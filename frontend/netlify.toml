@@ -1,0 +1,10 @@
+# Netlify alternative to Vercel. Set VITE_API_URL in Site settings → Environment.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# SPA fallback so client-side routes (e.g. /products/1) work on refresh
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

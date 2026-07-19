@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ElectroShop — Ghid de deployment gratuit</title>
+<style>
+  :root {
+    --brand:#2563eb; --brand-dark:#1d4ed8; --ink:#0f172a; --muted:#64748b;
+    --bg:#f8fafc; --card:#ffffff; --border:#e2e8f0; --ok:#16a34a; --warn:#b45309; --warnbg:#fffbeb;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.6; }
+  .wrap { max-width:900px; margin:0 auto; padding:32px 20px 64px; }
+  header.hero { background:linear-gradient(135deg,var(--brand-dark),var(--brand)); color:#fff;
+    border-radius:18px; padding:32px; margin-bottom:28px; }
+  header.hero h1 { margin:0 0 8px; font-size:28px; }
+  header.hero p { margin:0; opacity:.92; }
+  h2 { font-size:20px; margin:36px 0 12px; display:flex; align-items:center; gap:10px; }
+  .num { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px;
+    background:var(--brand); color:#fff; border-radius:50%; font-size:15px; font-weight:700; flex:none; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:20px 22px; margin:12px 0; }
+  .stack { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin:8px 0 4px; }
+  .pill { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px; }
+  .pill b { display:block; font-size:15px; } .pill span { color:var(--muted); font-size:13px; }
+  code, .mono { font-family:'SF Mono',Menlo,Consolas,monospace; font-size:13px; }
+  code { background:#eef2ff; color:#3730a3; padding:2px 6px; border-radius:5px; }
+  pre { background:#0f172a; color:#e2e8f0; padding:14px 16px; border-radius:10px; overflow-x:auto; font-size:13px; }
+  pre code { background:none; color:inherit; padding:0; }
+  table { width:100%; border-collapse:collapse; margin:10px 0; font-size:14px; }
+  th,td { text-align:left; padding:9px 10px; border-bottom:1px solid var(--border); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.03em; }
+  td.k { white-space:nowrap; }
+  .note { background:var(--warnbg); border:1px solid #fde68a; color:#7c5300; border-radius:10px; padding:12px 14px; margin:12px 0; font-size:14px; }
+  .ok { color:var(--ok); font-weight:600; }
+  ol,ul { margin:8px 0 8px 4px; padding-left:22px; }
+  li { margin:5px 0; }
+  .kbd { background:#f1f5f9; border:1px solid var(--border); border-bottom-width:2px; border-radius:6px; padding:1px 7px; font-size:12px; }
+  a { color:var(--brand); }
+  .foot { color:var(--muted); font-size:13px; margin-top:40px; text-align:center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>⚡ ElectroShop — Ghid de deployment gratuit</h1>
+  <p>Pui aplicația online folosind trei servicii gratuite. Datele (utilizatori, rol admin, comenzi) stau într-o bază de date MySQL persistentă.</p>
+</header>
+
+<div class="card">
+  <b>Arhitectura online</b>
+  <div class="stack" style="margin-top:12px">
+    <div class="pill"><b>Vercel</b><span>Frontend React (gratuit permanent)</span></div>
+    <div class="pill"><b>Render</b><span>Backend Spring Boot (gratuit, 750h/lună)</span></div>
+    <div class="pill"><b>Aiven</b><span>Bază de date MySQL (gratuit „forever")</span></div>
+  </div>
+  <p style="color:var(--muted);font-size:14px;margin:10px 0 0">
+    Flux: browserul încarcă frontend-ul de pe <b>Vercel</b> → acesta apelează API-ul de pe <b>Render</b> → care citește/scrie în MySQL pe <b>Aiven</b>.
+  </p>
+</div>
+
+<div class="note">
+  <b>Înainte de start — creează 4 conturi gratuite</b> (cu email sau „Sign in with GitHub"):
+  <a href="https://github.com">github.com</a>,
+  <a href="https://aiven.io">aiven.io</a>,
+  <a href="https://render.com">render.com</a>,
+  <a href="https://vercel.com">vercel.com</a>.
+</div>
+
+<!-- STEP 1 -->
+<h2><span class="num">1</span> Pune codul pe GitHub</h2>
+<div class="card">
+  <p>Render și Vercel iau codul dintr-un repository GitHub. Dezarhivează <code>electroshop.zip</code>, apoi din folderul <code>electroshop</code>:</p>
+  <pre><code>git init
+git add .
+git commit -m "ElectroShop initial"
+# creează un repo gol pe github.com (ex: electroshop), apoi:
+git branch -M main
+git remote add origin https://github.com/&lt;utilizatorul-tău&gt;/electroshop.git
+git push -u origin main</code></pre>
+  <p style="margin:0;color:var(--muted);font-size:14px">Alternativ, fără linia de comandă: pe github.com apeși <span class="kbd">Add file → Upload files</span> și tragi tot folderul.</p>
+</div>
+
+<!-- STEP 2 -->
+<h2><span class="num">2</span> Creează baza de date MySQL pe Aiven</h2>
+<div class="card">
+  <ol>
+    <li>Pe <a href="https://aiven.io">aiven.io</a> → <b>Create service</b> → <b>MySQL</b>.</li>
+    <li>Alege planul <b>Free</b>, o regiune apropiată (ex. Europe), nume <code>electroshop-db</code> → <b>Create</b>.</li>
+    <li>Așteaptă ~2 min să pornească (status <span class="ok">Running</span>).</li>
+    <li>Din pagina serviciului, secțiunea <b>Connection information</b>, notează: <code>Host</code>, <code>Port</code>, <code>User</code>, <code>Password</code> și <code>Database name</code> (de obicei <code>defaultdb</code>).</li>
+  </ol>
+  <p>Vei construi din ele URL-ul JDBC (îl folosești la pasul 3):</p>
+  <pre><code>jdbc:mysql://HOST:PORT/defaultdb?ssl-mode=REQUIRED</code></pre>
+  <p style="margin:0;color:var(--muted);font-size:14px">Tabelele (utilizatori, roluri, produse, comenzi) se creează <b>automat</b> la prima pornire a backend-ului. Nu trebuie să rulezi manual scripturile SQL.</p>
+</div>
+
+<!-- STEP 3 -->
+<h2><span class="num">3</span> Urcă backend-ul pe Render</h2>
+<div class="card">
+  <ol>
+    <li>Pe <a href="https://render.com">render.com</a> → <b>New</b> → <b>Web Service</b> → conectează repo-ul GitHub <code>electroshop</code>.</li>
+    <li>Setări: <b>Root Directory</b> = <code>backend</code>, <b>Runtime</b> = <b>Docker</b>, <b>Plan</b> = <b>Free</b>.</li>
+    <li>La <b>Environment Variables</b> adaugă exact:</li>
+  </ol>
+  <table>
+    <tr><th>Nume variabilă</th><th>Valoare</th></tr>
+    <tr><td class="k mono">SPRING_DATASOURCE_URL</td><td class="mono">jdbc:mysql://HOST:PORT/defaultdb?ssl-mode=REQUIRED</td></tr>
+    <tr><td class="k mono">SPRING_DATASOURCE_USERNAME</td><td class="mono">(User de la Aiven)</td></tr>
+    <tr><td class="k mono">SPRING_DATASOURCE_PASSWORD</td><td class="mono">(Password de la Aiven)</td></tr>
+    <tr><td class="k mono">JWT_SECRET</td><td class="mono">o1GUewhFu9FvyMzTmRP1kANSP0WP30+9jtQcoS+guI2Ftbh4pR/Ii+QwdiedH14J</td></tr>
+    <tr><td class="k mono">CORS_ORIGINS</td><td class="mono">https://TEMP (îl actualizezi la pasul 5)</td></tr>
+  </table>
+  <ol start="4">
+    <li><b>Create Web Service</b>. Primul build durează câteva minute.</li>
+    <li>Când e gata, testează în browser: <code>https://&lt;numele-serviciului&gt;.onrender.com/api/health</code> → trebuie să vezi <code>{"success":true,...,"status":"UP"}</code>.</li>
+    <li>Notează adresa backend-ului: <code>https://&lt;numele-serviciului&gt;.onrender.com</code></li>
+  </ol>
+  <div class="note">Există și fișierul <code>render.yaml</code> în proiect — dacă alegi <b>New → Blueprint</b>, Render preia automat aceste setări și îți cere doar valorile.</div>
+</div>
+
+<!-- STEP 4 -->
+<h2><span class="num">4</span> Urcă frontend-ul pe Vercel</h2>
+<div class="card">
+  <ol>
+    <li>Pe <a href="https://vercel.com">vercel.com</a> → <b>Add New → Project</b> → importă repo-ul <code>electroshop</code>.</li>
+    <li>Setări: <b>Root Directory</b> = <code>frontend</code>. Framework: <b>Vite</b> (detectat automat).</li>
+    <li>La <b>Environment Variables</b> adaugă:</li>
+  </ol>
+  <table>
+    <tr><th>Nume</th><th>Valoare</th></tr>
+    <tr><td class="k mono">VITE_API_URL</td><td class="mono">https://&lt;numele-serviciului&gt;.onrender.com/api</td></tr>
+  </table>
+  <ol start="4">
+    <li><b>Deploy</b>. La final primești adresa site-ului: <code>https://&lt;ceva&gt;.vercel.app</code></li>
+  </ol>
+</div>
+
+<!-- STEP 5 -->
+<h2><span class="num">5</span> Leagă-le și testează</h2>
+<div class="card">
+  <ol>
+    <li>Copiază adresa de la Vercel (ex. <code>https://electroshop.vercel.app</code>).</li>
+    <li>Înapoi pe <b>Render</b> → serviciul backend → <b>Environment</b> → editează <code>CORS_ORIGINS</code> = adresa Vercel (fără <code>/</code> la final) → <b>Save</b> (redeployează singur).</li>
+    <li>Deschide site-ul Vercel. <span class="ok">Gata — e live!</span></li>
+  </ol>
+  <p><b>Contul de administrator</b> este creat automat:</p>
+  <table>
+    <tr><th>Rol</th><th>Email</th><th>Parolă</th></tr>
+    <tr><td>ADMIN</td><td class="mono">admin@electroshop.com</td><td class="mono">admin123</td></tr>
+  </table>
+  <p style="margin:6px 0 0">Loghează-te ca admin → meniul <b>Admin</b> → <b>Utilizatori</b>: de acolo setezi rolul (ADMIN/USER) oricărui cont, inclusiv contului tău personal după ce te înregistrezi.
+  <b>Schimbă parola de admin</b> imediat ce intri (din management utilizatori).</p>
+</div>
+
+<!-- Notes -->
+<h2>⚠️ De reținut pe planul gratuit</h2>
+<div class="card">
+  <ul>
+    <li><b>Pornire „la rece":</b> backend-ul Render adoarme după 15 min fără trafic; prima cerere după pauză durează ~30–60 sec. Normal pe gratuit.</li>
+    <li><b>Imagini produse:</b> încărcarea prin fișier este temporară pe Render (se pierde la redeploy). Pentru început, folosește câmpul <b>URL imagine</b> din formularul de produs (imagini găzduite extern). Modulul de contabilitate/stoc nu e afectat.</li>
+    <li><b>Aiven</b> oprește baza după inactivitate lungă, dar <b>datele rămân</b> și repornește la următoarea conectare.</li>
+    <li><b>Securitate:</b> secretul JWT din acest ghid e doar pentru tine — nu-l publica. Poți genera altul oricând.</li>
+  </ul>
+</div>
+
+<h2>➡️ Pasul următor (după ce e live)</h2>
+<div class="card">
+  <p>Modulul de <b>contabilitate primară</b>: adaug furnizori + intrări de marfă (cumpărări) și un raport cu venituri (vânzări), cheltuieli (cumpărări) și profit/marjă — peste aceeași bază de date. Se adaugă fără să pierzi datele existente.</p>
+</div>
+
+<p class="foot">ElectroShop · Ghid generat pentru deployment gratuit · păstrează acest fișier ca referință</p>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,52 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: electroshop-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: electroshop
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: electroshop-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: electroshop
+      DB_USER: root
+      DB_PASSWORD: root
+      JWT_SECRET: Y2hhbmdlLW1lLXRoaXMtaXMtYS1kZXYtc2VjcmV0LWtleS1lbGVjdHJvc2hvcC0yMDI2fQ==
+      CORS_ORIGINS: http://localhost:5173,http://localhost:3000
+    ports:
+      - "8080:8080"
+    volumes:
+      - backend_uploads:/app/uploads
+
+  frontend:
+    build: ./frontend
+    container_name: electroshop-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  mysql_data:
+  backend_uploads:

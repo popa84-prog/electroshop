@@ -1,28 +1,10 @@
-# Render Blueprint — deploys the ElectroShop backend as a free Docker web service.
-# In the Render dashboard: New → Blueprint → connect this repo. Then fill the
-# env vars marked "sync: false" (Aiven DB credentials + your Vercel URL).
-services:
-  - type: web
-    name: electroshop-backend
-    runtime: docker
-    repo: # optional: https://github.com/<you>/electroshop
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
-    plan: free
-    region: frankfurt
-    healthCheckPath: /api/health
-    envVars:
-      # --- Aiven MySQL (set these in the dashboard) ---
-      - key: SPRING_DATASOURCE_URL
-        sync: false        # jdbc:mysql://<host>:<port>/<db>?ssl-mode=REQUIRED
-      - key: SPRING_DATASOURCE_USERNAME
-        sync: false
-      - key: SPRING_DATASOURCE_PASSWORD
-        sync: false
-      # --- App config ---
-      - key: JWT_SECRET
-        sync: false        # a Base64 string (see DEPLOYMENT guide)
-      - key: CORS_ORIGINS
-        sync: false        # https://<your-app>.vercel.app
-      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
-        value: update
+# Netlify alternative to Vercel. Set VITE_API_URL in Site settings → Environment.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# SPA fallback so client-side routes (e.g. /products/1) work on refresh
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

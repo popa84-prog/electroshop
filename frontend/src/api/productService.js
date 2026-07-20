@@ -4,6 +4,17 @@ const productService = {
   list: (params = {}) => api.get('/products', { params }).then((r) => r.data.data),
   getById: (id) => api.get(`/products/${id}`).then((r) => r.data.data),
   categories: () => api.get('/products/categories').then((r) => r.data.data),
+  categoryTree: () => api.get('/products/category-tree').then((r) => r.data.data),
+
+  importProducts: (file, dryRun = true) => {
+    const form = new FormData();
+    form.append('file', file);
+    return api
+      .post(`/products/import?dryRun=${dryRun}`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data.data);
+  },
 
   // Admin
   create: (payload) => api.post('/products', payload).then((r) => r.data.data),

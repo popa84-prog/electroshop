@@ -8,10 +8,15 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
 
 /**
  * Admin management panel API. Every endpoint requires ROLE_ADMIN
@@ -104,5 +109,26 @@ public class AdminController {
     public ResponseEntity<ApiResponse<Object>> deleteOrder(@PathVariable Long id) {
         orderService.delete(id);
         return ResponseEntity.ok(ApiResponse.ok("Order deleted", null));
+    }
+
+    /** Export orders in a date range as .xlsx (default) or .csv for accounting. */
+    @GetMapping("/orders/export")
+    public ResponseEntity<byte[]> exportOrders(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(defaultValue = "xlsx") String format) {
+
+        byte[] body = orderService.exportOrders(from, to, format);
+        boolean csv = "csv".equalsIgnoreCase(format);
+        String filename = csv ? "comenzi.csv" : "comenzi.xlsx";
+        MediaType type = csv
+                ? MediaType.parseMediaType("text/csv; charset=UTF-8")
+                : MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
+                .contentType(type)
+                .body(body);
     }
 }

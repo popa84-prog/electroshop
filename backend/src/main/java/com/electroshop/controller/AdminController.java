@@ -1,6 +1,7 @@
 package com.electroshop.controller;
 
 import com.electroshop.dto.*;
+import com.electroshop.service.AuditService;
 import com.electroshop.service.DashboardService;
 import com.electroshop.service.OrderService;
 import com.electroshop.service.UserService;
@@ -30,12 +31,14 @@ public class AdminController {
     private final UserService userService;
     private final OrderService orderService;
     private final DashboardService dashboardService;
+    private final AuditService auditService;
 
     public AdminController(UserService userService, OrderService orderService,
-                          DashboardService dashboardService) {
+                          DashboardService dashboardService, AuditService auditService) {
         this.userService = userService;
         this.orderService = orderService;
         this.dashboardService = dashboardService;
+        this.auditService = auditService;
     }
 
     // ---------- Dashboard ----------
@@ -43,6 +46,16 @@ public class AdminController {
     @GetMapping("/dashboard")
     public ResponseEntity<ApiResponse<DashboardStatsDto>> dashboard() {
         return ResponseEntity.ok(ApiResponse.ok(dashboardService.getStats()));
+    }
+
+    // ---------- Audit log ----------
+
+    @GetMapping("/audit-logs")
+    public ResponseEntity<ApiResponse<PageResponse<AuditLogDto>>> auditLogs(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Page<AuditLogDto> result = auditService.list(PageRequest.of(page, size));
+        return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(result)));
     }
 
     // ---------- Users CRUD ----------

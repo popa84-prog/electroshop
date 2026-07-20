@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
@@ -23,4 +24,16 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     @Query("SELECT DISTINCT p.category FROM Product p WHERE p.category IS NOT NULL ORDER BY p.category")
     List<String> findAllCategories();
+
+    /** Distinct [category, subcategory] pairs, used to build the category tree. */
+    @Query("""
+            SELECT DISTINCT p.category, p.subcategory FROM Product p
+            WHERE p.category IS NOT NULL
+            ORDER BY p.category, p.subcategory
+            """)
+    List<Object[]> findCategorySubcategoryPairs();
+
+    Optional<Product> findFirstByNameIgnoreCase(String name);
+
+    Optional<Product> findFirstBySku(String sku);
 }

@@ -8,6 +8,7 @@ const tabs = [
   { to: '/admin/suppliers', label: 'Furnizori' },
   { to: '/admin/purchases', label: 'Cumpărări' },
   { to: '/admin/accounting', label: 'Contabilitate' },
+  { to: '/admin/audit', label: 'Jurnal' },
 ];
 
 export default function AdminNav() {

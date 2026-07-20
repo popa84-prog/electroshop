@@ -42,6 +42,11 @@ public class ProductController {
     public ResponseEntity<ApiResponse<PageResponse<ProductDto>>> list(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String category,
+            @RequestParam(required = false) String subcategory,
+            @RequestParam(required = false) String brand,
+            @RequestParam(required = false) java.math.BigDecimal minPrice,
+            @RequestParam(required = false) java.math.BigDecimal maxPrice,
+            @RequestParam(defaultValue = "false") boolean inStock,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -50,13 +55,20 @@ public class ProductController {
         Sort sort = direction.equalsIgnoreCase("asc")
                 ? Sort.by(sortBy).ascending()
                 : Sort.by(sortBy).descending();
-        Page<ProductDto> result = productService.list(search, category, PageRequest.of(page, size, sort));
+        Page<ProductDto> result = productService.list(
+                search, category, subcategory, brand, minPrice, maxPrice, inStock,
+                PageRequest.of(page, size, sort));
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(result)));
     }
 
     @GetMapping("/categories")
     public ResponseEntity<ApiResponse<List<String>>> categories() {
         return ResponseEntity.ok(ApiResponse.ok(productService.getCategories()));
+    }
+
+    @GetMapping("/brands")
+    public ResponseEntity<ApiResponse<List<String>>> brands() {
+        return ResponseEntity.ok(ApiResponse.ok(productService.getBrands()));
     }
 
     @GetMapping("/category-tree")

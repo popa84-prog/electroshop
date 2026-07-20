@@ -3,8 +3,10 @@ package com.electroshop.controller;
 import com.electroshop.dto.ApiResponse;
 import com.electroshop.dto.PageResponse;
 import com.electroshop.dto.ProductDto;
+import com.electroshop.dto.ProductImportResult;
 import com.electroshop.dto.ProductRequest;
 import com.electroshop.service.FileStorageService;
+import com.electroshop.service.ProductImportService;
 import com.electroshop.service.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/products")
@@ -24,10 +27,13 @@ public class ProductController {
 
     private final ProductService productService;
     private final FileStorageService fileStorageService;
+    private final ProductImportService productImportService;
 
-    public ProductController(ProductService productService, FileStorageService fileStorageService) {
+    public ProductController(ProductService productService, FileStorageService fileStorageService,
+                             ProductImportService productImportService) {
         this.productService = productService;
         this.fileStorageService = fileStorageService;
+        this.productImportService = productImportService;
     }
 
     // ---- Public ----
@@ -51,6 +57,11 @@ public class ProductController {
     @GetMapping("/categories")
     public ResponseEntity<ApiResponse<List<String>>> categories() {
         return ResponseEntity.ok(ApiResponse.ok(productService.getCategories()));
+    }
+
+    @GetMapping("/category-tree")
+    public ResponseEntity<ApiResponse<Map<String, List<String>>>> categoryTree() {
+        return ResponseEntity.ok(ApiResponse.ok(productService.getCategoryTree()));
     }
 
     @GetMapping("/{id}")
@@ -87,5 +98,20 @@ public class ProductController {
                                                               @RequestParam("file") MultipartFile file) {
         String url = fileStorageService.store(file);
         return ResponseEntity.ok(ApiResponse.ok("Image uploaded", productService.updateImage(id, url)));
+    }
+
+    /**
+     * Import products from an .xlsx file. With dryRun=true (default) nothing is
+     * written — it returns a validation report. With dryRun=false the valid rows
+     * are created/updated.
+     */
+    @PostMapping("/import")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<ProductImportResult>> importExcel(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(name = "dryRun", defaultValue = "true") boolean dryRun) {
+        ProductImportResult result = productImportService.importFromExcel(file, dryRun);
+        String msg = dryRun ? "Previzualizare import" : "Import finalizat";
+        return ResponseEntity.ok(ApiResponse.ok(msg, result));
     }
 }

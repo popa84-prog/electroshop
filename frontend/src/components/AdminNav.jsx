@@ -5,6 +5,9 @@ const tabs = [
   { to: '/admin/products', label: 'Produse' },
   { to: '/admin/users', label: 'Utilizatori' },
   { to: '/admin/orders', label: 'Comenzi' },
+  { to: '/admin/suppliers', label: 'Furnizori' },
+  { to: '/admin/purchases', label: 'Cumpărări' },
+  { to: '/admin/accounting', label: 'Contabilitate' },
 ];
 
 export default function AdminNav() {

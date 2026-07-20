@@ -10,7 +10,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Transactional
@@ -37,6 +40,20 @@ public class ProductService {
     @Transactional(readOnly = true)
     public List<String> getCategories() {
         return productRepository.findAllCategories();
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, List<String>> getCategoryTree() {
+        Map<String, List<String>> tree = new LinkedHashMap<>();
+        for (Object[] pair : productRepository.findCategorySubcategoryPairs()) {
+            String cat = (String) pair[0];
+            String sub = (String) pair[1];
+            List<String> subs = tree.computeIfAbsent(cat, k -> new ArrayList<>());
+            if (sub != null && !sub.isBlank() && !subs.contains(sub)) {
+                subs.add(sub);
+            }
+        }
+        return tree;
     }
 
     public ProductDto create(ProductRequest req) {
@@ -73,7 +90,10 @@ public class ProductService {
         p.setPrice(req.price());
         p.setStockQuantity(req.stockQuantity());
         p.setCategory(req.category());
+        p.setSubcategory(req.subcategory());
         p.setBrand(req.brand());
+        p.setPurchasePrice(req.purchasePrice());
+        p.setSku(req.sku());
         if (req.imageUrl() != null) {
             p.setImageUrl(req.imageUrl());
         }

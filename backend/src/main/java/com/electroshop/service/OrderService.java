@@ -21,13 +21,16 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final OrderExportService orderExportService;
+    private final AuditService auditService;
 
     public OrderService(OrderRepository orderRepository, ProductRepository productRepository,
-                        UserRepository userRepository, OrderExportService orderExportService) {
+                        UserRepository userRepository, OrderExportService orderExportService,
+                        AuditService auditService) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
         this.userRepository = userRepository;
         this.orderExportService = orderExportService;
+        this.auditService = auditService;
     }
 
     @Transactional(readOnly = true)
@@ -74,6 +77,8 @@ public class OrderService {
 
         order.recalculateTotal();
         Order saved = orderRepository.save(order);
+        auditService.log("ORDER_CREATED", "Order", saved.getId(),
+                "client " + user.getEmail() + " · total " + saved.getTotalAmount());
         return OrderDto.from(saved);
     }
 
@@ -119,12 +124,15 @@ public class OrderService {
             }
         }
         order.setStatus(newStatus);
-        return OrderDto.from(orderRepository.save(order));
+        OrderDto dto = OrderDto.from(orderRepository.save(order));
+        auditService.log("ORDER_STATUS_CHANGED", "Order", orderId, "→ " + newStatus.name());
+        return dto;
     }
 
     public void delete(Long orderId) {
         Order order = findEntity(orderId);
         orderRepository.delete(order);
+        auditService.log("ORDER_DELETED", "Order", orderId, null);
     }
 
     private Order findEntity(Long orderId) {

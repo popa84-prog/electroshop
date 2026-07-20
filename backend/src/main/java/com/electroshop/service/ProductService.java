@@ -21,9 +21,11 @@ import java.util.Map;
 public class ProductService {
 
     private final ProductRepository productRepository;
+    private final AuditService auditService;
 
-    public ProductService(ProductRepository productRepository) {
+    public ProductService(ProductRepository productRepository, AuditService auditService) {
         this.productRepository = productRepository;
+        this.auditService = auditService;
     }
 
     @Transactional(readOnly = true)
@@ -72,24 +74,38 @@ public class ProductService {
     public ProductDto create(ProductRequest req) {
         Product p = new Product();
         apply(p, req);
-        return ProductDto.from(productRepository.save(p));
+        Product saved = productRepository.save(p);
+        auditService.log("PRODUCT_CREATED", "Product", saved.getId(),
+                saved.getName() + " · stoc " + saved.getStockQuantity());
+        return ProductDto.from(saved);
     }
 
     public ProductDto update(Long id, ProductRequest req) {
         Product p = findEntity(id);
+        Integer oldStock = p.getStockQuantity();
         apply(p, req);
-        return ProductDto.from(productRepository.save(p));
+        Product saved = productRepository.save(p);
+        String details = saved.getName();
+        if (oldStock != null && !oldStock.equals(saved.getStockQuantity())) {
+            details += " · stoc " + oldStock + " → " + saved.getStockQuantity();
+        }
+        auditService.log("PRODUCT_UPDATED", "Product", saved.getId(), details);
+        return ProductDto.from(saved);
     }
 
     public ProductDto updateImage(Long id, String imageUrl) {
         Product p = findEntity(id);
         p.setImageUrl(imageUrl);
-        return ProductDto.from(productRepository.save(p));
+        Product saved = productRepository.save(p);
+        auditService.log("PRODUCT_IMAGE_UPDATED", "Product", saved.getId(), saved.getName());
+        return ProductDto.from(saved);
     }
 
     public void delete(Long id) {
         Product p = findEntity(id);
+        String name = p.getName();
         productRepository.delete(p);
+        auditService.log("PRODUCT_DELETED", "Product", id, name);
     }
 
     public Product findEntity(Long id) {

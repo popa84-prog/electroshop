@@ -23,7 +23,17 @@ public record ProductRequest(
         String category,
 
         @Size(max = 80)
+        String subcategory,
+
+        @Size(max = 80)
         String brand,
+
+        // Admin-only acquisition price (optional on manual create/edit).
+        @DecimalMin(value = "0.0", message = "Purchase price cannot be negative")
+        BigDecimal purchasePrice,
+
+        @Size(max = 60)
+        String sku,
 
         @Size(max = 500)
         String imageUrl

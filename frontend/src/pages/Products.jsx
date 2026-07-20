@@ -4,8 +4,15 @@ import productService from '../api/productService';
 import ProductCard from '../components/ProductCard';
 import Pagination from '../components/Pagination';
 import Spinner from '../components/Spinner';
+import { useSeo } from '../utils/seo';
 
 export default function Products() {
+  useSeo({
+    title: 'Produse',
+    description:
+      'Descoperă toate produsele ElectroShop: telefoane, laptopuri, audio și accesorii. Filtrează după categorie, brand și preț.',
+    path: '/products',
+  });
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [tree, setTree] = useState({});

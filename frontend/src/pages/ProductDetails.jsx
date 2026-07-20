@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import productService from '../api/productService';
 import { useCart } from '../context/CartContext';
 import { formatPrice, resolveImage } from '../utils/format';
+import { useSeo } from '../utils/seo';
 import Spinner from '../components/Spinner';
 import Lightbox from '../components/Lightbox';
 
@@ -24,6 +25,17 @@ export default function ProductDetails() {
       .catch(() => setError('Produsul nu a fost găsit.'))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useSeo({
+    title: product?.name,
+    description: product
+      ? `${product.name}${product.brand ? ' ' + product.brand : ''} — ${
+          product.description || 'disponibil la ElectroShop'
+        }`.slice(0, 160)
+      : undefined,
+    path: `/products/${id}`,
+    image: product ? resolveImage(product.imageUrl) : undefined,
+  });
 
   if (loading) return <Spinner />;
   if (error) return <p className="py-16 text-center text-slate-500">{error}</p>;

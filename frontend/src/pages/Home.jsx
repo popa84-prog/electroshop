@@ -3,10 +3,17 @@ import { Link } from 'react-router-dom';
 import productService from '../api/productService';
 import ProductCard from '../components/ProductCard';
 import Spinner from '../components/Spinner';
+import { useSeo } from '../utils/seo';
 
 export default function Home() {
   const [featured, setFeatured] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  useSeo({
+    description:
+      'ElectroShop – magazin online de electronice: telefoane, laptopuri, audio și accesorii la prețuri bune, cu livrare rapidă.',
+    path: '/',
+  });
 
   useEffect(() => {
     productService

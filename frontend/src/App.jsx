@@ -17,6 +17,9 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminProducts from './pages/admin/AdminProducts';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminOrders from './pages/admin/AdminOrders';
+import AdminSuppliers from './pages/admin/AdminSuppliers';
+import AdminPurchases from './pages/admin/AdminPurchases';
+import AdminAccounting from './pages/admin/AdminAccounting';
 
 export default function App() {
   return (
@@ -86,6 +89,30 @@ export default function App() {
           element={
             <ProtectedRoute adminOnly>
               <AdminOrders />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/suppliers"
+          element={
+            <ProtectedRoute adminOnly>
+              <AdminSuppliers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/purchases"
+          element={
+            <ProtectedRoute adminOnly>
+              <AdminPurchases />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/accounting"
+          element={
+            <ProtectedRoute adminOnly>
+              <AdminAccounting />
             </ProtectedRoute>
           }
         />

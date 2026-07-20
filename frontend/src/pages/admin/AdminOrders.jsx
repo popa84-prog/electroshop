@@ -18,6 +18,33 @@ export default function AdminOrders() {
   const [detail, setDetail] = useState(null);
   const [savingStatus, setSavingStatus] = useState(false);
 
+  const [expFrom, setExpFrom] = useState('');
+  const [expTo, setExpTo] = useState('');
+  const [exporting, setExporting] = useState(false);
+
+  const doExport = async (format) => {
+    setExporting(true);
+    try {
+      const blob = await adminService.exportOrders({
+        from: expFrom || undefined,
+        to: expTo || undefined,
+        format,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = format === 'csv' ? 'comenzi.csv' : 'comenzi.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Exportul a eșuat.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const load = () => {
     setLoading(true);
     adminService
@@ -75,6 +102,24 @@ export default function AdminOrders() {
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="card mb-4 flex flex-wrap items-end gap-3 p-4">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-slate-500">Export — de la</label>
+          <input type="date" className="input" value={expFrom} onChange={(e) => setExpFrom(e.target.value)} />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-slate-500">până la</label>
+          <input type="date" className="input" value={expTo} onChange={(e) => setExpTo(e.target.value)} />
+        </div>
+        <button className="btn-primary" disabled={exporting} onClick={() => doExport('xlsx')}>
+          {exporting ? 'Se exportă...' : '⬇ Excel (.xlsx)'}
+        </button>
+        <button className="btn-secondary" disabled={exporting} onClick={() => doExport('csv')}>
+          ⬇ CSV
+        </button>
+        <span className="text-xs text-slate-400">Lasă datele goale pentru toate comenzile.</span>
       </div>
 
       {loading ? (

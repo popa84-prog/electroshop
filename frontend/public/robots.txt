@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# Admin and auth pages should not be indexed
+Disallow: /admin
+Disallow: /login
+Disallow: /register
+Disallow: /checkout
+Disallow: /cart
+
+Sitemap: https://electroshop-alpha.vercel.app/sitemap.xml

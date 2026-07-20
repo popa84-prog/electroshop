@@ -16,6 +16,26 @@ const adminService = {
   updateOrderStatus: (id, status) =>
     api.put(`/admin/orders/${id}/status`, { status }).then((r) => r.data.data),
   deleteOrder: (id) => api.delete(`/admin/orders/${id}`).then((r) => r.data),
+
+  // Suppliers (furnizori)
+  listSuppliers: (params = {}) => api.get('/admin/suppliers', { params }).then((r) => r.data.data),
+  createSupplier: (payload) => api.post('/admin/suppliers', payload).then((r) => r.data.data),
+  updateSupplier: (id, payload) => api.put(`/admin/suppliers/${id}`, payload).then((r) => r.data.data),
+  deleteSupplier: (id) => api.delete(`/admin/suppliers/${id}`).then((r) => r.data),
+
+  // Purchases (intrări de marfă)
+  listPurchases: (params = {}) => api.get('/admin/purchases', { params }).then((r) => r.data.data),
+  getPurchase: (id) => api.get(`/admin/purchases/${id}`).then((r) => r.data.data),
+  createPurchase: (payload) => api.post('/admin/purchases', payload).then((r) => r.data.data),
+  deletePurchase: (id) => api.delete(`/admin/purchases/${id}`).then((r) => r.data),
+
+  // Accounting report
+  accountingReport: (params = {}) =>
+    api.get('/admin/accounting/report', { params }).then((r) => r.data.data),
+
+  // Products (for purchase item selection)
+  listProductsAll: (params = { page: 0, size: 200 }) =>
+    api.get('/products', { params }).then((r) => r.data.data),
 };
 
 export default adminService;

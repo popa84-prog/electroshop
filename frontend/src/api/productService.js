@@ -5,6 +5,7 @@ const productService = {
   getById: (id) => api.get(`/products/${id}`).then((r) => r.data.data),
   categories: () => api.get('/products/categories').then((r) => r.data.data),
   categoryTree: () => api.get('/products/category-tree').then((r) => r.data.data),
+  brands: () => api.get('/products/brands').then((r) => r.data.data),
 
   importProducts: (file, dryRun = true) => {
     const form = new FormData();

@@ -10,9 +10,12 @@ const emptyForm = {
   name: '',
   description: '',
   price: '',
+  purchasePrice: '',
   stockQuantity: '',
   category: '',
+  subcategory: '',
   brand: '',
+  sku: '',
   imageUrl: '',
 };
 
@@ -29,6 +32,14 @@ export default function AdminProducts() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [imageFile, setImageFile] = useState(null);
+
+  // Import state
+  const [importOpen, setImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importReport, setImportReport] = useState(null);
+  const [importBusy, setImportBusy] = useState(false);
+  const [importError, setImportError] = useState(null);
+  const [importDone, setImportDone] = useState(null);
 
   const load = () => {
     setLoading(true);
@@ -58,9 +69,12 @@ export default function AdminProducts() {
       name: p.name,
       description: p.description || '',
       price: p.price,
+      purchasePrice: p.purchasePrice ?? '',
       stockQuantity: p.stockQuantity,
       category: p.category || '',
+      subcategory: p.subcategory || '',
       brand: p.brand || '',
+      sku: p.sku || '',
       imageUrl: p.imageUrl || '',
     });
     setImageFile(null);
@@ -79,6 +93,7 @@ export default function AdminProducts() {
         ...form,
         price: Number(form.price),
         stockQuantity: Number(form.stockQuantity),
+        purchasePrice: form.purchasePrice === '' ? null : Number(form.purchasePrice),
       };
       let saved;
       if (editing) {
@@ -108,14 +123,51 @@ export default function AdminProducts() {
     }
   };
 
+  // ---- Import ----
+  const openImport = () => {
+    setImportFile(null);
+    setImportReport(null);
+    setImportError(null);
+    setImportDone(null);
+    setImportOpen(true);
+  };
+
+  const runImport = async (dryRun) => {
+    if (!importFile) {
+      setImportError('Alege întâi un fișier .xlsx.');
+      return;
+    }
+    setImportBusy(true);
+    setImportError(null);
+    try {
+      const report = await productService.importProducts(importFile, dryRun);
+      if (dryRun) {
+        setImportReport(report);
+      } else {
+        setImportDone(report);
+        setImportReport(report);
+        load();
+      }
+    } catch (err) {
+      setImportError(err.response?.data?.message || 'Importul a eșuat.');
+    } finally {
+      setImportBusy(false);
+    }
+  };
+
   return (
     <div>
       <AdminNav />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-slate-800">Management produse</h1>
-        <button className="btn-primary" onClick={openCreate}>
-          + Produs nou
-        </button>
+        <div className="flex gap-2">
+          <button className="btn-secondary" onClick={openImport}>
+            ⬆ Import Excel
+          </button>
+          <button className="btn-primary" onClick={openCreate}>
+            + Produs nou
+          </button>
+        </div>
       </div>
 
       <input
@@ -158,7 +210,10 @@ export default function AdminProducts() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{p.category}</td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {p.category}
+                    {p.subcategory ? <span className="text-slate-400"> · {p.subcategory}</span> : null}
+                  </td>
                   <td className="px-4 py-3 font-medium">{formatPrice(p.price)}</td>
                   <td className="px-4 py-3">
                     <span
@@ -185,10 +240,12 @@ export default function AdminProducts() {
       )}
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />
 
+      {/* Create / edit modal */}
       <Modal
         open={modalOpen}
         title={editing ? 'Editează produs' : 'Produs nou'}
         onClose={() => setModalOpen(false)}
+        maxWidth="max-w-2xl"
       >
         {error && (
           <div className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>
@@ -209,7 +266,7 @@ export default function AdminProducts() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-600">Preț (RON)</label>
+              <label className="mb-1 block text-sm font-medium text-slate-600">Preț vânzare (RON)</label>
               <input
                 type="number"
                 step="0.01"
@@ -221,6 +278,21 @@ export default function AdminProducts() {
               />
             </div>
             <div>
+              <label className="mb-1 block text-sm font-medium text-slate-600">
+                Preț achiziție (RON) · doar admin
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                name="purchasePrice"
+                className="input"
+                value={form.purchasePrice}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
               <label className="mb-1 block text-sm font-medium text-slate-600">Stoc</label>
               <input
                 type="number"
@@ -231,11 +303,24 @@ export default function AdminProducts() {
                 required
               />
             </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-600">Cod / SKU</label>
+              <input name="sku" className="input" value={form.sku} onChange={handleChange} />
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-600">Categorie</label>
               <input name="category" className="input" value={form.category} onChange={handleChange} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-600">Subcategorie</label>
+              <input
+                name="subcategory"
+                className="input"
+                value={form.subcategory}
+                onChange={handleChange}
+              />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-600">Brand</label>
@@ -267,6 +352,115 @@ export default function AdminProducts() {
           </div>
         </form>
       </Modal>
+
+      {/* Import modal */}
+      <Modal
+        open={importOpen}
+        title="Import produse din Excel"
+        onClose={() => setImportOpen(false)}
+        maxWidth="max-w-2xl"
+      >
+        {importError && (
+          <div className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">{importError}</div>
+        )}
+
+        <p className="mb-3 text-sm text-slate-600">
+          Încarcă fișierul .xlsx completat după șablon. Îl verific întâi (fără a scrie nimic) și îți
+          arăt exact ce e valid și ce trebuie corectat. Abia după confirmare import produsele.
+        </p>
+
+        <input
+          type="file"
+          accept=".xlsx,.xls"
+          className="input"
+          onChange={(e) => {
+            setImportFile(e.target.files?.[0] || null);
+            setImportReport(null);
+            setImportDone(null);
+            setImportError(null);
+          }}
+        />
+
+        {importReport && (
+          <div className="mt-4 space-y-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <Stat label="Rânduri" value={importReport.totalRows} />
+              <Stat label="Valide" value={importReport.validCount} tone="green" />
+              <Stat label="Cu erori" value={importReport.errors?.length || 0} tone="red" />
+              <Stat label="Avertismente" value={importReport.warnings?.length || 0} tone="amber" />
+            </div>
+
+            {importDone && (
+              <div className="rounded-lg bg-green-50 px-4 py-2 text-sm text-green-700">
+                Import finalizat: {importDone.createdCount} adăugate, {importDone.updatedCount} actualizate.
+              </div>
+            )}
+
+            {importReport.errors?.length > 0 && (
+              <div className="max-h-48 overflow-y-auto rounded-lg border border-red-100 bg-red-50 p-3 text-sm">
+                <p className="mb-1 font-semibold text-red-700">Rânduri cu probleme (vor fi sărite):</p>
+                <ul className="list-disc space-y-1 pl-5 text-red-700">
+                  {importReport.errors.map((e) => (
+                    <li key={e.row}>
+                      Rând {e.row}: {e.message}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {importReport.warnings?.length > 0 && (
+              <div className="max-h-40 overflow-y-auto rounded-lg border border-amber-100 bg-amber-50 p-3 text-sm">
+                <p className="mb-1 font-semibold text-amber-700">Avertismente:</p>
+                <ul className="list-disc space-y-1 pl-5 text-amber-700">
+                  {importReport.warnings.map((w, i) => (
+                    <li key={i}>{w}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button type="button" className="btn-secondary" onClick={() => setImportOpen(false)}>
+            Închide
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={importBusy || !importFile}
+            onClick={() => runImport(true)}
+          >
+            {importBusy ? 'Se verifică...' : 'Verifică fișierul'}
+          </button>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={importBusy || !importReport || importReport.validCount === 0 || !!importDone}
+            onClick={() => runImport(false)}
+          >
+            {importDone
+              ? 'Importat ✓'
+              : `Importă ${importReport ? importReport.validCount : ''} produse`}
+          </button>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+function Stat({ label, value, tone = 'slate' }) {
+  const tones = {
+    slate: 'text-slate-900',
+    green: 'text-green-700',
+    red: 'text-red-700',
+    amber: 'text-amber-700',
+  };
+  return (
+    <div className="rounded-lg border border-slate-200 p-3 text-center">
+      <p className={`text-2xl font-bold ${tones[tone]}`}>{value}</p>
+      <p className="text-xs text-slate-500">{label}</p>
     </div>
   );
 }

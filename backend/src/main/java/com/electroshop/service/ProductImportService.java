@@ -64,10 +64,7 @@ public class ProductImportService {
 
             List<String> missing = new ArrayList<>();
             if (!col.containsKey(Field.NAME)) missing.add("Nume produs");
-            if (!col.containsKey(Field.CATEGORY)) missing.add("Categorie");
-            if (!col.containsKey(Field.SUBCATEGORY)) missing.add("Subcategorie");
             if (!col.containsKey(Field.STOCK)) missing.add("Cantitate în stoc");
-            if (!col.containsKey(Field.PURCHASE_PRICE)) missing.add("Preț achiziție unitar");
             if (!col.containsKey(Field.SELL_PRICE)) missing.add("Preț vânzare unitar");
             if (!missing.isEmpty()) {
                 throw new BadRequestException("Lipsesc coloanele obligatorii: "
@@ -88,9 +85,9 @@ public class ProductImportService {
                 String sku = str(row, col.get(Field.SKU));
 
                 List<String> rowErrs = new ArrayList<>();
+                // Only name, stock and selling price are truly required. Category,
+                // subcategory and purchase price are optional (warned, not rejected).
                 if (name.isBlank()) rowErrs.add("lipsește 'Nume produs'");
-                if (category.isBlank()) rowErrs.add("lipsește 'Categorie'");
-                if (subcategory.isBlank()) rowErrs.add("lipsește 'Subcategorie'");
 
                 Integer stock = null;
                 try {
@@ -107,8 +104,9 @@ public class ProductImportService {
                 } catch (Exception e) {
                     rowErrs.add("'Preț achiziție' nu este un număr valid");
                 }
-                if (purchase == null) rowErrs.add("lipsește 'Preț achiziție unitar'");
-                else if (purchase.signum() < 0) rowErrs.add("'Preț achiziție' nu poate fi negativ");
+                if (purchase != null && purchase.signum() < 0) {
+                    rowErrs.add("'Preț achiziție' nu poate fi negativ");
+                }
 
                 BigDecimal sell = null;
                 try {
@@ -124,7 +122,10 @@ public class ProductImportService {
                     continue;
                 }
 
-                if (sell.compareTo(purchase) < 0) {
+                if (purchase == null) {
+                    warnings.add("Rând " + humanRow + " (" + name
+                            + "): fără preț de achiziție (poți completa mai târziu).");
+                } else if (sell.compareTo(purchase) < 0) {
                     warnings.add("Rând " + humanRow + " (" + name
                             + "): preț de vânzare mai mic decât prețul de achiziție.");
                 }

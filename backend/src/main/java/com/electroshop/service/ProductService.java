@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -26,10 +27,17 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public Page<ProductDto> list(String search, String category, Pageable pageable) {
-        String s = (search == null || search.isBlank()) ? null : search;
-        String c = (category == null || category.isBlank()) ? null : category;
-        return productRepository.search(s, c, pageable).map(ProductDto::from);
+    public Page<ProductDto> list(String search, String category, String subcategory, String brand,
+                                 BigDecimal minPrice, BigDecimal maxPrice, boolean inStock,
+                                 Pageable pageable) {
+        return productRepository.search(
+                blankToNull(search), blankToNull(category), blankToNull(subcategory),
+                blankToNull(brand), minPrice, maxPrice, inStock, pageable
+        ).map(ProductDto::from);
+    }
+
+    private String blankToNull(String v) {
+        return (v == null || v.isBlank()) ? null : v;
     }
 
     @Transactional(readOnly = true)
@@ -40,6 +48,11 @@ public class ProductService {
     @Transactional(readOnly = true)
     public List<String> getCategories() {
         return productRepository.findAllCategories();
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> getBrands() {
+        return productRepository.findAllBrands();
     }
 
     @Transactional(readOnly = true)

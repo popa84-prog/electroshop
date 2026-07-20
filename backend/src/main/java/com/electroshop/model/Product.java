@@ -38,7 +38,17 @@ public class Product {
     private String category;
 
     @Column(length = 80)
+    private String subcategory;
+
+    @Column(length = 80)
     private String brand;
+
+    /** Unit purchase (acquisition) price — ADMIN ONLY, never exposed to buyers. */
+    @Column(precision = 12, scale = 2)
+    private BigDecimal purchasePrice;
+
+    @Column(length = 60)
+    private String sku;
 
     @Column(length = 500)
     private String imageUrl;

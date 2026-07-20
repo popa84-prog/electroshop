@@ -20,12 +20,28 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final OrderExportService orderExportService;
 
     public OrderService(OrderRepository orderRepository, ProductRepository productRepository,
-                        UserRepository userRepository) {
+                        UserRepository userRepository, OrderExportService orderExportService) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
         this.userRepository = userRepository;
+        this.orderExportService = orderExportService;
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] exportOrders(java.time.LocalDate from, java.time.LocalDate to, String format) {
+        java.time.LocalDateTime start = (from != null)
+                ? from.atStartOfDay()
+                : java.time.LocalDateTime.of(2000, 1, 1, 0, 0);
+        java.time.LocalDateTime end = (to != null)
+                ? to.plusDays(1).atStartOfDay()
+                : java.time.LocalDate.now().plusDays(1).atStartOfDay();
+        var orders = orderRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(start, end);
+        return "csv".equalsIgnoreCase(format)
+                ? orderExportService.toCsv(orders)
+                : orderExportService.toExcel(orders);
     }
 
     public OrderDto placeOrder(Long userId, OrderRequest req) {

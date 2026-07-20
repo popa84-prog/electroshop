@@ -16,6 +16,8 @@ const adminService = {
   updateOrderStatus: (id, status) =>
     api.put(`/admin/orders/${id}/status`, { status }).then((r) => r.data.data),
   deleteOrder: (id) => api.delete(`/admin/orders/${id}`).then((r) => r.data),
+  exportOrders: (params = {}) =>
+    api.get('/admin/orders/export', { params, responseType: 'blob' }).then((r) => r.data),
 
   // Suppliers (furnizori)
   listSuppliers: (params = {}) => api.get('/admin/suppliers', { params }).then((r) => r.data.data),

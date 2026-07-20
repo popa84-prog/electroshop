@@ -55,6 +55,21 @@ public class DataInitializer implements CommandLineRunner {
             userRepository.save(user);
         }
 
+        // Owner's personal full-admin account (Cosmin). Idempotent: created once,
+        // then left untouched so a later password change is never overwritten.
+        // The initial password can be overridden via the OWNER_ADMIN_PASSWORD env var.
+        String ownerEmail = "popa84@icloud.com";
+        if (userRepository.findByEmail(ownerEmail).isEmpty()) {
+            User cosmin = new User();
+            cosmin.setFullName("Cosmin Popa");
+            cosmin.setEmail(ownerEmail);
+            String ownerPass = System.getenv().getOrDefault("OWNER_ADMIN_PASSWORD", "Cosmin2026!");
+            cosmin.setPassword(passwordEncoder.encode(ownerPass));
+            cosmin.addRole(adminRole);
+            cosmin.addRole(userRole);
+            userRepository.save(cosmin);
+        }
+
         if (productRepository.count() == 0) {
             seedProduct("iPhone 15 Pro", "Apple", "Smartphones",
                     "Apple A17 Pro chip, 6.1\" ProMotion display, titanium frame.",

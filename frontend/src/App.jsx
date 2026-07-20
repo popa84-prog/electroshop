@@ -20,6 +20,7 @@ import AdminOrders from './pages/admin/AdminOrders';
 import AdminSuppliers from './pages/admin/AdminSuppliers';
 import AdminPurchases from './pages/admin/AdminPurchases';
 import AdminAccounting from './pages/admin/AdminAccounting';
+import AdminAuditLog from './pages/admin/AdminAuditLog';
 
 export default function App() {
   return (
@@ -113,6 +114,14 @@ export default function App() {
           element={
             <ProtectedRoute adminOnly>
               <AdminAccounting />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/audit"
+          element={
+            <ProtectedRoute adminOnly>
+              <AdminAuditLog />
             </ProtectedRoute>
           }
         />

@@ -4,6 +4,7 @@ import productService from '../api/productService';
 import { useCart } from '../context/CartContext';
 import { formatPrice, resolveImage } from '../utils/format';
 import Spinner from '../components/Spinner';
+import Lightbox from '../components/Lightbox';
 
 export default function ProductDetails() {
   const { id } = useParams();
@@ -13,6 +14,7 @@ export default function ProductDetails() {
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [lightbox, setLightbox] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -27,6 +29,9 @@ export default function ProductDetails() {
   if (error) return <p className="py-16 text-center text-slate-500">{error}</p>;
 
   const outOfStock = product.stockQuantity <= 0;
+  const gallery = (product.images && product.images.length ? product.images : [product.imageUrl]).filter(
+    Boolean
+  );
 
   const handleAddToCart = () => addItem(product, quantity);
   const handleBuyNow = () => {
@@ -41,13 +46,20 @@ export default function ProductDetails() {
       </Link>
 
       <div className="mt-4 grid gap-8 lg:grid-cols-2">
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <button
+          type="button"
+          onClick={() => gallery.length && setLightbox(true)}
+          className="group relative block overflow-hidden rounded-xl border border-slate-200 bg-white"
+        >
           <img
             src={resolveImage(product.imageUrl)}
             alt={product.name}
-            className="h-full max-h-[480px] w-full object-cover"
+            className="h-full max-h-[480px] w-full object-cover transition group-hover:scale-[1.02]"
           />
-        </div>
+          <span className="absolute bottom-3 right-3 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white opacity-0 transition group-hover:opacity-100">
+            🔍 Mărește
+          </span>
+        </button>
 
         <div className="flex flex-col">
           <span className="text-sm font-medium uppercase tracking-wide text-brand-600">
@@ -94,6 +106,8 @@ export default function ProductDetails() {
           </div>
         </div>
       </div>
+
+      {lightbox && <Lightbox images={gallery} onClose={() => setLightbox(false)} />}
     </div>
   );
 }

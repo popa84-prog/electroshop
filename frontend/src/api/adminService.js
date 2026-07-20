@@ -3,6 +3,9 @@ import api from './axios';
 const adminService = {
   dashboard: () => api.get('/admin/dashboard').then((r) => r.data.data),
 
+  // Audit log
+  listAuditLogs: (params = {}) => api.get('/admin/audit-logs', { params }).then((r) => r.data.data),
+
   // Users
   listUsers: (params = {}) => api.get('/admin/users', { params }).then((r) => r.data.data),
   getUser: (id) => api.get(`/admin/users/${id}`).then((r) => r.data.data),

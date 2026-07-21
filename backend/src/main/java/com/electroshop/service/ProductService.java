@@ -4,28 +4,38 @@ import com.electroshop.dto.ProductDto;
 import com.electroshop.dto.ProductRequest;
 import com.electroshop.exception.ResourceNotFoundException;
 import com.electroshop.model.Product;
+import com.electroshop.model.ProductImage;
 import com.electroshop.repository.ProductRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @Transactional
 public class ProductService {
 
+    private static final Set<String> ALLOWED_IMAGE_TYPES =
+            Set.of("image/jpeg", "image/jpg", "image/png", "image/webp");
+    private static final long MAX_IMAGE_BYTES = 5L * 1024 * 1024; // 5 MB
+
     private final ProductRepository productRepository;
     private final AuditService auditService;
+    private final CloudinaryService cloudinaryService;
 
-    public ProductService(ProductRepository productRepository, AuditService auditService) {
+    public ProductService(ProductRepository productRepository, AuditService auditService,
+                          CloudinaryService cloudinaryService) {
         this.productRepository = productRepository;
         this.auditService = auditService;
+        this.cloudinaryService = cloudinaryService;
     }
 
     @Transactional(readOnly = true)
@@ -44,7 +54,7 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     public ProductDto getById(Long id) {
-        return ProductDto.from(findEntity(id));
+        return ProductDto.detail(findEntity(id));
     }
 
     @Transactional(readOnly = true)
@@ -104,8 +114,104 @@ public class ProductService {
     public void delete(Long id) {
         Product p = findEntity(id);
         String name = p.getName();
+        // Remove hosted assets first, then the row (cascade drops the image rows).
+        for (ProductImage img : p.getImages()) {
+            cloudinaryService.delete(img.getPublicId());
+        }
         productRepository.delete(p);
         auditService.log("PRODUCT_DELETED", "Product", id, name);
+    }
+
+    // ==============================================================
+    //  Product image gallery (Cloudinary-hosted) — feature #5
+    // ==============================================================
+
+    /** Uploads one or more images to Cloudinary and attaches them to the product. */
+    public ProductDto addImages(Long id, MultipartFile[] files) {
+        Product p = findEntity(id);
+        if (files == null || files.length == 0) {
+            throw new IllegalArgumentException("Nu ai selectat nicio imagine.");
+        }
+        int nextPos = p.getImages().stream().mapToInt(ProductImage::getPosition).max().orElse(-1) + 1;
+        int added = 0;
+        for (MultipartFile file : files) {
+            if (file == null || file.isEmpty()) {
+                continue;
+            }
+            validateImage(file);
+            CloudinaryService.UploadResult res =
+                    cloudinaryService.upload(file, "electroshop/products/" + id);
+            ProductImage img = new ProductImage(p, res.url(), res.publicId(), nextPos++);
+            // First image on a product with no cover becomes the primary/cover.
+            if (p.getImages().isEmpty() && !hasPrimary(p)) {
+                img.setPrimary(true);
+                p.setImageUrl(res.url());
+            }
+            p.getImages().add(img);
+            added++;
+        }
+        if (added == 0) {
+            throw new IllegalArgumentException("Fișierele trimise sunt goale.");
+        }
+        Product saved = productRepository.save(p);
+        auditService.log("PRODUCT_IMAGE_ADDED", "Product", saved.getId(),
+                saved.getName() + " · " + added + " imagine(i)");
+        return ProductDto.detail(saved);
+    }
+
+    /** Deletes one image (from Cloudinary + DB), promoting a new cover if needed. */
+    public ProductDto deleteImage(Long id, Long imageId) {
+        Product p = findEntity(id);
+        ProductImage target = p.getImages().stream()
+                .filter(i -> i.getId().equals(imageId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("ProductImage", imageId));
+        boolean wasPrimary = target.isPrimary();
+        cloudinaryService.delete(target.getPublicId());
+        p.getImages().remove(target); // orphanRemoval deletes the row
+        if (wasPrimary) {
+            ProductImage next = p.getImages().stream().findFirst().orElse(null);
+            if (next != null) {
+                next.setPrimary(true);
+                p.setImageUrl(next.getUrl());
+            } else {
+                p.setImageUrl(null);
+            }
+        }
+        Product saved = productRepository.save(p);
+        auditService.log("PRODUCT_IMAGE_DELETED", "Product", saved.getId(), saved.getName());
+        return ProductDto.detail(saved);
+    }
+
+    /** Marks one image as the primary/cover. */
+    public ProductDto setPrimaryImage(Long id, Long imageId) {
+        Product p = findEntity(id);
+        ProductImage target = p.getImages().stream()
+                .filter(i -> i.getId().equals(imageId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("ProductImage", imageId));
+        for (ProductImage img : p.getImages()) {
+            img.setPrimary(img == target);
+        }
+        p.setImageUrl(target.getUrl());
+        Product saved = productRepository.save(p);
+        auditService.log("PRODUCT_IMAGE_PRIMARY", "Product", saved.getId(), saved.getName());
+        return ProductDto.detail(saved);
+    }
+
+    private boolean hasPrimary(Product p) {
+        return p.getImages().stream().anyMatch(ProductImage::isPrimary);
+    }
+
+    private void validateImage(MultipartFile file) {
+        String type = file.getContentType();
+        if (type == null || !ALLOWED_IMAGE_TYPES.contains(type.toLowerCase())) {
+            throw new IllegalArgumentException(
+                    "Format neacceptat: " + type + ". Sunt permise doar JPG, PNG și WebP.");
+        }
+        if (file.getSize() > MAX_IMAGE_BYTES) {
+            throw new IllegalArgumentException("Imaginea depășește limita de 5 MB.");
+        }
     }
 
     public Product findEntity(Long id) {

@@ -7,6 +7,8 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "products", indexes = {
@@ -50,8 +52,14 @@ public class Product {
     @Column(length = 60)
     private String sku;
 
+    /** Cover image — mirrors the {@link ProductImage} flagged primary. */
     @Column(length = 500)
     private String imageUrl;
+
+    /** Full image gallery (Cloudinary-hosted). Ordered by position then id. */
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("position ASC, id ASC")
+    private List<ProductImage> images = new ArrayList<>();
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();

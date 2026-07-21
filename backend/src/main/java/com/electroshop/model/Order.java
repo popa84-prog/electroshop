@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,6 +38,14 @@ public class Order {
 
     @Column(length = 300)
     private String shippingAddress;
+
+    // ---- Facturare (feature #9) — completate la prima generare a facturii ----
+    @Column(length = 12)
+    private String invoiceSeries;
+
+    private Integer invoiceNumber;
+
+    private LocalDate invoiceIssuedAt;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();

@@ -33,6 +33,15 @@ export default function AdminProducts() {
   const [error, setError] = useState(null);
   const [imageFile, setImageFile] = useState(null);
 
+  // Image gallery manager (feature #5)
+  const [images, setImages] = useState([]);
+  const [imgBusy, setImgBusy] = useState(false);
+  const [imgError, setImgError] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
+
+  const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  const MAX_BYTES = 5 * 1024 * 1024;
+
   // Import state
   const [importOpen, setImportOpen] = useState(false);
   const [importFile, setImportFile] = useState(null);
@@ -59,6 +68,8 @@ export default function AdminProducts() {
     setEditing(null);
     setForm(emptyForm);
     setImageFile(null);
+    setImages([]);
+    setImgError(null);
     setError(null);
     setModalOpen(true);
   };
@@ -78,8 +89,84 @@ export default function AdminProducts() {
       imageUrl: p.imageUrl || '',
     });
     setImageFile(null);
+    setImages(p.images || []);
+    setImgError(null);
     setError(null);
     setModalOpen(true);
+    // The list view doesn't carry the gallery — fetch full detail for images.
+    productService
+      .getById(p.id)
+      .then((detail) => setImages(detail.images || []))
+      .catch(() => {});
+  };
+
+  // ---- Image gallery handlers (feature #5) ----
+  const validateFiles = (fileList) => {
+    const files = Array.from(fileList || []);
+    const valid = [];
+    for (const f of files) {
+      if (!ALLOWED_TYPES.includes(f.type)) {
+        setImgError(`Format neacceptat: ${f.name}. Doar JPG, PNG, WebP.`);
+        continue;
+      }
+      if (f.size > MAX_BYTES) {
+        setImgError(`${f.name} depășește 5 MB.`);
+        continue;
+      }
+      valid.push(f);
+    }
+    return valid;
+  };
+
+  const handleImageFiles = async (fileList) => {
+    if (!editing) return;
+    setImgError(null);
+    const valid = validateFiles(fileList);
+    if (valid.length === 0) return;
+    setImgBusy(true);
+    try {
+      const detail = await productService.uploadProductImages(editing.id, valid);
+      if (detail) syncGallery(detail);
+    } catch (err) {
+      setImgError(err.response?.data?.message || 'Încărcarea imaginilor a eșuat.');
+    } finally {
+      setImgBusy(false);
+    }
+  };
+
+  const handleDeleteImage = async (imageId) => {
+    if (!editing) return;
+    setImgBusy(true);
+    setImgError(null);
+    try {
+      const detail = await productService.deleteProductImage(editing.id, imageId);
+      syncGallery(detail);
+    } catch (err) {
+      setImgError(err.response?.data?.message || 'Ștergerea imaginii a eșuat.');
+    } finally {
+      setImgBusy(false);
+    }
+  };
+
+  const handleSetPrimary = async (imageId) => {
+    if (!editing) return;
+    setImgBusy(true);
+    setImgError(null);
+    try {
+      const detail = await productService.setPrimaryImage(editing.id, imageId);
+      syncGallery(detail);
+    } catch (err) {
+      setImgError(err.response?.data?.message || 'Setarea imaginii principale a eșuat.');
+    } finally {
+      setImgBusy(false);
+    }
+  };
+
+  // Keep the gallery state and the cover-URL field in sync with the server,
+  // so a later "Salvează" doesn't overwrite a freshly-set primary image.
+  const syncGallery = (detail) => {
+    setImages(detail.images || []);
+    setForm((f) => ({ ...f, imageUrl: detail.imageUrl || '' }));
   };
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
@@ -101,8 +188,9 @@ export default function AdminProducts() {
       } else {
         saved = await productService.create(payload);
       }
-      if (imageFile) {
-        await productService.uploadImage(saved.id, imageFile);
+      // New product with a chosen file → upload it to Cloudinary as first image.
+      if (imageFile && !editing) {
+        await productService.uploadProductImages(saved.id, [imageFile]);
       }
       setModalOpen(false);
       load();
@@ -328,20 +416,105 @@ export default function AdminProducts() {
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-600">URL imagine</label>
+            <label className="mb-1 block text-sm font-medium text-slate-600">
+              URL imagine (opțional)
+            </label>
             <input name="imageUrl" className="input" value={form.imageUrl} onChange={handleChange} />
           </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-600">
-              sau încarcă o imagine
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              className="input"
-              onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-            />
-          </div>
+
+          {editing ? (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-600">Imagini produs</label>
+              {imgError && (
+                <div className="mb-2 rounded bg-red-50 px-3 py-1.5 text-xs text-red-700">{imgError}</div>
+              )}
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOver(true);
+                }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOver(false);
+                  handleImageFiles(e.dataTransfer.files);
+                }}
+                className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-6 text-center text-sm transition ${
+                  dragOver ? 'border-brand-500 bg-brand-50' : 'border-slate-300'
+                }`}
+              >
+                <p className="text-slate-600">Trage imaginile aici sau</p>
+                <label className="mt-1 cursor-pointer font-medium text-brand-600 hover:underline">
+                  alege fișiere
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      handleImageFiles(e.target.files);
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+                <p className="mt-1 text-xs text-slate-400">JPG, PNG sau WebP · max 5 MB</p>
+                {imgBusy && <p className="mt-2 text-xs text-brand-600">Se procesează...</p>}
+              </div>
+
+              {images.length > 0 && (
+                <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4">
+                  {images.map((img) => (
+                    <div
+                      key={img.id}
+                      className="group relative overflow-hidden rounded-lg border border-slate-200"
+                    >
+                      <img src={img.url} alt="" className="h-24 w-full object-cover" />
+                      {img.primary && (
+                        <span className="absolute left-1 top-1 rounded bg-brand-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                          Principală
+                        </span>
+                      )}
+                      <div className="absolute inset-x-0 bottom-0 flex items-center gap-1 bg-black/50 p-1 opacity-0 transition group-hover:opacity-100">
+                        {!img.primary && (
+                          <button
+                            type="button"
+                            onClick={() => handleSetPrimary(img.id)}
+                            disabled={imgBusy}
+                            className="rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-medium text-slate-700 hover:bg-white"
+                          >
+                            ★ Principală
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteImage(img.id)}
+                          disabled={imgBusy}
+                          className="ml-auto rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-medium text-white hover:bg-red-700"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-600">
+                Imagine principală (opțional)
+              </label>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="input"
+                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+              />
+              <p className="mt-1 text-xs text-slate-400">
+                Poți adăuga mai multe imagini după ce salvezi produsul.
+              </p>
+            </div>
+          )}
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" className="btn-secondary" onClick={() => setModalOpen(false)}>
               Anulează

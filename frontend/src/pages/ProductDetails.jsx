@@ -41,9 +41,12 @@ export default function ProductDetails() {
   if (error) return <p className="py-16 text-center text-slate-500">{error}</p>;
 
   const outOfStock = product.stockQuantity <= 0;
-  const gallery = (product.images && product.images.length ? product.images : [product.imageUrl]).filter(
-    Boolean
-  );
+  // product.images is a list of { id, url, primary }; fall back to the cover.
+  const gallery = (
+    product.images && product.images.length
+      ? product.images.map((i) => i.url)
+      : [product.imageUrl]
+  ).filter(Boolean);
 
   const handleAddToCart = () => addItem(product, quantity);
   const handleBuyNow = () => {

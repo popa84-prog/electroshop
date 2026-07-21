@@ -72,6 +72,22 @@ export default function AdminOrders() {
     }
   };
 
+  const downloadInvoice = async (order) => {
+    try {
+      const blob = await adminService.downloadInvoice(order.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Factura-comanda-${order.id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Generarea facturii a eșuat.');
+    }
+  };
+
   const handleDelete = async (order) => {
     if (!window.confirm(`Ștergi comanda #${order.id}?`)) return;
     try {
@@ -162,6 +178,9 @@ export default function AdminOrders() {
                     </select>
                   </td>
                   <td className="px-4 py-3 text-right">
+                    <button onClick={() => downloadInvoice(o)} className="mr-2 text-slate-600 hover:underline">
+                      Factură
+                    </button>
                     <button onClick={() => setDetail(o)} className="mr-2 text-brand-600 hover:underline">
                       Detalii
                     </button>
@@ -212,6 +231,9 @@ export default function AdminOrders() {
               <span className="font-semibold">Total</span>
               <span className="text-lg font-bold">{formatPrice(detail.totalAmount)}</span>
             </div>
+            <button className="btn-secondary w-full" onClick={() => downloadInvoice(detail)}>
+              🧾 Descarcă factura PDF
+            </button>
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-600">Schimbă status</label>
               <select

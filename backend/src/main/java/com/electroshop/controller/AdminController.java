@@ -2,6 +2,7 @@ package com.electroshop.controller;
 
 import com.electroshop.dto.*;
 import com.electroshop.service.AuditService;
+import com.electroshop.service.CompanySettingsService;
 import com.electroshop.service.DashboardService;
 import com.electroshop.service.OrderService;
 import com.electroshop.service.UserService;
@@ -32,13 +33,30 @@ public class AdminController {
     private final OrderService orderService;
     private final DashboardService dashboardService;
     private final AuditService auditService;
+    private final CompanySettingsService companySettingsService;
 
     public AdminController(UserService userService, OrderService orderService,
-                          DashboardService dashboardService, AuditService auditService) {
+                          DashboardService dashboardService, AuditService auditService,
+                          CompanySettingsService companySettingsService) {
         this.userService = userService;
         this.orderService = orderService;
         this.dashboardService = dashboardService;
         this.auditService = auditService;
+        this.companySettingsService = companySettingsService;
+    }
+
+    // ---------- Company / billing settings (feature #9) ----------
+
+    @GetMapping("/company-settings")
+    public ResponseEntity<ApiResponse<CompanySettingsDto>> getCompanySettings() {
+        return ResponseEntity.ok(ApiResponse.ok(companySettingsService.get()));
+    }
+
+    @PutMapping("/company-settings")
+    public ResponseEntity<ApiResponse<CompanySettingsDto>> updateCompanySettings(
+            @RequestBody CompanySettingsDto request) {
+        return ResponseEntity.ok(
+                ApiResponse.ok("Date firmă salvate", companySettingsService.update(request)));
     }
 
     // ---------- Dashboard ----------

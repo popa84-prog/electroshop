@@ -112,6 +112,31 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.ok("Image uploaded", productService.updateImage(id, url)));
     }
 
+    // ---- Cloudinary image gallery (feature #5) ----
+
+    /** Upload one or more product images (JPG/PNG/WebP) to Cloudinary. */
+    @PostMapping("/{id}/images")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<ProductDto>> uploadImages(@PathVariable Long id,
+                                                               @RequestParam("files") MultipartFile[] files) {
+        return ResponseEntity.ok(ApiResponse.ok("Imagini încărcate", productService.addImages(id, files)));
+    }
+
+    @DeleteMapping("/{id}/images/{imageId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<ProductDto>> deleteImage(@PathVariable Long id,
+                                                              @PathVariable Long imageId) {
+        return ResponseEntity.ok(ApiResponse.ok("Imagine ștearsă", productService.deleteImage(id, imageId)));
+    }
+
+    @PutMapping("/{id}/images/{imageId}/primary")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<ProductDto>> setPrimaryImage(@PathVariable Long id,
+                                                                  @PathVariable Long imageId) {
+        return ResponseEntity.ok(ApiResponse.ok("Imagine principală setată",
+                productService.setPrimaryImage(id, imageId)));
+    }
+
     /**
      * Import products from an .xlsx file. With dryRun=true (default) nothing is
      * written — it returns a validation report. With dryRun=false the valid rows

@@ -21,6 +21,7 @@ import AdminSuppliers from './pages/admin/AdminSuppliers';
 import AdminPurchases from './pages/admin/AdminPurchases';
 import AdminAccounting from './pages/admin/AdminAccounting';
 import AdminAuditLog from './pages/admin/AdminAuditLog';
+import AdminSettings from './pages/admin/AdminSettings';
 
 export default function App() {
   return (
@@ -122,6 +123,14 @@ export default function App() {
           element={
             <ProtectedRoute adminOnly>
               <AdminAuditLog />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/settings"
+          element={
+            <ProtectedRoute adminOnly>
+              <AdminSettings />
             </ProtectedRoute>
           }
         />

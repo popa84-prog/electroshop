@@ -28,6 +28,27 @@ const productService = {
       .post(`/products/${id}/image`, form, { headers: { 'Content-Type': 'multipart/form-data' } })
       .then((r) => r.data.data);
   },
+
+  // ---- Cloudinary image gallery (feature #5) ----
+  // Uploads one file at a time (keeps each request small) and returns the
+  // latest product detail (with the full image list) after the last upload.
+  uploadProductImages: async (id, files) => {
+    let last = null;
+    for (const file of files) {
+      const form = new FormData();
+      form.append('files', file);
+      // eslint-disable-next-line no-await-in-loop
+      const r = await api.post(`/products/${id}/images`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      last = r.data.data;
+    }
+    return last;
+  },
+  deleteProductImage: (id, imageId) =>
+    api.delete(`/products/${id}/images/${imageId}`).then((r) => r.data.data),
+  setPrimaryImage: (id, imageId) =>
+    api.put(`/products/${id}/images/${imageId}/primary`).then((r) => r.data.data),
 };
 
 export default productService;

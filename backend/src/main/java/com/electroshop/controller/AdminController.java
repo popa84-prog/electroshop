@@ -4,6 +4,7 @@ import com.electroshop.dto.*;
 import com.electroshop.service.AuditService;
 import com.electroshop.service.CompanySettingsService;
 import com.electroshop.service.DashboardService;
+import com.electroshop.service.InvoiceService;
 import com.electroshop.service.OrderService;
 import com.electroshop.service.UserService;
 import jakarta.validation.Valid;
@@ -34,15 +35,29 @@ public class AdminController {
     private final DashboardService dashboardService;
     private final AuditService auditService;
     private final CompanySettingsService companySettingsService;
+    private final InvoiceService invoiceService;
 
     public AdminController(UserService userService, OrderService orderService,
                           DashboardService dashboardService, AuditService auditService,
-                          CompanySettingsService companySettingsService) {
+                          CompanySettingsService companySettingsService,
+                          InvoiceService invoiceService) {
         this.userService = userService;
         this.orderService = orderService;
         this.dashboardService = dashboardService;
         this.auditService = auditService;
         this.companySettingsService = companySettingsService;
+        this.invoiceService = invoiceService;
+    }
+
+    // ---------- PDF invoice for an order (feature #9) ----------
+
+    @GetMapping("/orders/{id}/invoice")
+    public ResponseEntity<byte[]> orderInvoice(@PathVariable Long id) {
+        InvoiceService.InvoiceFile file = invoiceService.generateForOrder(id);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + file.filename())
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(file.content());
     }
 
     // ---------- Company / billing settings (feature #9) ----------

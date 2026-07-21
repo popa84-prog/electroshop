@@ -21,6 +21,9 @@ const adminService = {
   deleteOrder: (id) => api.delete(`/admin/orders/${id}`).then((r) => r.data),
   exportOrders: (params = {}) =>
     api.get('/admin/orders/export', { params, responseType: 'blob' }).then((r) => r.data),
+  // PDF invoice for one order (feature #9)
+  downloadInvoice: (id) =>
+    api.get(`/admin/orders/${id}/invoice`, { responseType: 'blob' }).then((r) => r.data),
 
   // Suppliers (furnizori)
   listSuppliers: (params = {}) => api.get('/admin/suppliers', { params }).then((r) => r.data.data),

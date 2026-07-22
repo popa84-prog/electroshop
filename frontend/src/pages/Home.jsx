@@ -32,8 +32,7 @@ export default function Home() {
             Tehnologie de top, la prețuri corecte
           </h1>
           <p className="mt-4 text-brand-50">
-            Descoperă cele mai noi telefoane, laptopuri, produse audio și accesorii. Livrare rapidă
-            și garanție inclusă.
+            Descoperă cele mai noi telefoane, laptopuri, produse audio și accesorii.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link to="/products" className="btn bg-white text-brand-700 hover:bg-brand-50">

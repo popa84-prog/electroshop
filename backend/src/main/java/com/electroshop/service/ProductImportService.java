@@ -12,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -41,6 +42,20 @@ public class ProductImportService {
 
     @Transactional
     public ProductImportResult importFromExcel(MultipartFile file, boolean dryRun) {
+        return importFromExcel(file, dryRun, false);
+    }
+
+    /**
+     * @param restock when true, runs in "intrare marfă" (stock intake) mode:
+     *   for products that already exist, the imported quantity is ADDED to the
+     *   current stock and the acquisition price is recomputed as the
+     *   quantity-weighted average (CMP). The selling price, category and other
+     *   fields of existing products are left untouched. Brand-new products are
+     *   still created in full. When false, existing products are overwritten
+     *   with the Excel values (classic import).
+     */
+    @Transactional
+    public ProductImportResult importFromExcel(MultipartFile file, boolean dryRun, boolean restock) {
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("Fișierul este gol.");
         }
@@ -167,30 +182,78 @@ public class ProductImportService {
 
         int created = 0;
         int updated = 0;
-        if (!dryRun) {
-            for (PreparedRow pr : prepared) {
-                Product p = null;
-                if (pr.sku != null) {
-                    p = productRepository.findFirstBySku(pr.sku).orElse(null);
-                }
-                if (p == null) {
-                    p = productRepository.findFirstByNameIgnoreCase(pr.name).orElse(null);
-                }
-                boolean isNew = (p == null);
-                if (isNew) p = new Product();
-                p.setName(pr.name);
-                p.setCategory(pr.category);
-                p.setSubcategory(pr.subcategory);
-                p.setBrand(pr.brand);
-                p.setDescription(pr.description);
-                p.setSku(pr.sku);
-                p.setStockQuantity(pr.stock);
-                p.setPurchasePrice(pr.purchase);
-                p.setPrice(pr.sell);
-                productRepository.save(p);
-                if (isNew) created++;
-                else updated++;
+        int restocked = 0;
+        for (PreparedRow pr : prepared) {
+            Product p = null;
+            if (pr.sku != null) {
+                p = productRepository.findFirstBySku(pr.sku).orElse(null);
             }
+            if (p == null) {
+                p = productRepository.findFirstByNameIgnoreCase(pr.name).orElse(null);
+            }
+            boolean isNew = (p == null);
+
+            if (isNew) {
+                // Brand-new product — created in full in every mode.
+                if (!dryRun) {
+                    Product np = new Product();
+                    np.setName(pr.name);
+                    np.setCategory(pr.category);
+                    np.setSubcategory(pr.subcategory);
+                    np.setBrand(pr.brand);
+                    np.setDescription(pr.description);
+                    np.setSku(pr.sku);
+                    np.setStockQuantity(pr.stock);
+                    np.setPurchasePrice(pr.purchase);
+                    np.setPrice(pr.sell);
+                    productRepository.save(np);
+                }
+                created++;
+            } else if (restock) {
+                // Intrare marfă: adaugă la stoc + medie ponderată a prețului de achiziție.
+                int existingStock = p.getStockQuantity() != null ? p.getStockQuantity() : 0;
+                int incoming = pr.stock != null ? pr.stock : 0;
+                int totalStock = existingStock + incoming;
+                BigDecimal newPurchase = p.getPurchasePrice();
+                if (pr.purchase != null) {
+                    BigDecimal existingPurchase = p.getPurchasePrice();
+                    if (existingPurchase == null || existingStock <= 0) {
+                        // Nimic de mediat — folosește prețul nou.
+                        newPurchase = pr.purchase;
+                    } else if (incoming > 0) {
+                        newPurchase = existingPurchase.multiply(BigDecimal.valueOf(existingStock))
+                                .add(pr.purchase.multiply(BigDecimal.valueOf(incoming)))
+                                .divide(BigDecimal.valueOf(totalStock), 2, RoundingMode.HALF_UP);
+                    }
+                }
+                if (!dryRun) {
+                    p.setStockQuantity(totalStock);
+                    p.setPurchasePrice(newPurchase);
+                    // Preț de vânzare, categorie, brand etc. rămân neschimbate.
+                    productRepository.save(p);
+                }
+                restocked++;
+                updated++;
+            } else {
+                // Import normal: suprascrie câmpurile existente cu valorile din Excel.
+                if (!dryRun) {
+                    p.setName(pr.name);
+                    p.setCategory(pr.category);
+                    p.setSubcategory(pr.subcategory);
+                    p.setBrand(pr.brand);
+                    p.setDescription(pr.description);
+                    p.setSku(pr.sku);
+                    p.setStockQuantity(pr.stock);
+                    p.setPurchasePrice(pr.purchase);
+                    p.setPrice(pr.sell);
+                    productRepository.save(p);
+                }
+                updated++;
+            }
+        }
+        if (restock) {
+            warnings.add(0, "Mod intrare marfă: " + restocked + " produse existente au primit cantitatea adăugată la stoc și prețul de achiziție recalculat ca medie ponderată; "
+                    + created + " produse noi au fost adăugate. Prețul de vânzare și categoriile produselor existente nu au fost modificate.");
         }
 
         return new ProductImportResult(dryRun, totalRows, prepared.size(), created, updated, errors, warnings);

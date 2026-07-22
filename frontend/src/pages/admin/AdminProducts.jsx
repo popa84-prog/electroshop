@@ -52,6 +52,9 @@ export default function AdminProducts() {
   const [importDone, setImportDone] = useState(null);
   // When true, the modal only syncs purchase prices (no create/update of other fields).
   const [syncMode, setSyncMode] = useState(false);
+  // When true, import runs in "intrare marfă" mode: existing products get stock
+  // added and a quantity-weighted average purchase price.
+  const [restockMode, setRestockMode] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -225,6 +228,7 @@ export default function AdminProducts() {
     setImportError(null);
     setImportDone(null);
     setSyncMode(false);
+    setRestockMode(false);
     setImportOpen(true);
   };
 
@@ -238,7 +242,7 @@ export default function AdminProducts() {
     try {
       const report = syncMode
         ? await productService.syncPurchasePrices(importFile, dryRun)
-        : await productService.importProducts(importFile, dryRun);
+        : await productService.importProducts(importFile, dryRun, restockMode);
       if (dryRun) {
         setImportReport(report);
       } else {
@@ -566,17 +570,20 @@ export default function AdminProducts() {
 
         <p className="mb-3 text-sm text-slate-600">
           {syncMode
-            ? 'Mod „doar prețuri achiziție”: actualizez DOAR prețul de achiziție al produselor existente, potrivind după nume. Nu creez, nu șterg și nu modific stoc, preț de vânzare sau categorii.'
+            ? 'Mod "doar prețuri achiziție": actualizez DOAR prețul de achiziție al produselor existente, potrivind după nume. Nu creez, nu șterg și nu modific stoc, preț de vânzare sau categorii.'
+            : restockMode
+            ? 'Mod "intrare marfă": pentru produsele care există deja, adaug cantitatea din Excel la stocul curent și recalculez prețul de achiziție ca medie ponderată după cantitate. Produsele noi sunt adăugate normal. Prețul de vânzare și categoriile produselor existente rămân neschimbate.'
             : 'Încarcă fișierul .xlsx completat după șablon. Îl verific întâi (fără a scrie nimic) și îți arăt exact ce e valid și ce trebuie corectat. Abia după confirmare import produsele.'}
         </p>
 
-        <label className="mb-3 flex cursor-pointer items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+        <label className="mb-2 flex cursor-pointer items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
           <input
             type="checkbox"
             className="mt-0.5"
             checked={syncMode}
             onChange={(e) => {
               setSyncMode(e.target.checked);
+              if (e.target.checked) setRestockMode(false);
               setImportReport(null);
               setImportDone(null);
               setImportError(null);
@@ -585,6 +592,26 @@ export default function AdminProducts() {
           <span>
             <span className="font-medium">Doar prețuri de achiziție</span> — completează prețul de
             achiziție lipsă din baza de date, fără a atinge stocul, prețul de vânzare sau categoriile.
+          </span>
+        </label>
+
+        <label className="mb-3 flex cursor-pointer items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={restockMode}
+            onChange={(e) => {
+              setRestockMode(e.target.checked);
+              if (e.target.checked) setSyncMode(false);
+              setImportReport(null);
+              setImportDone(null);
+              setImportError(null);
+            }}
+          />
+          <span>
+            <span className="font-medium">Mod intrare marfă</span> — la produsele existente adaugă
+            cantitatea la stoc și recalculează prețul de achiziție ca medie ponderată (CMP); produsele
+            noi sunt adăugate normal.
           </span>
         </label>
 
@@ -611,8 +638,12 @@ export default function AdminProducts() {
               />
               <Stat label="Cu erori" value={importReport.errors?.length || 0} tone="red" />
               <Stat
-                label={syncMode ? 'Se vor actualiza' : 'Avertismente'}
-                value={syncMode ? importReport.updatedCount : importReport.warnings?.length || 0}
+                label={syncMode ? 'Se vor actualiza' : restockMode ? 'La stoc (există)' : 'Avertismente'}
+                value={
+                  syncMode || restockMode
+                    ? importReport.updatedCount
+                    : importReport.warnings?.length || 0
+                }
                 tone="amber"
               />
             </div>
@@ -621,6 +652,8 @@ export default function AdminProducts() {
               <div className="rounded-lg bg-green-50 px-4 py-2 text-sm text-green-700">
                 {syncMode
                   ? `Sincronizare finalizată: ${importDone.updatedCount} produse au primit prețul de achiziție.`
+                  : restockMode
+                  ? `Intrare marfă finalizată: ${importDone.updatedCount} produse actualizate la stoc (medie ponderată), ${importDone.createdCount} produse noi.`
                   : `Import finalizat: ${importDone.createdCount} adăugate, ${importDone.updatedCount} actualizate.`}
               </div>
             )}
@@ -670,9 +703,15 @@ export default function AdminProducts() {
             onClick={() => runImport(false)}
           >
             {importDone
-              ? (syncMode ? 'Sincronizat ✓' : 'Importat ✓')
+              ? syncMode
+                ? 'Sincronizat ✓'
+                : restockMode
+                ? 'Recepționat ✓'
+                : 'Importat ✓'
               : syncMode
               ? `Sincronizează ${importReport ? importReport.updatedCount : ''} prețuri`
+              : restockMode
+              ? `Înregistrează intrarea (${importReport ? importReport.validCount : ''})`
               : `Importă ${importReport ? importReport.validCount : ''} produse`}
           </button>
         </div>

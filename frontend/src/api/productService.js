@@ -8,11 +8,11 @@ const productService = {
   brands: () => api.get('/products/brands').then((r) => r.data.data),
   companyInfo: () => api.get('/products/company-info').then((r) => r.data.data),
 
-  importProducts: (file, dryRun = true) => {
+  importProducts: (file, dryRun = true, restock = false) => {
     const form = new FormData();
     form.append('file', file);
     return api
-      .post(`/products/import?dryRun=${dryRun}`, form, {
+      .post(`/products/import?dryRun=${dryRun}&restock=${restock}`, form, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
       .then((r) => r.data.data);

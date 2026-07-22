@@ -50,6 +50,8 @@ export default function AdminProducts() {
   const [importBusy, setImportBusy] = useState(false);
   const [importError, setImportError] = useState(null);
   const [importDone, setImportDone] = useState(null);
+  // When true, the modal only syncs purchase prices (no create/update of other fields).
+  const [syncMode, setSyncMode] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -222,6 +224,7 @@ export default function AdminProducts() {
     setImportReport(null);
     setImportError(null);
     setImportDone(null);
+    setSyncMode(false);
     setImportOpen(true);
   };
 
@@ -233,7 +236,9 @@ export default function AdminProducts() {
     setImportBusy(true);
     setImportError(null);
     try {
-      const report = await productService.importProducts(importFile, dryRun);
+      const report = syncMode
+        ? await productService.syncPurchasePrices(importFile, dryRun)
+        : await productService.importProducts(importFile, dryRun);
       if (dryRun) {
         setImportReport(report);
       } else {
@@ -560,9 +565,28 @@ export default function AdminProducts() {
         )}
 
         <p className="mb-3 text-sm text-slate-600">
-          Încarcă fișierul .xlsx completat după șablon. Îl verific întâi (fără a scrie nimic) și îți
-          arăt exact ce e valid și ce trebuie corectat. Abia după confirmare import produsele.
+          {syncMode
+            ? 'Mod „doar prețuri achiziție”: actualizez DOAR prețul de achiziție al produselor existente, potrivind după nume. Nu creez, nu șterg și nu modific stoc, preț de vânzare sau categorii.'
+            : 'Încarcă fișierul .xlsx completat după șablon. Îl verific întâi (fără a scrie nimic) și îți arăt exact ce e valid și ce trebuie corectat. Abia după confirmare import produsele.'}
         </p>
+
+        <label className="mb-3 flex cursor-pointer items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={syncMode}
+            onChange={(e) => {
+              setSyncMode(e.target.checked);
+              setImportReport(null);
+              setImportDone(null);
+              setImportError(null);
+            }}
+          />
+          <span>
+            <span className="font-medium">Doar prețuri de achiziție</span> — completează prețul de
+            achiziție lipsă din baza de date, fără a atinge stocul, prețul de vânzare sau categoriile.
+          </span>
+        </label>
 
         <input
           type="file"
@@ -580,14 +604,24 @@ export default function AdminProducts() {
           <div className="mt-4 space-y-3">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Stat label="Rânduri" value={importReport.totalRows} />
-              <Stat label="Valide" value={importReport.validCount} tone="green" />
+              <Stat
+                label={syncMode ? 'Cu preț achiziție' : 'Valide'}
+                value={importReport.validCount}
+                tone="green"
+              />
               <Stat label="Cu erori" value={importReport.errors?.length || 0} tone="red" />
-              <Stat label="Avertismente" value={importReport.warnings?.length || 0} tone="amber" />
+              <Stat
+                label={syncMode ? 'Se vor actualiza' : 'Avertismente'}
+                value={syncMode ? importReport.updatedCount : importReport.warnings?.length || 0}
+                tone="amber"
+              />
             </div>
 
             {importDone && (
               <div className="rounded-lg bg-green-50 px-4 py-2 text-sm text-green-700">
-                Import finalizat: {importDone.createdCount} adăugate, {importDone.updatedCount} actualizate.
+                {syncMode
+                  ? `Sincronizare finalizată: ${importDone.updatedCount} produse au primit prețul de achiziție.`
+                  : `Import finalizat: ${importDone.createdCount} adăugate, ${importDone.updatedCount} actualizate.`}
               </div>
             )}
 
@@ -636,7 +670,9 @@ export default function AdminProducts() {
             onClick={() => runImport(false)}
           >
             {importDone
-              ? 'Importat ✓'
+              ? (syncMode ? 'Sincronizat ✓' : 'Importat ✓')
+              : syncMode
+              ? `Sincronizează ${importReport ? importReport.updatedCount : ''} prețuri`
               : `Importă ${importReport ? importReport.validCount : ''} produse`}
           </button>
         </div>

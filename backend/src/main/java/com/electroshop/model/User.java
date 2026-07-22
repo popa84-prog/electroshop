@@ -10,50 +10,69 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-    @Table(name = "users", uniqueConstraints = @UniqueConstraint(columnNames = "email"))
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    public class User {
+@Table(name = "users", uniqueConstraints = @UniqueConstraint(columnNames = "email"))
+@Getter
+@Setter
+@NoArgsConstructor
+public class User {
 
     @Id
-            @GeneratedValue(strategy = GenerationType.IDENTITY)
-            private Long id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(nullable = false, length = 100)
-            private String fullName;
+    private String fullName;
 
     @Column(nullable = false, unique = true, length = 150)
-            private String email;
+    private String email;
 
     @Column(nullable = false)
-            private String password;
+    private String password;
 
     @Column(nullable = false)
-            private boolean enabled = true;
+    private boolean enabled = true;
+
+    /**
+     * Whether an administrator has approved this account. New self-registered
+     * accounts start as {@code false} (pending) and cannot log in until approved.
+     * Nullable on purpose: pre-existing accounts get a NULL column when Hibernate
+     * adds it, and SchemaFixer grandfathers those NULLs to TRUE on startup so no
+     * existing user is locked out.
+     */
+    @Column
+    private Boolean approved = false;
+
+    // --- Last successful login tracking (quick view; full history in login_events) ---
+    private LocalDateTime lastLoginAt;
+
+    @Column(length = 45)
+    private String lastLoginIp;
+
+    @Column(length = 120)
+    private String lastLoginLocation;
 
     @Column(nullable = false, updatable = false)
-            private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt = LocalDateTime.now();
 
     @ManyToMany(fetch = FetchType.EAGER)
-            @JoinTable(
-                            name = "user_roles",
-                            joinColumns = @JoinColumn(name = "user_id"),
-                            inverseJoinColumns = @JoinColumn(name = "role_id")
-                    )
-            private Set<Role> roles = new HashSet<>();
+    @JoinTable(
+            name = "user_roles",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    private Set<Role> roles = new HashSet<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-            private Set<Order> orders = new HashSet<>();
+    private Set<Order> orders = new HashSet<>();
 
     @PrePersist
-            protected void onCreate() {
-                        if (createdAt == null) {
-                                        createdAt = LocalDateTime.now();
-                        }
-            }
+    protected void onCreate() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+    }
 
     public void addRole(Role role) {
-                this.roles.add(role);
+        this.roles.add(role);
     }
-    }
+}

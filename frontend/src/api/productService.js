@@ -18,6 +18,18 @@ const productService = {
       .then((r) => r.data.data);
   },
 
+  // Sync ONLY the purchase price (pret achizitie) on existing products, by name.
+  // Does not create/delete products or change stock, price or categories.
+  syncPurchasePrices: (file, dryRun = true) => {
+    const form = new FormData();
+    form.append('file', file);
+    return api
+      .post(`/products/sync-purchase-prices?dryRun=${dryRun}`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data.data);
+  },
+
   // Admin
   create: (payload) => api.post('/products', payload).then((r) => r.data.data),
   update: (id, payload) => api.put(`/products/${id}`, payload).then((r) => r.data.data),

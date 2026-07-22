@@ -1,5 +1,6 @@
 package com.electroshop.service;
 
+import com.electroshop.dto.LoginEventDto;
 import com.electroshop.dto.UserDto;
 import com.electroshop.dto.UserRequest;
 import com.electroshop.exception.BadRequestException;
@@ -7,6 +8,7 @@ import com.electroshop.exception.ResourceNotFoundException;
 import com.electroshop.model.Role;
 import com.electroshop.model.RoleName;
 import com.electroshop.model.User;
+import com.electroshop.repository.LoginEventRepository;
 import com.electroshop.repository.RoleRepository;
 import com.electroshop.repository.UserRepository;
 import org.springframework.data.domain.Page;
@@ -25,12 +27,14 @@ public class UserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final LoginEventRepository loginEventRepository;
 
     public UserService(UserRepository userRepository, RoleRepository roleRepository,
-                       PasswordEncoder passwordEncoder) {
+                       PasswordEncoder passwordEncoder, LoginEventRepository loginEventRepository) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
+        this.loginEventRepository = loginEventRepository;
     }
 
     @Transactional(readOnly = true)
@@ -40,6 +44,33 @@ public class UserService {
                 : userRepository.findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
                         search, search, pageable);
         return page.map(UserDto::from);
+    }
+
+    /** Accounts awaiting admin approval. */
+    @Transactional(readOnly = true)
+    public Page<UserDto> listPending(Pageable pageable) {
+        return userRepository.findPending(pageable).map(UserDto::from);
+    }
+
+    @Transactional(readOnly = true)
+    public long countPending() {
+        return userRepository.countPending();
+    }
+
+    /** Approve a pending account so its owner can log in. */
+    public UserDto approve(Long id) {
+        User user = findEntity(id);
+        user.setApproved(true);
+        return UserDto.from(userRepository.save(user));
+    }
+
+    /** Connection history (all users, or a single user when userId is provided). */
+    @Transactional(readOnly = true)
+    public Page<LoginEventDto> listLoginEvents(Long userId, Pageable pageable) {
+        return (userId == null
+                ? loginEventRepository.findAllByOrderByLoginAtDesc(pageable)
+                : loginEventRepository.findByUserIdOrderByLoginAtDesc(userId, pageable))
+                .map(LoginEventDto::from);
     }
 
     @Transactional(readOnly = true)
@@ -65,6 +96,7 @@ public class UserService {
         user.setEmail(req.email());
         user.setPassword(passwordEncoder.encode(req.password()));
         user.setEnabled(req.enabled() == null || req.enabled());
+        user.setApproved(true); // accounts created by an admin are approved immediately
         user.setRoles(resolveRoles(req.roles()));
         return UserDto.from(userRepository.save(user));
     }

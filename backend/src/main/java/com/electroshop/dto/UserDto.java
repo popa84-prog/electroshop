@@ -12,8 +12,12 @@ public record UserDto(
         String fullName,
         String email,
         boolean enabled,
+        boolean approved,
         Set<String> roles,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        LocalDateTime lastLoginAt,
+        String lastLoginIp,
+        String lastLoginLocation
 ) {
     public static UserDto from(User u) {
         return new UserDto(
@@ -21,8 +25,12 @@ public record UserDto(
                 u.getFullName(),
                 u.getEmail(),
                 u.isEnabled(),
+                Boolean.TRUE.equals(u.getApproved()),
                 u.getRoles().stream().map(Role::getName).map(Enum::name).collect(Collectors.toSet()),
-                u.getCreatedAt()
+                u.getCreatedAt(),
+                u.getLastLoginAt(),
+                u.getLastLoginIp(),
+                u.getLastLoginLocation()
         );
     }
 }

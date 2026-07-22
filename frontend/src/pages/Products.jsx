@@ -29,6 +29,9 @@ export default function Products() {
   const inStock = searchParams.get('inStock') === 'true';
   const sort = searchParams.get('sort') || 'createdAt:desc';
   const search = searchParams.get('search') || '';
+  const view = searchParams.get('view') || 'grid';
+  const pageSize = Number(searchParams.get('size') || 12);
+  const [total, setTotal] = useState(0);
 
   const [searchInput, setSearchInput] = useState(search);
   const [minInput, setMinInput] = useState(minPrice);
@@ -45,7 +48,7 @@ export default function Products() {
     productService
       .list({
         page,
-        size: 12,
+        size: pageSize,
         search,
         category,
         subcategory,
@@ -59,10 +62,11 @@ export default function Products() {
       .then((data) => {
         setProducts(data.content);
         setTotalPages(data.totalPages);
+        setTotal(data.totalElements ?? data.content.length);
       })
       .catch(() => setProducts([]))
       .finally(() => setLoading(false));
-  }, [page, search, category, subcategory, brand, minPrice, maxPrice, inStock, sort]);
+  }, [page, pageSize, search, category, subcategory, brand, minPrice, maxPrice, inStock, sort]);
 
   const updateParam = (updates) => {
     const next = new URLSearchParams(searchParams);
@@ -218,17 +222,76 @@ export default function Products() {
 
         {/* Results */}
         <div>
+          {/* Toolbar: result count, per-page selector, grid/list toggle */}
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <span className="text-sm text-graphite-500">
+              {loading ? 'Se încarcă…' : `${total} produse`}
+            </span>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 text-sm text-graphite-600">
+                Pe pagină
+                <select
+                  className="input w-auto py-1"
+                  value={pageSize}
+                  onChange={(e) => updateParam({ size: e.target.value, page: 0 })}
+                >
+                  {[12, 24, 48, 96].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="flex overflow-hidden rounded-lg border border-graphite-200">
+                <button
+                  type="button"
+                  title="Vizualizare grilă"
+                  aria-label="Grilă"
+                  onClick={() => updateParam({ view: 'grid' })}
+                  className={`px-3 py-1.5 text-sm ${
+                    view === 'grid'
+                      ? 'bg-brand-600 text-white'
+                      : 'bg-white text-graphite-600 hover:bg-champagne-100'
+                  }`}
+                >
+                  ▦
+                </button>
+                <button
+                  type="button"
+                  title="Vizualizare listă"
+                  aria-label="Listă"
+                  onClick={() => updateParam({ view: 'list' })}
+                  className={`px-3 py-1.5 text-sm ${
+                    view === 'list'
+                      ? 'bg-brand-600 text-white'
+                      : 'bg-white text-graphite-600 hover:bg-champagne-100'
+                  }`}
+                >
+                  ☰
+                </button>
+              </div>
+            </div>
+          </div>
+
           {loading ? (
             <Spinner />
           ) : products.length === 0 ? (
-            <p className="py-16 text-center text-slate-500">Niciun produs găsit.</p>
+            <p className="py-16 text-center text-graphite-500">Niciun produs găsit.</p>
           ) : (
             <>
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-                {products.map((p) => (
-                  <ProductCard key={p.id} product={p} />
-                ))}
-              </div>
+              {view === 'list' ? (
+                <div className="flex flex-col gap-3">
+                  {products.map((p) => (
+                    <ProductCard key={p.id} product={p} layout="list" />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                  {products.map((p) => (
+                    <ProductCard key={p.id} product={p} layout="grid" />
+                  ))}
+                </div>
+              )}
               <Pagination
                 page={page}
                 totalPages={totalPages}

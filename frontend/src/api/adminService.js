@@ -45,6 +45,11 @@ const adminService = {
   listProductsAll: (params = { page: 0, size: 200 }) =>
     api.get('/products', { params }).then((r) => r.data.data),
 
+  // Admin product views WITH purchase price + profit (feature #2)
+  listAdminProducts: (params = {}) =>
+    api.get('/admin/products', { params }).then((r) => r.data.data),
+  getAdminProduct: (id) => api.get(`/admin/products/${id}`).then((r) => r.data.data),
+
   // Company / billing settings (feature #9)
   getCompanySettings: () => api.get('/admin/company-settings').then((r) => r.data.data),
   updateCompanySettings: (payload) =>

@@ -6,6 +6,7 @@ const productService = {
   categories: () => api.get('/products/categories').then((r) => r.data.data),
   categoryTree: () => api.get('/products/category-tree').then((r) => r.data.data),
   brands: () => api.get('/products/brands').then((r) => r.data.data),
+  companyInfo: () => api.get('/products/company-info').then((r) => r.data.data),
 
   importProducts: (file, dryRun = true) => {
     const form = new FormData();

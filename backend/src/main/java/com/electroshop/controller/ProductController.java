@@ -163,4 +163,20 @@ public class ProductController {
         String msg = dryRun ? "Previzualizare import" : "Import finalizat";
         return ResponseEntity.ok(ApiResponse.ok(msg, result));
     }
+
+    /**
+     * Surgical purchase-price sync: updates ONLY purchase_price on existing
+     * products (matched by name). Does not create, delete, or change any other
+     * field. Use dryRun=true first for a preview. Admin only.
+     */
+    @PostMapping("/sync-purchase-prices")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<ProductImportResult>> syncPurchasePrices(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(name = "dryRun", defaultValue = "true") boolean dryRun) {
+        ProductImportResult result = productImportService.syncPurchasePrices(file, dryRun);
+        String msg = dryRun ? "Previzualizare sincronizare prețuri achiziție"
+                            : "Prețuri de achiziție actualizate";
+        return ResponseEntity.ok(ApiResponse.ok(msg, result));
+    }
 }

@@ -158,9 +158,12 @@ public class ProductController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<ProductImportResult>> importExcel(
             @RequestParam("file") MultipartFile file,
-            @RequestParam(name = "dryRun", defaultValue = "true") boolean dryRun) {
-        ProductImportResult result = productImportService.importFromExcel(file, dryRun);
-        String msg = dryRun ? "Previzualizare import" : "Import finalizat";
+            @RequestParam(name = "dryRun", defaultValue = "true") boolean dryRun,
+            @RequestParam(name = "restock", defaultValue = "false") boolean restock) {
+        ProductImportResult result = productImportService.importFromExcel(file, dryRun, restock);
+        String msg = dryRun
+                ? (restock ? "Previzualizare intrare marfă" : "Previzualizare import")
+                : (restock ? "Intrare marfă finalizată" : "Import finalizat");
         return ResponseEntity.ok(ApiResponse.ok(msg, result));
     }
 

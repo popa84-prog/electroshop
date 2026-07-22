@@ -6,6 +6,7 @@ import com.electroshop.service.CompanySettingsService;
 import com.electroshop.service.DashboardService;
 import com.electroshop.service.InvoiceService;
 import com.electroshop.service.OrderService;
+import com.electroshop.service.ProductService;
 import com.electroshop.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -36,17 +37,36 @@ public class AdminController {
     private final AuditService auditService;
     private final CompanySettingsService companySettingsService;
     private final InvoiceService invoiceService;
+    private final ProductService productService;
 
     public AdminController(UserService userService, OrderService orderService,
                           DashboardService dashboardService, AuditService auditService,
                           CompanySettingsService companySettingsService,
-                          InvoiceService invoiceService) {
+                          InvoiceService invoiceService, ProductService productService) {
         this.userService = userService;
         this.orderService = orderService;
         this.dashboardService = dashboardService;
         this.auditService = auditService;
         this.companySettingsService = companySettingsService;
         this.invoiceService = invoiceService;
+        this.productService = productService;
+    }
+
+    // ---------- Admin product views (with purchase price + profit, feature #2) ----------
+
+    @GetMapping("/products")
+    public ResponseEntity<ApiResponse<PageResponse<AdminProductDto>>> listProducts(
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Page<AdminProductDto> result = productService.adminList(search,
+                PageRequest.of(page, size, Sort.by("createdAt").descending()));
+        return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(result)));
+    }
+
+    @GetMapping("/products/{id}")
+    public ResponseEntity<ApiResponse<AdminProductDto>> getProduct(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.ok(productService.adminGet(id)));
     }
 
     // ---------- PDF invoice for an order (feature #9) ----------

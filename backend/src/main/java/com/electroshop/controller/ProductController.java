@@ -1,10 +1,12 @@
 package com.electroshop.controller;
 
 import com.electroshop.dto.ApiResponse;
+import com.electroshop.dto.CompanyPublicDto;
 import com.electroshop.dto.PageResponse;
 import com.electroshop.dto.ProductDto;
 import com.electroshop.dto.ProductImportResult;
 import com.electroshop.dto.ProductRequest;
+import com.electroshop.service.CompanySettingsService;
 import com.electroshop.service.FileStorageService;
 import com.electroshop.service.ProductImportService;
 import com.electroshop.service.ProductService;
@@ -28,12 +30,22 @@ public class ProductController {
     private final ProductService productService;
     private final FileStorageService fileStorageService;
     private final ProductImportService productImportService;
+    private final CompanySettingsService companySettingsService;
 
     public ProductController(ProductService productService, FileStorageService fileStorageService,
-                             ProductImportService productImportService) {
+                             ProductImportService productImportService,
+                             CompanySettingsService companySettingsService) {
         this.productService = productService;
         this.fileStorageService = fileStorageService;
         this.productImportService = productImportService;
+        this.companySettingsService = companySettingsService;
+    }
+
+    /** Public company contact details for the storefront footer (feature #1). */
+    @GetMapping("/company-info")
+    public ResponseEntity<ApiResponse<CompanyPublicDto>> companyInfo() {
+        return ResponseEntity.ok(ApiResponse.ok(
+                CompanyPublicDto.from(companySettingsService.getEntity())));
     }
 
     // ---- Public ----

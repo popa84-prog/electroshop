@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import productService from '../../api/productService';
+import adminService from '../../api/adminService';
 import AdminNav from '../../components/AdminNav';
 import Modal from '../../components/Modal';
 import Pagination from '../../components/Pagination';
@@ -52,8 +53,9 @@ export default function AdminProducts() {
 
   const load = () => {
     setLoading(true);
-    productService
-      .list({ page, size: 10, search })
+    // Admin endpoint: includes purchasePrice + profit (only visible to admins).
+    adminService
+      .listAdminProducts({ page, size: 10, search })
       .then((data) => {
         setProducts(data.content);
         setTotalPages(data.totalPages);
@@ -93,10 +95,13 @@ export default function AdminProducts() {
     setImgError(null);
     setError(null);
     setModalOpen(true);
-    // The list view doesn't carry the gallery — fetch full detail for images.
-    productService
-      .getById(p.id)
-      .then((detail) => setImages(detail.images || []))
+    // Fetch full admin detail for images + the exact purchase price.
+    adminService
+      .getAdminProduct(p.id)
+      .then((detail) => {
+        setImages(detail.images || []);
+        setForm((f) => ({ ...f, purchasePrice: detail.purchasePrice ?? '' }));
+      })
       .catch(() => {});
   };
 
@@ -277,7 +282,9 @@ export default function AdminProducts() {
               <tr>
                 <th className="px-4 py-3">Produs</th>
                 <th className="px-4 py-3">Categorie</th>
-                <th className="px-4 py-3">Preț</th>
+                <th className="px-4 py-3">Preț vânzare</th>
+                <th className="px-4 py-3">Achiziție</th>
+                <th className="px-4 py-3">Profit</th>
                 <th className="px-4 py-3">Stoc</th>
                 <th className="px-4 py-3 text-right">Acțiuni</th>
               </tr>
@@ -303,6 +310,21 @@ export default function AdminProducts() {
                     {p.subcategory ? <span className="text-slate-400"> · {p.subcategory}</span> : null}
                   </td>
                   <td className="px-4 py-3 font-medium">{formatPrice(p.price)}</td>
+                  <td className="px-4 py-3 text-graphite-600">
+                    {p.purchasePrice != null ? formatPrice(p.purchasePrice) : '—'}
+                  </td>
+                  <td className="px-4 py-3">
+                    {p.profit != null ? (
+                      <span className="font-medium text-brand-700">
+                        {formatPrice(p.profit)}
+                        {p.marginPercent != null && (
+                          <span className="ml-1 text-xs text-graphite-400">· {p.marginPercent}%</span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-graphite-400">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <span
                       className={`badge ${

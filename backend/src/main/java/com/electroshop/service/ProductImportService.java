@@ -32,9 +32,11 @@ public class ProductImportService {
     }
 
     private final ProductRepository productRepository;
+    private final ProductCategorizer categorizer;
 
-    public ProductImportService(ProductRepository productRepository) {
+    public ProductImportService(ProductRepository productRepository, ProductCategorizer categorizer) {
         this.productRepository = productRepository;
+        this.categorizer = categorizer;
     }
 
     @Transactional
@@ -120,6 +122,17 @@ public class ProductImportService {
                 if (!rowErrs.isEmpty()) {
                     errors.add(new RowError(humanRow, String.join("; ", rowErrs)));
                     continue;
+                }
+
+                // Auto-fill category / subcategory from the product name when the
+                // Excel leaves them blank (feature #3). Keeps any value provided.
+                if (category.isBlank() || subcategory.isBlank()) {
+                    ProductCategorizer.Categorization auto = categorizer.categorize(name);
+                    if (category.isBlank()) category = auto.category();
+                    if (subcategory.isBlank()) subcategory = auto.subcategory();
+                    warnings.add("Rând " + humanRow + " (" + name
+                            + "): categorie/subcategorie completate automat → "
+                            + category + " / " + subcategory + ".");
                 }
 
                 if (purchase == null) {

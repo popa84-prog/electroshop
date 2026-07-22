@@ -1,5 +1,6 @@
 package com.electroshop.service;
 
+import com.electroshop.dto.AdminProductDto;
 import com.electroshop.dto.ProductDto;
 import com.electroshop.dto.ProductRequest;
 import com.electroshop.exception.ResourceNotFoundException;
@@ -55,6 +56,20 @@ public class ProductService {
     @Transactional(readOnly = true)
     public ProductDto getById(Long id) {
         return ProductDto.detail(findEntity(id));
+    }
+
+    // ---- Admin-only views (expose purchase price + profit) ----
+
+    @Transactional(readOnly = true)
+    public Page<AdminProductDto> adminList(String search, Pageable pageable) {
+        return productRepository.search(
+                blankToNull(search), null, null, null, null, null, false, pageable
+        ).map(AdminProductDto::from);
+    }
+
+    @Transactional(readOnly = true)
+    public AdminProductDto adminGet(Long id) {
+        return AdminProductDto.detail(findEntity(id));
     }
 
     @Transactional(readOnly = true)

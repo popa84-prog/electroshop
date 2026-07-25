@@ -31,6 +31,12 @@ public class SchemaFixer implements CommandLineRunner {
         // Widen products.name so long real-world product titles import cleanly.
         // Re-applying the same definition is a cheap no-op on subsequent boots.
         safeExecute("ALTER TABLE products MODIFY COLUMN name VARCHAR(300) NOT NULL");
+
+        // Grandfather existing accounts when the new 'approved' column is first added:
+        // Hibernate adds it as NULL for pre-existing rows, so mark those as approved
+        // to avoid locking out anyone who registered before the approval feature.
+        // Idempotent: new pending accounts store approved = 0 (not NULL) and are untouched.
+        safeExecute("UPDATE users SET approved = TRUE WHERE approved IS NULL");
     }
 
     private void safeExecute(String sql) {

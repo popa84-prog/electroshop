@@ -12,4 +12,8 @@ WORKDIR /app
 COPY --from=build /build/target/*.jar app.jar
 RUN mkdir -p /app/uploads
 EXPOSE 8080
+# Memory-friendly JVM settings for small (512MB) free instances:
+# SerialGC uses far less overhead than the default G1GC, and the heap is capped
+# so the container is not OOM-killed. Override via the JAVA_TOOL_OPTIONS env var.
+ENV JAVA_TOOL_OPTIONS="-XX:+UseSerialGC -Xmx200m -Xss512k"
 ENTRYPOINT ["java", "-jar", "app.jar"]

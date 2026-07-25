@@ -128,6 +128,32 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.ok(userService.getById(id)));
     }
 
+    /** Accounts awaiting approval (self-registered, not yet approved). */
+    @GetMapping("/users/pending")
+    public ResponseEntity<ApiResponse<PageResponse<UserDto>>> pendingUsers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Page<UserDto> result = userService.listPending(
+                PageRequest.of(page, size, Sort.by("id").descending()));
+        return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(result)));
+    }
+
+    /** Approve a pending account so the user can log in. */
+    @PostMapping("/users/{id}/approve")
+    public ResponseEntity<ApiResponse<UserDto>> approveUser(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.ok("Cont aprobat", userService.approve(id)));
+    }
+
+    /** Login/connection history: who logged in, from which IP and location, when. */
+    @GetMapping("/login-events")
+    public ResponseEntity<ApiResponse<PageResponse<LoginEventDto>>> loginEvents(
+            @RequestParam(required = false) Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "25") int size) {
+        Page<LoginEventDto> result = userService.listLoginEvents(userId, PageRequest.of(page, size));
+        return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(result)));
+    }
+
     @PostMapping("/users")
     public ResponseEntity<ApiResponse<UserDto>> createUser(@Valid @RequestBody UserRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)

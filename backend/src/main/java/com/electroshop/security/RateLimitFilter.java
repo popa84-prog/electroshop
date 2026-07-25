@@ -53,7 +53,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if (bucket.tryConsume()) {
             filterChain.doFilter(request, response);
         } else {
-            response.setStatus(429); // 429 Too Many Requests (no named constant in the Servlet API);
+            response.setStatus(429); // 429 Too Many Requests (no named constant in the Servlet API)
             response.setContentType("application/json");
             response.getWriter().write(
                     "{\"success\":false,\"message\":\"Too many requests. Please try again later.\"}");

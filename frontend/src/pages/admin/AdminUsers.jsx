@@ -21,6 +21,17 @@ export default function AdminUsers() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
+  // Pending self-registrations awaiting approval
+  const [pending, setPending] = useState([]);
+  const [approvingId, setApprovingId] = useState(null);
+
+  const loadPending = () => {
+    adminService
+      .listPendingUsers({ page: 0, size: 50 })
+      .then((data) => setPending(data.content || []))
+      .catch(() => setPending([]));
+  };
+
   const load = () => {
     setLoading(true);
     adminService
@@ -31,9 +42,32 @@ export default function AdminUsers() {
       })
       .catch(() => setUsers([]))
       .finally(() => setLoading(false));
+    loadPending();
   };
 
   useEffect(load, [page, search]);
+
+  const handleApprove = async (u) => {
+    setApprovingId(u.id);
+    try {
+      await adminService.approveUser(u.id);
+      load();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Aprobarea a eșuat.');
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  const handleReject = async (u) => {
+    if (!window.confirm(`Respingi și ștergi cererea de la "${u.email}"?`)) return;
+    try {
+      await adminService.deleteUser(u.id);
+      load();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Respingerea a eșuat.');
+    }
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -103,6 +137,45 @@ export default function AdminUsers() {
         </button>
       </div>
 
+      {pending.length > 0 && (
+        <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <div className="mb-3 flex items-center gap-2">
+            <span className="badge bg-amber-200 text-amber-900">{pending.length}</span>
+            <h2 className="text-sm font-semibold text-amber-800">
+              Conturi în așteptarea aprobării
+            </h2>
+          </div>
+          <div className="space-y-2">
+            {pending.map((u) => (
+              <div
+                key={u.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white px-3 py-2 shadow-sm"
+              >
+                <div>
+                  <p className="font-medium text-slate-800">{u.fullName}</p>
+                  <p className="text-xs text-slate-500">{u.email}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleApprove(u)}
+                    disabled={approvingId === u.id}
+                    className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-60"
+                  >
+                    {approvingId === u.id ? 'Se aprobă...' : '✓ Aprobă'}
+                  </button>
+                  <button
+                    onClick={() => handleReject(u)}
+                    className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
+                  >
+                    ✕ Respinge
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <input
         className="input mb-4 sm:w-72"
         placeholder="Caută după nume sau email..."
@@ -124,6 +197,7 @@ export default function AdminUsers() {
                 <th className="px-4 py-3">Email</th>
                 <th className="px-4 py-3">Roluri</th>
                 <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Ultima conectare</th>
                 <th className="px-4 py-3">Creat</th>
                 <th className="px-4 py-3 text-right">Acțiuni</th>
               </tr>
@@ -148,13 +222,30 @@ export default function AdminUsers() {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`badge ${
-                        u.enabled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      {u.enabled ? 'Activ' : 'Inactiv'}
-                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      <span
+                        className={`badge ${
+                          u.enabled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {u.enabled ? 'Activ' : 'Inactiv'}
+                      </span>
+                      {!u.approved && (
+                        <span className="badge bg-amber-100 text-amber-800">În așteptare</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {u.lastLoginAt ? (
+                      <div>
+                        <p className="text-xs">{formatDate(u.lastLoginAt)}</p>
+                        <p className="text-xs text-slate-400">
+                          {u.lastLoginLocation || u.lastLoginIp || ''}
+                        </p>
+                      </div>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-slate-500">{formatDate(u.createdAt)}</td>
                   <td className="px-4 py-3 text-right">

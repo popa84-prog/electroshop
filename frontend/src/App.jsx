@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import RequireAuth from './components/RequireAuth';
 
 import Home from './pages/Home';
 import Products from './pages/Products';
@@ -22,18 +23,22 @@ import AdminPurchases from './pages/admin/AdminPurchases';
 import AdminAccounting from './pages/admin/AdminAccounting';
 import AdminAuditLog from './pages/admin/AdminAuditLog';
 import AdminSettings from './pages/admin/AdminSettings';
+import AdminLoginEvents from './pages/admin/AdminLoginEvents';
 
 export default function App() {
   return (
     <Routes>
-      <Route element={<Layout />}>
-        {/* Public */}
-        <Route path="/" element={<Home />} />
-        <Route path="/products" element={<Products />} />
-        <Route path="/products/:id" element={<ProductDetails />} />
-        <Route path="/cart" element={<Cart />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+      {/* Standalone auth pages — the only thing an unauthenticated visitor can reach */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+
+      {/* Everything else is private: requires an authenticated session */}
+      <Route element={<RequireAuth />}>
+        <Route element={<Layout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/products" element={<Products />} />
+          <Route path="/products/:id" element={<ProductDetails />} />
+          <Route path="/cart" element={<Cart />} />
 
         {/* Authenticated users */}
         <Route
@@ -134,8 +139,17 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/admin/login-events"
+          element={
+            <ProtectedRoute adminOnly>
+              <AdminLoginEvents />
+            </ProtectedRoute>
+          }
+        />
 
-        <Route path="*" element={<NotFound />} />
+          <Route path="*" element={<NotFound />} />
+        </Route>
       </Route>
     </Routes>
   );

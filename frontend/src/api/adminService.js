@@ -13,6 +13,14 @@ const adminService = {
   updateUser: (id, payload) => api.put(`/admin/users/${id}`, payload).then((r) => r.data.data),
   deleteUser: (id) => api.delete(`/admin/users/${id}`).then((r) => r.data),
 
+  // Account approval (pending self-registrations)
+  listPendingUsers: (params = {}) =>
+    api.get('/admin/users/pending', { params }).then((r) => r.data.data),
+  approveUser: (id) => api.post(`/admin/users/${id}/approve`).then((r) => r.data.data),
+
+  // Connection log (login events with IP + location)
+  loginEvents: (params = {}) => api.get('/admin/login-events', { params }).then((r) => r.data.data),
+
   // Orders
   listOrders: (params = {}) => api.get('/admin/orders', { params }).then((r) => r.data.data),
   getOrder: (id) => api.get(`/admin/orders/${id}`).then((r) => r.data.data),

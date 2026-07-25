@@ -41,10 +41,10 @@ export function AuthProvider({ children }) {
     return data;
   };
 
+  // Registration no longer logs the user in: new accounts are pending admin
+  // approval. Returns the API response so the page can show the pending message.
   const register = async (payload) => {
-    const data = await authService.register(payload);
-    handleAuthPayload(data);
-    return data;
+    return authService.register(payload);
   };
 
   const logout = () => {

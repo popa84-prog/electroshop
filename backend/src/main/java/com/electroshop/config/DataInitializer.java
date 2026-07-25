@@ -43,6 +43,7 @@ public class DataInitializer implements CommandLineRunner {
             admin.setFullName("Administrator");
             admin.setEmail("admin@electroshop.com");
             admin.setPassword(passwordEncoder.encode("admin123"));
+            admin.setApproved(true);
             admin.addRole(adminRole);
             admin.addRole(userRole);
             userRepository.save(admin);
@@ -51,6 +52,7 @@ public class DataInitializer implements CommandLineRunner {
             user.setFullName("Demo User");
             user.setEmail("user@electroshop.com");
             user.setPassword(passwordEncoder.encode("user123"));
+            user.setApproved(true);
             user.addRole(userRole);
             userRepository.save(user);
         }
@@ -65,6 +67,7 @@ public class DataInitializer implements CommandLineRunner {
             cosmin.setEmail(ownerEmail);
             String ownerPass = System.getenv().getOrDefault("OWNER_ADMIN_PASSWORD", "Cosmin2026!");
             cosmin.setPassword(passwordEncoder.encode(ownerPass));
+            cosmin.setApproved(true);
             cosmin.addRole(adminRole);
             cosmin.addRole(userRole);
             userRepository.save(cosmin);

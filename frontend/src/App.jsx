@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
+import AdminLayout from './components/AdminLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import RequireAuth from './components/RequireAuth';
 
@@ -66,87 +67,27 @@ export default function App() {
           }
         />
 
-        {/* Admin */}
+        {/* Admin — one guarded layout route so the section navigation is drawn
+            once and stays on screen for every admin page. */}
         <Route
           path="/admin"
           element={
             <ProtectedRoute adminOnly>
-              <AdminDashboard />
+              <AdminLayout />
             </ProtectedRoute>
           }
-        />
-        <Route
-          path="/admin/products"
-          element={
-            <ProtectedRoute adminOnly>
-              <AdminProducts />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/users"
-          element={
-            <ProtectedRoute adminOnly>
-              <AdminUsers />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/orders"
-          element={
-            <ProtectedRoute adminOnly>
-              <AdminOrders />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/suppliers"
-          element={
-            <ProtectedRoute adminOnly>
-              <AdminSuppliers />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/purchases"
-          element={
-            <ProtectedRoute adminOnly>
-              <AdminPurchases />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/accounting"
-          element={
-            <ProtectedRoute adminOnly>
-              <AdminAccounting />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/audit"
-          element={
-            <ProtectedRoute adminOnly>
-              <AdminAuditLog />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/settings"
-          element={
-            <ProtectedRoute adminOnly>
-              <AdminSettings />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/login-events"
-          element={
-            <ProtectedRoute adminOnly>
-              <AdminLoginEvents />
-            </ProtectedRoute>
-          }
-        />
+        >
+          <Route index element={<AdminDashboard />} />
+          <Route path="products" element={<AdminProducts />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="orders" element={<AdminOrders />} />
+          <Route path="suppliers" element={<AdminSuppliers />} />
+          <Route path="purchases" element={<AdminPurchases />} />
+          <Route path="accounting" element={<AdminAccounting />} />
+          <Route path="audit" element={<AdminAuditLog />} />
+          <Route path="settings" element={<AdminSettings />} />
+          <Route path="login-events" element={<AdminLoginEvents />} />
+        </Route>
 
           <Route path="*" element={<NotFound />} />
         </Route>

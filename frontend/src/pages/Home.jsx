@@ -5,8 +5,46 @@ import ProductCard from '../components/ProductCard';
 import Spinner from '../components/Spinner';
 import { useSeo } from '../utils/seo';
 
+/**
+ * Icons for the category tiles. Keys are compared case-insensitively against
+ * the real category names stored on the products, so a category that has no
+ * entry here still renders — just with the neutral fallback icon.
+ */
+const CATEGORY_ICONS = {
+  audio: '🎧',
+  'foto & video': '📷',
+  'auto & moto': '🚗',
+  wearables: '⌚',
+  'smart home': '🏠',
+  tablete: '📱',
+  telefoane: '📱',
+  monitoare: '🖥️',
+  gaming: '🎮',
+  laptopuri: '💻',
+  'periferice pc': '⌨️',
+  'sisteme pc': '🖥️',
+  'componente pc': '🧩',
+  stocare: '💾',
+  'tv & proiectoare': '📺',
+  electrocasnice: '🔌',
+  accesorii: '🔗',
+  'ingrijire personala': '💇',
+  'instrumente muzicale': '🎸',
+  'scule & unelte': '🛠️',
+  retea: '📶',
+  sanatate: '❤️',
+  folosit: '♻️',
+};
+
+const FALLBACK_ICON = '🔌';
+
+function iconFor(name) {
+  return CATEGORY_ICONS[String(name).trim().toLowerCase()] || FALLBACK_ICON;
+}
+
 export default function Home() {
   const [featured, setFeatured] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useSeo({
@@ -21,6 +59,15 @@ export default function Home() {
       .then((data) => setFeatured(data.content))
       .catch(() => setFeatured([]))
       .finally(() => setLoading(false));
+  }, []);
+
+  // The tiles mirror the four best-stocked categories in the real catalogue,
+  // so they never advertise a section that does not exist.
+  useEffect(() => {
+    productService
+      .topCategories(4)
+      .then((data) => setCategories(Array.isArray(data) ? data : []))
+      .catch(() => setCategories([]));
   }, []);
 
   return (
@@ -45,26 +92,27 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Categories */}
-      <section>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {[
-            { icon: '📱', name: 'Smartphones' },
-            { icon: '💻', name: 'Laptops' },
-            { icon: '🎧', name: 'Audio' },
-            { icon: '📷', name: 'Cameras' },
-          ].map((c) => (
-            <Link
-              key={c.name}
-              to={`/products?category=${encodeURIComponent(c.name)}`}
-              className="card flex flex-col items-center gap-2 p-6 transition hover:shadow-md"
-            >
-              <span className="text-4xl">{c.icon}</span>
-              <span className="font-medium text-slate-700">{c.name}</span>
-            </Link>
-          ))}
-        </div>
-      </section>
+      {/* Categories — the four most populated ones, straight from the catalogue */}
+      {categories.length > 0 && (
+        <section>
+          <h2 className="mb-4 text-2xl font-bold text-slate-800">Categorii populare</h2>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {categories.map((c) => (
+              <Link
+                key={c.name}
+                to={`/products?category=${encodeURIComponent(c.name)}`}
+                className="card flex flex-col items-center gap-2 p-6 text-center transition hover:shadow-md"
+              >
+                <span className="text-4xl">{iconFor(c.name)}</span>
+                <span className="font-medium text-slate-700">{c.name}</span>
+                <span className="text-xs text-slate-500">
+                  {c.productCount} {c.productCount === 1 ? 'produs' : 'produse'}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Featured */}
       <section>

@@ -58,6 +58,9 @@ export default function AdminProducts() {
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
 
+  // Spreadsheet export of the stock list.
+  const [exporting, setExporting] = useState(false);
+
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
@@ -298,6 +301,30 @@ export default function AdminProducts() {
     }
   };
 
+  /**
+   * Downloads the stock list as .xlsx. The current search term is sent along,
+   * so what lands in the file is what the operator is looking at — filter the
+   * table first and the export narrows with it.
+   */
+  const doExport = async () => {
+    setExporting(true);
+    try {
+      const blob = await adminService.exportProducts({ search: search || undefined });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'produse.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Exportul a eșuat.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // ---- Deletion (single or batch) — always behind two confirmations ----
 
   /** Opens the confirmation flow for one product or for the whole selection. */
@@ -397,6 +424,9 @@ export default function AdminProducts() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-slate-800">Management produse</h1>
         <div className="flex gap-2">
+          <button className="btn-secondary" onClick={doExport} disabled={exporting}>
+            {exporting ? 'Se exportă...' : '⬇ Export Excel'}
+          </button>
           <button className="btn-secondary" onClick={openImport}>
             ⬆ Import Excel
           </button>

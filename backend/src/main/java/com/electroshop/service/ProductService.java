@@ -11,6 +11,7 @@ import com.electroshop.repository.ProductRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -31,15 +32,21 @@ public class ProductService {
             Set.of("image/jpeg", "image/jpg", "image/png", "image/webp");
     private static final long MAX_IMAGE_BYTES = 5L * 1024 * 1024; // 5 MB
 
+    /** Upper bound on how many rows a single spreadsheet export may contain. */
+    private static final int MAX_EXPORT_ROWS = 20_000;
+
     private final ProductRepository productRepository;
     private final AuditService auditService;
     private final CloudinaryService cloudinaryService;
+    private final ProductExportService productExportService;
 
     public ProductService(ProductRepository productRepository, AuditService auditService,
-                          CloudinaryService cloudinaryService) {
+                          CloudinaryService cloudinaryService,
+                          ProductExportService productExportService) {
         this.productRepository = productRepository;
         this.auditService = auditService;
         this.cloudinaryService = cloudinaryService;
+        this.productExportService = productExportService;
     }
 
     @Transactional(readOnly = true)
@@ -68,6 +75,30 @@ public class ProductService {
         return productRepository.search(
                 blankToNull(search), null, null, null, null, null, false, pageable
         ).map(AdminProductDto::from);
+    }
+
+    /**
+     * The catalogue as a spreadsheet: product, acquisition price, selling price
+     * and stock on hand, sorted by name so the file reads like a shelf list.
+     * <p>
+     * Honours the same search box as the table, so the operator can export just
+     * the rows currently being looked at. The row count is capped rather than
+     * unbounded: an export is a report, not a database dump, and the whole sheet
+     * has to be held in memory while it is built.
+     *
+     * @param search optional free-text filter, exactly as on the admin table
+     * @param format "csv" for comma-separated output, anything else for .xlsx
+     */
+    @Transactional(readOnly = true)
+    public byte[] exportProducts(String search, String format) {
+        List<AdminProductDto> rows = productRepository.search(
+                blankToNull(search), null, null, null, null, null, false,
+                PageRequest.of(0, MAX_EXPORT_ROWS, Sort.by("name").ascending())
+        ).map(AdminProductDto::from).getContent();
+
+        return "csv".equalsIgnoreCase(format)
+                ? productExportService.toCsv(rows)
+                : productExportService.toExcel(rows);
     }
 
     @Transactional(readOnly = true)

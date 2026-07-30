@@ -7,6 +7,9 @@ const productService = {
   categoryTree: () => api.get('/products/category-tree').then((r) => r.data.data),
   brands: () => api.get('/products/brands').then((r) => r.data.data),
   companyInfo: () => api.get('/products/company-info').then((r) => r.data.data),
+  // Real categories ranked by how many products they hold.
+  topCategories: (limit = 4) =>
+    api.get('/products/top-categories', { params: { limit } }).then((r) => r.data.data),
 
   importProducts: (file, dryRun = true, restock = false) => {
     const form = new FormData();
@@ -34,6 +37,9 @@ const productService = {
   create: (payload) => api.post('/products', payload).then((r) => r.data.data),
   update: (id, payload) => api.put(`/products/${id}`, payload).then((r) => r.data.data),
   remove: (id) => api.delete(`/products/${id}`).then((r) => r.data),
+  // Batch delete. POST (not DELETE) because the call is not idempotent and
+  // request bodies on DELETE are unreliable across proxies.
+  bulkRemove: (ids) => api.post('/products/bulk-delete', { ids }).then((r) => r.data.data),
   uploadImage: (id, file) => {
     const form = new FormData();
     form.append('file', file);

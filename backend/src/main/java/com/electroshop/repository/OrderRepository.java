@@ -26,11 +26,11 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Object[]> countByStatus();
 
     @Query("""
-            SELECT oi.product.id, oi.product.name, SUM(oi.quantity),
+            SELECT oi.product.id, oi.product.name, oi.product.imageUrl, SUM(oi.quantity),
                    SUM(oi.unitPrice * oi.quantity)
             FROM OrderItem oi
             WHERE oi.order.status <> 'CANCELLED'
-            GROUP BY oi.product.id, oi.product.name
+            GROUP BY oi.product.id, oi.product.name, oi.product.imageUrl
             ORDER BY SUM(oi.quantity) DESC
             """)
     List<Object[]> findTopProducts(Pageable pageable);
@@ -43,4 +43,30 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             ORDER BY d
             """, nativeQuery = true)
     List<Object[]> findSalesByDay();
+
+    /** All orders (any status) per calendar day — feeds the "Comenzi" stat-card trend. */
+    @Query(value = """
+            SELECT DATE(o.created_at) AS d, COUNT(*)
+            FROM orders o
+            GROUP BY DATE(o.created_at)
+            ORDER BY d
+            """, nativeQuery = true)
+    List<Object[]> countOrdersByDay();
+
+    /**
+     * Units sold per product per day, for the given product ids from {@code from} onward.
+     * Backs each top-product row's 7-day sparkline and its trend percentage.
+     */
+    @Query(value = """
+            SELECT oi.product_id, DATE(o.created_at) AS d, SUM(oi.quantity)
+            FROM order_items oi
+            JOIN orders o ON o.id = oi.order_id
+            WHERE o.status <> 'CANCELLED'
+              AND oi.product_id IN (:productIds)
+              AND o.created_at >= :from
+            GROUP BY oi.product_id, DATE(o.created_at)
+            ORDER BY d
+            """, nativeQuery = true)
+    List<Object[]> findDailyUnitsForProducts(@org.springframework.data.repository.query.Param("productIds") List<Long> productIds,
+                                              @org.springframework.data.repository.query.Param("from") LocalDateTime from);
 }

@@ -39,6 +39,20 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT DISTINCT p.brand FROM Product p WHERE p.brand IS NOT NULL ORDER BY p.brand")
     List<String> findAllBrands();
 
+    /**
+     * Category names together with how many products each one holds, most populated
+     * first. Backs the "most popular categories" tiles on the storefront home page,
+     * so those tiles always reflect the real catalogue instead of hardcoded names.
+     * Returns Object[]{String category, Long productCount}.
+     */
+    @Query("""
+            SELECT p.category, COUNT(p) FROM Product p
+            WHERE p.category IS NOT NULL AND TRIM(p.category) <> ''
+            GROUP BY p.category
+            ORDER BY COUNT(p) DESC, p.category ASC
+            """)
+    List<Object[]> findCategoryCounts(Pageable pageable);
+
     /** Distinct [category, subcategory] pairs, used to build the category tree. */
     @Query("""
             SELECT DISTINCT p.category, p.subcategory FROM Product p

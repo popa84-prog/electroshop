@@ -1,6 +1,7 @@
 package com.electroshop.service;
 
 import com.electroshop.dto.AdminProductDto;
+import com.electroshop.dto.CategoryStatDto;
 import com.electroshop.dto.ProductDto;
 import com.electroshop.dto.ProductRequest;
 import com.electroshop.exception.ResourceNotFoundException;
@@ -8,6 +9,7 @@ import com.electroshop.model.Product;
 import com.electroshop.model.ProductImage;
 import com.electroshop.repository.ProductRepository;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -82,6 +85,46 @@ public class ProductService {
         return productRepository.findAllBrands();
     }
 
+    /**
+     * The most populated categories, largest first, for the storefront tiles.
+     * <p>
+     * Categories whose name is purely numeric (for example "0") are rejected:
+     * those are artefacts of malformed spreadsheet imports, not real
+     * categories, and must never be advertised on the home page. Because such
+     * rows can occupy the top of the ranking, the query is asked for a wider
+     * window than requested and the result is trimmed after filtering.
+     *
+     * @param limit how many categories to return; clamped to 1..12
+     */
+    @Transactional(readOnly = true)
+    public List<CategoryStatDto> getTopCategories(int limit) {
+        int safeLimit = Math.max(1, Math.min(limit, 12));
+        int window = Math.min(safeLimit * 3 + 5, 60);
+        List<CategoryStatDto> result = new ArrayList<>();
+        for (Object[] row : productRepository.findCategoryCounts(PageRequest.of(0, window))) {
+            String name = row[0] == null ? null : row[0].toString().trim();
+            if (name == null || name.isEmpty() || isNumeric(name)) {
+                continue;
+            }
+            long count = row[1] == null ? 0L : ((Number) row[1]).longValue();
+            result.add(new CategoryStatDto(name, count));
+            if (result.size() == safeLimit) {
+                break;
+            }
+        }
+        return result;
+    }
+
+    /** True when every character is a digit, so the value is not a real category name. */
+    private boolean isNumeric(String value) {
+        for (int i = 0; i < value.length(); i++) {
+            if (!Character.isDigit(value.charAt(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     @Transactional(readOnly = true)
     public Map<String, List<String>> getCategoryTree() {
         Map<String, List<String>> tree = new LinkedHashMap<>();
@@ -135,6 +178,50 @@ public class ProductService {
         }
         productRepository.delete(p);
         auditService.log("PRODUCT_DELETED", "Product", id, name);
+    }
+
+    /**
+     * Deletes several products in one transaction and reports the outcome.
+     * <p>
+     * Identifiers are de-duplicated first. An id that no longer exists is not an
+     * error for the batch as a whole — it is reported as "skipped" so the client
+     * can refresh a stale table without the whole operation failing. Every
+     * successful removal is written to the audit log individually, exactly as a
+     * single delete would be, and a summary entry records the batch itself.
+     *
+     * @param ids the products to remove
+     * @return how many rows were deleted and which ids were not found
+     */
+    public BulkDeleteResult deleteBulk(List<Long> ids) {
+        List<Long> unique = new ArrayList<>(new LinkedHashSet<>(ids));
+        List<Long> notFound = new ArrayList<>();
+        int deleted = 0;
+        for (Long id : unique) {
+            Product p = productRepository.findById(id).orElse(null);
+            if (p == null) {
+                notFound.add(id);
+                continue;
+            }
+            String name = p.getName();
+            for (ProductImage img : p.getImages()) {
+                cloudinaryService.delete(img.getPublicId());
+            }
+            productRepository.delete(p);
+            auditService.log("PRODUCT_DELETED", "Product", id, name);
+            deleted++;
+        }
+        auditService.log("PRODUCTS_BULK_DELETED", "Product", null,
+                deleted + " produse șterse în masă");
+        return new BulkDeleteResult(deleted, notFound);
+    }
+
+    /**
+     * Outcome of a batch delete.
+     *
+     * @param deleted  number of rows actually removed
+     * @param notFound identifiers that no longer existed when the batch ran
+     */
+    public record BulkDeleteResult(int deleted, List<Long> notFound) {
     }
 
     // ==============================================================

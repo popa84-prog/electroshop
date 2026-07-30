@@ -22,6 +22,10 @@ import { AdminChromeContext, adminTabs } from './AdminNav';
 /** Ignore absurd measurements rather than pushing the rail off the screen. */
 const MAX_RAIL_OFFSET = 400;
 
+/** How long after a page opens the offset keeps being re-read, and how often. */
+const SETTLE_WINDOW_MS = 8000;
+const SETTLE_TICK_MS = 200;
+
 export default function AdminLayout() {
   const location = useLocation();
   const contentRef = useRef(null);
@@ -40,12 +44,12 @@ export default function AdminLayout() {
         setRailOffset(0);
         return;
       }
-      // The first panel is whatever the page renders as its main surface.
+      // The first panel is whatever the page renders as its main surface. While
+      // a page is fetching there is none, and the offset is simply left alone:
+      // resetting it would make the rail jump to the top and back on every
+      // reload, and the next measurement is only a tick away anyway.
       const panel = content.querySelector('.card, table');
-      if (!panel) {
-        setRailOffset(0);
-        return;
-      }
+      if (!panel) return;
       const delta = panel.getBoundingClientRect().top - content.getBoundingClientRect().top;
       setRailOffset(delta > 0 && delta < MAX_RAIL_OFFSET ? Math.round(delta) : 0);
     };
@@ -59,14 +63,20 @@ export default function AdminLayout() {
 
     schedule();
 
-    // One measurement on mount is not enough. The header keeps reflowing while
-    // the web fonts arrive, and when the product list is served from cache the
-    // table is already in place before the observers below are attached, so no
-    // notification ever follows. A few staggered re-reads cover both cases and
-    // then stop, instead of leaving a timer running for the life of the page.
-    const timers = [80, 250, 600, 1200, 2500].map((delay) =>
-      window.setTimeout(schedule, delay)
-    );
+    // One measurement on mount is not enough, and the observers below are not
+    // enough either: whether a notification arrives at all depends on when the
+    // list request resolves relative to the mount, so on a warm cache the page
+    // can settle without a single one firing. Re-reading on a short tick for
+    // the first few seconds makes the result independent of that race. The
+    // ticker stops on its own; the observers keep the rail correct afterwards.
+    const settleUntil = performance.now() + SETTLE_WINDOW_MS;
+    const ticker = window.setInterval(() => {
+      if (performance.now() > settleUntil) {
+        window.clearInterval(ticker);
+        return;
+      }
+      schedule();
+    }, SETTLE_TICK_MS);
 
     // Three things move the first panel: the window changing size, the header
     // reflowing as filters wrap, and — the common case — the table replacing
@@ -82,7 +92,7 @@ export default function AdminLayout() {
 
     return () => {
       cancelAnimationFrame(frame);
-      timers.forEach(clearTimeout);
+      window.clearInterval(ticker);
       resizeObserver.disconnect();
       mutationObserver.disconnect();
       window.removeEventListener('resize', schedule);

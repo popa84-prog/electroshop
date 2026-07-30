@@ -64,4 +64,16 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     Optional<Product> findFirstByNameIgnoreCase(String name);
 
     Optional<Product> findFirstBySku(String sku);
+
+    /** New products per calendar day — feeds the "Produse" stat-card trend on the dashboard. */
+    @Query(value = """
+            SELECT DATE(created_at) AS d, COUNT(*)
+            FROM products
+            GROUP BY DATE(created_at)
+            ORDER BY d
+            """, nativeQuery = true)
+    List<Object[]> countCreatedByDay();
+
+    /** The five lowest-stock products at or below {@code threshold}, emptiest first. */
+    List<Product> findTop5ByStockQuantityLessThanEqualOrderByStockQuantityAsc(int threshold);
 }

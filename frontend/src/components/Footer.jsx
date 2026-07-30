@@ -19,7 +19,7 @@ export default function Footer() {
 
   return (
     <footer className="mt-auto border-t border-graphite-100 bg-white">
-      <div className="mx-auto max-w-7xl px-4 py-8">
+      <div className="mx-auto max-w-[1680px] px-4 py-8">
         <div className="grid gap-6 sm:grid-cols-3">
           <div>
             <h3 className="flex items-center gap-2 text-lg font-bold text-brand-700">⚡ {name}</h3>

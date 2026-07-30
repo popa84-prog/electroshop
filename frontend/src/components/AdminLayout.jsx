@@ -59,6 +59,15 @@ export default function AdminLayout() {
 
     schedule();
 
+    // One measurement on mount is not enough. The header keeps reflowing while
+    // the web fonts arrive, and when the product list is served from cache the
+    // table is already in place before the observers below are attached, so no
+    // notification ever follows. A few staggered re-reads cover both cases and
+    // then stop, instead of leaving a timer running for the life of the page.
+    const timers = [80, 250, 600, 1200, 2500].map((delay) =>
+      window.setTimeout(schedule, delay)
+    );
+
     // Three things move the first panel: the window changing size, the header
     // reflowing as filters wrap, and — the common case — the table replacing
     // its loading placeholder once the rows arrive. The last one is a subtree
@@ -73,6 +82,7 @@ export default function AdminLayout() {
 
     return () => {
       cancelAnimationFrame(frame);
+      timers.forEach(clearTimeout);
       resizeObserver.disconnect();
       mutationObserver.disconnect();
       window.removeEventListener('resize', schedule);

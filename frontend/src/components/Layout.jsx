@@ -9,7 +9,10 @@ export default function Layout() {
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">
+      {/* Wider than the default 7xl container: the admin tables and the product
+          grid both benefit from the extra columns on large monitors, while the
+          cap keeps line length readable on ultra-wide displays. */}
+      <main className="mx-auto w-full max-w-[1680px] flex-1 px-4 py-6">
         <Outlet />
       </main>
       <Footer />

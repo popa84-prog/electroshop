@@ -31,6 +31,8 @@ export default function AdminLayout() {
     const content = contentRef.current;
     if (!content) return undefined;
 
+    let frame = 0;
+
     const measure = () => {
       // Only the two-column layout needs the offset; the mobile strip sits
       // above the content and must stay flush with it.
@@ -48,17 +50,32 @@ export default function AdminLayout() {
       setRailOffset(delta > 0 && delta < MAX_RAIL_OFFSET ? Math.round(delta) : 0);
     };
 
-    measure();
+    // Measuring on the next frame collapses the burst of notifications that
+    // arrives while a page settles into a single layout read.
+    const schedule = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(measure);
+    };
 
-    // The header grows and shrinks as data loads, filters wrap onto a second
-    // line, or the window is resized — re-measure whenever that happens.
-    const observer = new ResizeObserver(measure);
-    observer.observe(content);
-    window.addEventListener('resize', measure);
+    schedule();
+
+    // Three things move the first panel: the window changing size, the header
+    // reflowing as filters wrap, and — the common case — the table replacing
+    // its loading placeholder once the rows arrive. The last one is a subtree
+    // change rather than a resize of the content box, so it needs its own
+    // observer; without it the rail would keep the offset it had while the
+    // page was still empty.
+    const resizeObserver = new ResizeObserver(schedule);
+    resizeObserver.observe(content);
+    const mutationObserver = new MutationObserver(schedule);
+    mutationObserver.observe(content, { childList: true, subtree: true });
+    window.addEventListener('resize', schedule);
 
     return () => {
-      observer.disconnect();
-      window.removeEventListener('resize', measure);
+      cancelAnimationFrame(frame);
+      resizeObserver.disconnect();
+      mutationObserver.disconnect();
+      window.removeEventListener('resize', schedule);
     };
   }, [location.pathname]);
 

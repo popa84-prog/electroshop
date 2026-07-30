@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import productService from '../../api/productService';
 import adminService from '../../api/adminService';
 import AdminNav from '../../components/AdminNav';
@@ -6,6 +6,23 @@ import Modal from '../../components/Modal';
 import Pagination from '../../components/Pagination';
 import Spinner from '../../components/Spinner';
 import { formatPrice, resolveImage } from '../../utils/format';
+
+/** Selectable page sizes for the products table. */
+const PAGE_SIZES = [10, 20, 50, 100, 200];
+const PAGE_SIZE_KEY = 'admin.products.pageSize';
+
+/** Word the operator must type to confirm a deletion. */
+const DELETE_KEYWORD = 'STERG';
+
+/** Remembers the chosen page size between visits; falls back to 10. */
+function readStoredPageSize() {
+  try {
+    const stored = Number(window.localStorage.getItem(PAGE_SIZE_KEY));
+    return PAGE_SIZES.includes(stored) ? stored : 10;
+  } catch {
+    return 10;
+  }
+}
 
 const emptyForm = {
   name: '',
@@ -23,9 +40,23 @@ const emptyForm = {
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(readStoredPageSize);
   const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+
+  // Multi-select: ids of the rows ticked on the current page.
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const selectAllRef = useRef(null);
+
+  // Two-step delete confirmation. `pending` holds the products queued for
+  // removal; `deleteStep` is 1 (review) or 2 (type the keyword).
+  const [pending, setPending] = useState([]);
+  const [deleteStep, setDeleteStep] = useState(0);
+  const [deleteWord, setDeleteWord] = useState('');
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -60,16 +91,72 @@ export default function AdminProducts() {
     setLoading(true);
     // Admin endpoint: includes purchasePrice + profit (only visible to admins).
     adminService
-      .listAdminProducts({ page, size: 10, search })
+      .listAdminProducts({ page, size: pageSize, search })
       .then((data) => {
         setProducts(data.content);
         setTotalPages(data.totalPages);
+        setTotalElements(data.totalElements ?? data.content.length);
       })
       .catch(() => setProducts([]))
       .finally(() => setLoading(false));
   };
 
-  useEffect(load, [page, search]);
+  useEffect(load, [page, pageSize, search]);
+
+  // A tick only ever refers to a row the operator can currently see, so the
+  // selection is dropped whenever the visible set changes.
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [page, pageSize, search]);
+
+  const allOnPageSelected = products.length > 0 && products.every((p) => selectedIds.has(p.id));
+  const someOnPageSelected = products.some((p) => selectedIds.has(p.id));
+
+  // "Partially selected" has no HTML attribute — it must be set on the node.
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = someOnPageSelected && !allOnPageSelected;
+    }
+  }, [someOnPageSelected, allOnPageSelected]);
+
+  const selectedProducts = useMemo(
+    () => products.filter((p) => selectedIds.has(p.id)),
+    [products, selectedIds]
+  );
+
+  const toggleOne = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleAllOnPage = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (products.every((p) => next.has(p.id))) {
+        products.forEach((p) => next.delete(p.id));
+      } else {
+        products.forEach((p) => next.add(p.id));
+      }
+      return next;
+    });
+  };
+
+  const changePageSize = (size) => {
+    setPage(0);
+    setPageSize(size);
+    try {
+      window.localStorage.setItem(PAGE_SIZE_KEY, String(size));
+    } catch {
+      // Storage unavailable (private mode) — the choice simply is not remembered.
+    }
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -211,13 +298,60 @@ export default function AdminProducts() {
     }
   };
 
-  const handleDelete = async (p) => {
-    if (!window.confirm(`Ștergi produsul "${p.name}"?`)) return;
+  // ---- Deletion (single or batch) — always behind two confirmations ----
+
+  /** Opens the confirmation flow for one product or for the whole selection. */
+  const askDelete = (items) => {
+    if (!items || items.length === 0) return;
+    setPending(items);
+    setDeleteWord('');
+    setDeleteError(null);
+    setDeleteStep(1);
+  };
+
+  const closeDelete = () => {
+    setDeleteStep(0);
+    setPending([]);
+    setDeleteWord('');
+    setDeleteError(null);
+  };
+
+  /**
+   * Runs only after both confirmation steps have been cleared. A single item
+   * still goes through the dedicated endpoint; anything larger uses the batch
+   * endpoint so the whole set is removed in one transaction.
+   */
+  const confirmDelete = async () => {
+    if (deleteWord.trim().toUpperCase() !== DELETE_KEYWORD) {
+      setDeleteError(`Scrie exact ${DELETE_KEYWORD} pentru a confirma.`);
+      return;
+    }
+    setDeleteBusy(true);
+    setDeleteError(null);
     try {
-      await productService.remove(p.id);
-      load();
+      const ids = pending.map((p) => p.id);
+      if (ids.length === 1) {
+        await productService.remove(ids[0]);
+      } else {
+        await productService.bulkRemove(ids);
+      }
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        ids.forEach((id) => next.delete(id));
+        return next;
+      });
+      closeDelete();
+      // Stepping back a page keeps the operator on a populated page when the
+      // last rows of the final page were just removed.
+      if (products.length === ids.length && page > 0) {
+        setPage((p) => p - 1);
+      } else {
+        load();
+      }
     } catch (err) {
-      alert(err.response?.data?.message || 'Ștergerea a eșuat.');
+      setDeleteError(err.response?.data?.message || 'Ștergerea a eșuat.');
+    } finally {
+      setDeleteBusy(false);
     }
   };
 
@@ -272,15 +406,61 @@ export default function AdminProducts() {
         </div>
       </div>
 
-      <input
-        className="input mb-4 sm:w-72"
-        placeholder="Caută produse..."
-        value={search}
-        onChange={(e) => {
-          setPage(0);
-          setSearch(e.target.value);
-        }}
-      />
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <input
+          className="input sm:w-72"
+          placeholder="Caută produse..."
+          value={search}
+          onChange={(e) => {
+            setPage(0);
+            setSearch(e.target.value);
+          }}
+        />
+
+        <label className="flex items-center gap-2 text-sm text-slate-600">
+          Produse pe pagină
+          <select
+            className="input w-24 py-2"
+            value={pageSize}
+            onChange={(e) => changePageSize(Number(e.target.value))}
+          >
+            {PAGE_SIZES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {totalElements > 0 && (
+          <span className="text-sm text-slate-500">
+            {totalElements} produse în total
+          </span>
+        )}
+      </div>
+
+      {/* Batch action bar — only present while something is ticked */}
+      {selectedIds.size > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-brand-200 bg-brand-50 px-4 py-2.5 text-sm">
+          <span className="font-medium text-brand-800">
+            {selectedIds.size} {selectedIds.size === 1 ? 'produs selectat' : 'produse selectate'}
+          </span>
+          <button
+            type="button"
+            className="text-slate-600 hover:underline"
+            onClick={() => setSelectedIds(new Set())}
+          >
+            Deselectează tot
+          </button>
+          <button
+            type="button"
+            className="ml-auto rounded-lg bg-red-600 px-3 py-1.5 font-medium text-white hover:bg-red-700"
+            onClick={() => askDelete(selectedProducts)}
+          >
+            🗑 Șterge selectate
+          </button>
+        </div>
+      )}
 
       {loading ? (
         <Spinner />
@@ -289,6 +469,16 @@ export default function AdminProducts() {
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50 text-left text-slate-500">
               <tr>
+                <th className="w-10 px-4 py-3">
+                  <input
+                    ref={selectAllRef}
+                    type="checkbox"
+                    className="h-4 w-4 cursor-pointer accent-brand-600"
+                    checked={allOnPageSelected}
+                    onChange={toggleAllOnPage}
+                    aria-label="Selectează toate produsele de pe această pagină"
+                  />
+                </th>
                 <th className="px-4 py-3">Produs</th>
                 <th className="px-4 py-3">Categorie</th>
                 <th className="px-4 py-3">Preț vânzare</th>
@@ -300,7 +490,19 @@ export default function AdminProducts() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {products.map((p) => (
-                <tr key={p.id} className="hover:bg-slate-50">
+                <tr
+                  key={p.id}
+                  className={selectedIds.has(p.id) ? 'bg-brand-50' : 'hover:bg-slate-50'}
+                >
+                  <td className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 cursor-pointer accent-brand-600"
+                      checked={selectedIds.has(p.id)}
+                      onChange={() => toggleOne(p.id)}
+                      aria-label={`Selectează ${p.name}`}
+                    />
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <img
@@ -347,7 +549,7 @@ export default function AdminProducts() {
                     <button onClick={() => openEdit(p)} className="mr-2 text-brand-600 hover:underline">
                       Editează
                     </button>
-                    <button onClick={() => handleDelete(p)} className="text-red-600 hover:underline">
+                    <button onClick={() => askDelete([p])} className="text-red-600 hover:underline">
                       Șterge
                     </button>
                   </td>
@@ -358,6 +560,78 @@ export default function AdminProducts() {
         </div>
       )}
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+
+      {/* Delete confirmation — step 1: review what is about to be removed */}
+      <Modal
+        open={deleteStep === 1}
+        title={pending.length === 1 ? 'Confirmă ștergerea' : `Confirmă ștergerea a ${pending.length} produse`}
+        onClose={closeDelete}
+        maxWidth="max-w-lg"
+      >
+        <p className="text-sm text-slate-600">
+          Următoarele produse vor fi șterse definitiv, împreună cu imaginile lor. Operațiunea nu poate
+          fi anulată.
+        </p>
+        <ul className="mt-3 max-h-60 space-y-1 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+          {pending.map((p) => (
+            <li key={p.id} className="truncate">
+              • {p.name}
+            </li>
+          ))}
+        </ul>
+        <div className="mt-5 flex justify-end gap-2">
+          <button type="button" className="btn-secondary" onClick={closeDelete}>
+            Anulează
+          </button>
+          <button
+            type="button"
+            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+            onClick={() => setDeleteStep(2)}
+          >
+            Continuă
+          </button>
+        </div>
+      </Modal>
+
+      {/* Delete confirmation — step 2: type the keyword */}
+      <Modal
+        open={deleteStep === 2}
+        title="Ultima confirmare"
+        onClose={closeDelete}
+        maxWidth="max-w-lg"
+      >
+        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+          Ești pe cale să ștergi definitiv{' '}
+          <strong>
+            {pending.length} {pending.length === 1 ? 'produs' : 'produse'}
+          </strong>
+          . Pentru a confirma, scrie <strong>{DELETE_KEYWORD}</strong> în câmpul de mai jos.
+        </div>
+        {deleteError && (
+          <div className="mt-3 rounded-lg bg-red-100 px-4 py-2 text-sm text-red-800">{deleteError}</div>
+        )}
+        <input
+          className="input mt-3"
+          value={deleteWord}
+          onChange={(e) => setDeleteWord(e.target.value)}
+          placeholder={DELETE_KEYWORD}
+          autoComplete="off"
+          aria-label={`Scrie ${DELETE_KEYWORD} pentru a confirma`}
+        />
+        <div className="mt-5 flex justify-end gap-2">
+          <button type="button" className="btn-secondary" onClick={closeDelete}>
+            Anulează
+          </button>
+          <button
+            type="button"
+            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+            disabled={deleteBusy || deleteWord.trim().toUpperCase() !== DELETE_KEYWORD}
+            onClick={confirmDelete}
+          >
+            {deleteBusy ? 'Se șterge...' : 'Șterge definitiv'}
+          </button>
+        </div>
+      </Modal>
 
       {/* Create / edit modal */}
       <Modal

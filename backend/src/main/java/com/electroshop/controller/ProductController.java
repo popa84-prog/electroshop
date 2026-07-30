@@ -1,6 +1,8 @@
 package com.electroshop.controller;
 
 import com.electroshop.dto.ApiResponse;
+import com.electroshop.dto.BulkIdsRequest;
+import com.electroshop.dto.CategoryStatDto;
 import com.electroshop.dto.CompanyPublicDto;
 import com.electroshop.dto.PageResponse;
 import com.electroshop.dto.ProductDto;
@@ -83,6 +85,17 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.ok(productService.getBrands()));
     }
 
+    /**
+     * The most populated categories, largest first. The storefront home page
+     * renders its category tiles from this, so they always match the real
+     * catalogue instead of a hardcoded list that drifts out of date.
+     */
+    @GetMapping("/top-categories")
+    public ResponseEntity<ApiResponse<List<CategoryStatDto>>> topCategories(
+            @RequestParam(defaultValue = "4") int limit) {
+        return ResponseEntity.ok(ApiResponse.ok(productService.getTopCategories(limit)));
+    }
+
     @GetMapping("/category-tree")
     public ResponseEntity<ApiResponse<Map<String, List<String>>>> categoryTree() {
         return ResponseEntity.ok(ApiResponse.ok(productService.getCategoryTree()));
@@ -114,6 +127,25 @@ public class ProductController {
     public ResponseEntity<ApiResponse<Object>> delete(@PathVariable Long id) {
         productService.delete(id);
         return ResponseEntity.ok(ApiResponse.ok("Product deleted", null));
+    }
+
+    /**
+     * Removes several products in one call.
+     * <p>
+     * Modelled as POST rather than DELETE deliberately: the operation is not
+     * idempotent from the caller's point of view (the response reports how many
+     * rows were actually removed) and request bodies on DELETE are not handled
+     * consistently by proxies and HTTP clients.
+     */
+    @PostMapping("/bulk-delete")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<ProductService.BulkDeleteResult>> bulkDelete(
+            @Valid @RequestBody BulkIdsRequest request) {
+        ProductService.BulkDeleteResult result = productService.deleteBulk(request.getIds());
+        String message = result.deleted() == 1
+                ? "1 produs șters"
+                : result.deleted() + " produse șterse";
+        return ResponseEntity.ok(ApiResponse.ok(message, result));
     }
 
     @PostMapping("/{id}/image")

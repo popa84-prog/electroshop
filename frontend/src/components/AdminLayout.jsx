@@ -1,17 +1,67 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { AdminChromeContext, adminTabs } from './AdminNav';
 
 /**
  * Chrome shared by every admin screen.
  *
- * The section menu lives in a rail pinned to the right-hand side of the page and
+ * The section menu lives in a rail pinned to the left-hand side of the page and
  * stays on screen while the content scrolls, so switching between Dashboard,
  * Produse, Utilizatori and the rest never requires going back to a landing page.
  * Below the large breakpoint the rail becomes a horizontally scrollable strip
  * above the content, because a fixed side column would leave too little room for
  * the data tables on a phone.
+ *
+ * The rail is pushed down so its top edge lines up with the first content panel
+ * (the products table, the statistics cards, and so on) rather than with the
+ * page title. That offset cannot be a fixed value: every admin page has a
+ * different header — some carry a subtitle, some a toolbar — so it is measured
+ * from the rendered page instead of guessed.
  */
+
+/** Ignore absurd measurements rather than pushing the rail off the screen. */
+const MAX_RAIL_OFFSET = 400;
+
 export default function AdminLayout() {
+  const location = useLocation();
+  const contentRef = useRef(null);
+  const [railOffset, setRailOffset] = useState(0);
+
+  useEffect(() => {
+    const content = contentRef.current;
+    if (!content) return undefined;
+
+    const measure = () => {
+      // Only the two-column layout needs the offset; the mobile strip sits
+      // above the content and must stay flush with it.
+      if (window.innerWidth < 1024) {
+        setRailOffset(0);
+        return;
+      }
+      // The first panel is whatever the page renders as its main surface.
+      const panel = content.querySelector('.card, table');
+      if (!panel) {
+        setRailOffset(0);
+        return;
+      }
+      const delta = panel.getBoundingClientRect().top - content.getBoundingClientRect().top;
+      setRailOffset(delta > 0 && delta < MAX_RAIL_OFFSET ? Math.round(delta) : 0);
+    };
+
+    measure();
+
+    // The header grows and shrinks as data loads, filters wrap onto a second
+    // line, or the window is resized — re-measure whenever that happens.
+    const observer = new ResizeObserver(measure);
+    observer.observe(content);
+    window.addEventListener('resize', measure);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [location.pathname]);
+
   const linkClass = ({ isActive }) =>
     `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
       isActive
@@ -28,13 +78,17 @@ export default function AdminLayout() {
     <AdminChromeContext.Provider value={true}>
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         {/* Content first in the DOM so keyboard and screen-reader users reach it
-            before the ten navigation links. */}
-        <div className="order-2 min-w-0 flex-1 lg:order-1">
+            before the ten navigation links; `order` puts the rail on the left
+            visually without changing that reading order. */}
+        <div ref={contentRef} className="order-2 min-w-0 flex-1 lg:order-2">
           <Outlet />
         </div>
 
-        {/* Persistent side rail — large screens */}
-        <aside className="order-1 hidden lg:order-2 lg:block lg:w-52 lg:shrink-0">
+        {/* Persistent side rail — large screens, left-hand column */}
+        <aside
+          className="order-1 hidden lg:order-1 lg:block lg:w-52 lg:shrink-0"
+          style={railOffset ? { marginTop: `${railOffset}px` } : undefined}
+        >
           <nav
             aria-label="Secțiuni administrare"
             className="sticky top-20 rounded-xl border border-slate-200 bg-white p-2 shadow-sm"

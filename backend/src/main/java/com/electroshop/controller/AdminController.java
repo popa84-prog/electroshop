@@ -59,8 +59,13 @@ public class AdminController {
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+        // The table lets the operator pick the page size, so the value is
+        // clamped here: a hand-crafted request must not be able to pull the
+        // whole catalogue into memory in one response.
+        int safeSize = Math.max(1, Math.min(size, 200));
+        int safePage = Math.max(0, page);
         Page<AdminProductDto> result = productService.adminList(search,
-                PageRequest.of(page, size, Sort.by("createdAt").descending()));
+                PageRequest.of(safePage, safeSize, Sort.by("createdAt").descending()));
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(result)));
     }
 

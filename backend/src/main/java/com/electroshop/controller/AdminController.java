@@ -208,6 +208,30 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.ok("Order deleted", null));
     }
 
+    /**
+     * Export the product catalogue as a stock list: produs / achiziție /
+     * preț vânzare / stoc. Respects the table's search box, so the operator can
+     * export either everything or just the rows currently filtered.
+     */
+    @GetMapping("/products/export")
+    public ResponseEntity<byte[]> exportProducts(
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "xlsx") String format) {
+
+        byte[] body = productService.exportProducts(search, format);
+        boolean csv = "csv".equalsIgnoreCase(format);
+        String filename = csv ? "produse.csv" : "produse.xlsx";
+        MediaType type = csv
+                ? MediaType.parseMediaType("text/csv; charset=UTF-8")
+                : MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
+                .contentType(type)
+                .body(body);
+    }
+
     /** Export orders in a date range as .xlsx (default) or .csv for accounting. */
     @GetMapping("/orders/export")
     public ResponseEntity<byte[]> exportOrders(

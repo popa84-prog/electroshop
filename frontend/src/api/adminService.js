@@ -21,6 +21,11 @@ const adminService = {
   // Connection log (login events with IP + location)
   loginEvents: (params = {}) => api.get('/admin/login-events', { params }).then((r) => r.data.data),
 
+  // Stock list export: produs / achiziție / preț vânzare / stoc.
+  // Returns a Blob — the caller turns it into a download.
+  exportProducts: (params = {}) =>
+    api.get('/admin/products/export', { params, responseType: 'blob' }).then((r) => r.data),
+
   // Orders
   listOrders: (params = {}) => api.get('/admin/orders', { params }).then((r) => r.data.data),
   getOrder: (id) => api.get(`/admin/orders/${id}`).then((r) => r.data.data),

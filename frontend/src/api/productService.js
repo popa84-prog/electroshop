@@ -37,6 +37,13 @@ const productService = {
   create: (payload) => api.post('/products', payload).then((r) => r.data.data),
   update: (id, payload) => api.put(`/products/${id}`, payload).then((r) => r.data.data),
   remove: (id) => api.delete(`/products/${id}`).then((r) => r.data),
+  // Hide/show on the storefront without deleting (feature #5).
+  activate: (id) => api.post(`/products/${id}/activate`).then((r) => r.data.data),
+  deactivate: (id) => api.post(`/products/${id}/deactivate`).then((r) => r.data.data),
+  // Feature #10 — "VÂNDUT" quick sale: records a walk-in sale, decrements stock,
+  // creates a completed order (feeds the dashboard automatically) and returns the
+  // fresh product row.
+  sell: (id, payload) => api.post(`/products/${id}/sell`, payload).then((r) => r.data.data),
   // Batch delete. POST (not DELETE) because the call is not idempotent and
   // request bodies on DELETE are unreliable across proxies.
   bulkRemove: (ids) => api.post('/products/bulk-delete', { ids }).then((r) => r.data.data),
@@ -68,6 +75,9 @@ const productService = {
     api.delete(`/products/${id}/images/${imageId}`).then((r) => r.data.data),
   setPrimaryImage: (id, imageId) =>
     api.put(`/products/${id}/images/${imageId}/primary`).then((r) => r.data.data),
+  // Saves the new drag & drop order — imageIds must be the full, ordered id list.
+  reorderProductImages: (id, imageIds) =>
+    api.put(`/products/${id}/images/reorder`, { imageIds }).then((r) => r.data.data),
 };
 
 export default productService;

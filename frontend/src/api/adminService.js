@@ -3,8 +3,10 @@ import api from './axios';
 const adminService = {
   dashboard: () => api.get('/admin/dashboard').then((r) => r.data.data),
 
-  // Audit log
+  // Audit log — params: action, entityType, entityId, page, size (all optional)
   listAuditLogs: (params = {}) => api.get('/admin/audit-logs', { params }).then((r) => r.data.data),
+  exportAuditLogs: (params = {}) =>
+    api.get('/admin/audit-logs/export', { params, responseType: 'blob' }).then((r) => r.data),
 
   // Users
   listUsers: (params = {}) => api.get('/admin/users', { params }).then((r) => r.data.data),
@@ -17,6 +19,10 @@ const adminService = {
   listPendingUsers: (params = {}) =>
     api.get('/admin/users/pending', { params }).then((r) => r.data.data),
   approveUser: (id) => api.post(`/admin/users/${id}/approve`).then((r) => r.data.data),
+
+  // Feature #6 — brute-force unlock + admin override to turn off a lost-device 2FA.
+  unlockUser: (id) => api.post(`/admin/users/${id}/unlock`).then((r) => r.data.data),
+  disableUserTwoFactor: (id) => api.post(`/admin/users/${id}/disable-2fa`).then((r) => r.data.data),
 
   // Connection log (login events with IP + location)
   loginEvents: (params = {}) => api.get('/admin/login-events', { params }).then((r) => r.data.data),
@@ -67,6 +73,13 @@ const adminService = {
   getCompanySettings: () => api.get('/admin/company-settings').then((r) => r.data.data),
   updateCompanySettings: (payload) =>
     api.put('/admin/company-settings', payload).then((r) => r.data.data),
+
+  // Notification center (feature #8) — params: type, unreadOnly, page, size
+  listNotifications: (params = {}) => api.get('/admin/notifications', { params }).then((r) => r.data.data),
+  unreadNotificationCount: () =>
+    api.get('/admin/notifications/unread-count').then((r) => r.data.data),
+  markNotificationRead: (id) => api.post(`/admin/notifications/${id}/read`).then((r) => r.data.data),
+  markAllNotificationsRead: () => api.post('/admin/notifications/read-all').then((r) => r.data),
 };
 
 export default adminService;

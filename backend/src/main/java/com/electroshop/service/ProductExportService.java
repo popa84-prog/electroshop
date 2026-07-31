@@ -150,7 +150,7 @@ public class ProductExportService {
      */
     public byte[] toCsv(List<AdminProductDto> products) {
         StringBuilder sb = new StringBuilder();
-        sb.append('﻿');
+        sb.append((char) 0xFEFF);
         sb.append(String.join(",", HEADERS)).append('\n');
         for (AdminProductDto p : products) {
             sb.append(csv(p.name())).append(',')

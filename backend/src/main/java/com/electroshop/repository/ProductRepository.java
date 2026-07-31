@@ -23,6 +23,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
               AND (:minPrice IS NULL OR p.price >= :minPrice)
               AND (:maxPrice IS NULL OR p.price <= :maxPrice)
               AND (:inStock = FALSE OR p.stockQuantity > 0)
+              AND (:outOfStock = FALSE OR p.stockQuantity = 0)
+              AND (:lowStockAtMost IS NULL OR (p.stockQuantity <= :lowStockAtMost AND p.stockQuantity > 0))
+              AND (:noImage = FALSE OR p.imageUrl IS NULL OR p.imageUrl = '')
             """)
     Page<Product> search(@Param("search") String search,
                          @Param("category") String category,
@@ -31,6 +34,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                          @Param("minPrice") BigDecimal minPrice,
                          @Param("maxPrice") BigDecimal maxPrice,
                          @Param("inStock") boolean inStock,
+                         @Param("outOfStock") boolean outOfStock,
+                         @Param("lowStockAtMost") Integer lowStockAtMost,
+                         @Param("noImage") boolean noImage,
                          Pageable pageable);
 
     @Query("SELECT DISTINCT p.category FROM Product p WHERE p.category IS NOT NULL ORDER BY p.category")

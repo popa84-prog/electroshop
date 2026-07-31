@@ -57,6 +57,10 @@ public class AdminController {
     @GetMapping("/products")
     public ResponseEntity<ApiResponse<PageResponse<AdminProductDto>>> listProducts(
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) String category,
+            @RequestParam(defaultValue = "false") boolean inStock,
+            // Quick-filter shortcut (feature #3): "low_stock" | "out_of_stock" | "no_image".
+            @RequestParam(required = false) String quickFilter,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         // The table lets the operator pick the page size, so the value is
@@ -64,7 +68,7 @@ public class AdminController {
         // whole catalogue into memory in one response.
         int safeSize = Math.max(1, Math.min(size, 200));
         int safePage = Math.max(0, page);
-        Page<AdminProductDto> result = productService.adminList(search,
+        Page<AdminProductDto> result = productService.adminList(search, category, inStock, quickFilter,
                 PageRequest.of(safePage, safeSize, Sort.by("createdAt").descending()));
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(result)));
     }

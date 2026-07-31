@@ -61,6 +61,16 @@ public class Product {
     @OrderBy("position ASC, id ASC")
     private List<ProductImage> images = new ArrayList<>();
 
+    /**
+     * Whether the product is visible on the storefront. Deactivating hides it
+     * from public listings without deleting it — stock and history are kept.
+     * Toggled only via {@code ProductService#setActive}, never through the
+     * regular create/update payload, so a routine edit can never silently
+     * flip it back on.
+     */
+    @Column(nullable = false)
+    private boolean active = true;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 

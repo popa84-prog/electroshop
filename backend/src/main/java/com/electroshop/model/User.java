@@ -51,6 +51,35 @@ public class User {
     @Column(length = 120)
     private String lastLoginLocation;
 
+    // --- Brute-force protection (feature #6) ---
+    /** Consecutive failed login attempts since the last success or unlock. */
+    @Column(nullable = false)
+    private int failedLoginAttempts = 0;
+
+    /** While in the future, login is blocked even with the correct password. */
+    private LocalDateTime lockedUntil;
+
+    // --- Two-factor authentication for Admin accounts (feature #6) ---
+    private boolean twoFactorEnabled = false;
+
+    /** Active TOTP secret (Base32), only set once 2FA is confirmed. Never exposed via DTOs. */
+    @Column(length = 64)
+    private String twoFactorSecret;
+
+    /** Secret generated during /2fa/setup, awaiting confirmation via /2fa/confirm. */
+    @Column(length = 64)
+    private String twoFactorPendingSecret;
+
+    // --- Refresh-token security (feature #6) ---
+    /**
+     * Bumped on demand (logout-all / "revoke sessions"). Every issued access
+     * and refresh token embeds the version it was minted with; a mismatch
+     * against the user's current value makes the token invalid even though it
+     * has not expired yet.
+     */
+    @Column(nullable = false)
+    private int tokenVersion = 0;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 

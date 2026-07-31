@@ -45,6 +45,14 @@ public class LoginEvent {
     @Column(length = 400)
     private String userAgent;
 
+    /** False for a failed login attempt (bad password, locked account, ...) — feature #6. */
+    @Column(nullable = false)
+    private boolean success = true;
+
+    /** Short machine reason for a failed attempt, e.g. "bad_credentials", "account_locked". */
+    @Column(length = 60)
+    private String failureReason;
+
     @Column(nullable = false)
     private LocalDateTime loginAt = LocalDateTime.now();
 }

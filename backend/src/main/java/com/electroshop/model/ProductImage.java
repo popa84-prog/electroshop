@@ -42,6 +42,18 @@ public class ProductImage {
     @Column(nullable = false)
     private int position = 0;
 
+    /** Pixel width/height as reported by Cloudinary at upload time. Null for images uploaded before this field existed. */
+    private Integer width;
+
+    private Integer height;
+
+    /** File format reported by Cloudinary, e.g. "jpg", "png", "webp". Null for pre-existing images. */
+    @Column(length = 20)
+    private String format;
+
+    /** Original file size in bytes, as reported by Cloudinary. Null for pre-existing images. */
+    private Long bytes;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 

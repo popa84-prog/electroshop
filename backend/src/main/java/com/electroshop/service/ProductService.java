@@ -35,6 +35,9 @@ public class ProductService {
     /** Upper bound on how many rows a single spreadsheet export may contain. */
     private static final int MAX_EXPORT_ROWS = 20_000;
 
+    /** Stock at or below this (but above zero) counts as "Stoc redus" for the quick filter. */
+    private static final int LOW_STOCK_THRESHOLD = 5;
+
     private final ProductRepository productRepository;
     private final AuditService auditService;
     private final CloudinaryService cloudinaryService;
@@ -55,7 +58,7 @@ public class ProductService {
                                  Pageable pageable) {
         return productRepository.search(
                 blankToNull(search), blankToNull(category), blankToNull(subcategory),
-                blankToNull(brand), minPrice, maxPrice, inStock, pageable
+                blankToNull(brand), minPrice, maxPrice, inStock, false, null, false, pageable
         ).map(ProductDto::from);
     }
 
@@ -70,10 +73,21 @@ public class ProductService {
 
     // ---- Admin-only views (expose purchase price + profit) ----
 
+    /**
+     * Admin table listing. {@code quickFilter} short-circuits the free-text/category
+     * search with one of the preset operator shortcuts (feature #3 — filtre rapide):
+     * "low_stock" (1..5 units), "out_of_stock" (0 units) or "no_image" (missing cover).
+     * Any other value (including {@code null}/blank) leaves those shortcuts off.
+     */
     @Transactional(readOnly = true)
-    public Page<AdminProductDto> adminList(String search, Pageable pageable) {
+    public Page<AdminProductDto> adminList(String search, String category, boolean inStock,
+                                           String quickFilter, Pageable pageable) {
+        boolean outOfStock = "out_of_stock".equals(quickFilter);
+        boolean noImage = "no_image".equals(quickFilter);
+        Integer lowStockAtMost = "low_stock".equals(quickFilter) ? LOW_STOCK_THRESHOLD : null;
         return productRepository.search(
-                blankToNull(search), null, null, null, null, null, false, pageable
+                blankToNull(search), blankToNull(category), null, null, null, null,
+                inStock, outOfStock, lowStockAtMost, noImage, pageable
         ).map(AdminProductDto::from);
     }
 
@@ -92,7 +106,7 @@ public class ProductService {
     @Transactional(readOnly = true)
     public byte[] exportProducts(String search, String format) {
         List<AdminProductDto> rows = productRepository.search(
-                blankToNull(search), null, null, null, null, null, false,
+                blankToNull(search), null, null, null, null, null, false, false, null, false,
                 PageRequest.of(0, MAX_EXPORT_ROWS, Sort.by("name").ascending())
         ).map(AdminProductDto::from).getContent();
 

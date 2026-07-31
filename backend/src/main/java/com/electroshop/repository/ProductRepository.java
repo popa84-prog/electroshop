@@ -26,6 +26,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
               AND (:outOfStock = FALSE OR p.stockQuantity = 0)
               AND (:lowStockAtMost IS NULL OR (p.stockQuantity <= :lowStockAtMost AND p.stockQuantity > 0))
               AND (:noImage = FALSE OR p.imageUrl IS NULL OR p.imageUrl = '')
+              AND (:activeOnly = FALSE OR p.active = TRUE)
             """)
     Page<Product> search(@Param("search") String search,
                          @Param("category") String category,
@@ -37,6 +38,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                          @Param("outOfStock") boolean outOfStock,
                          @Param("lowStockAtMost") Integer lowStockAtMost,
                          @Param("noImage") boolean noImage,
+                         @Param("activeOnly") boolean activeOnly,
                          Pageable pageable);
 
     @Query("SELECT DISTINCT p.category FROM Product p WHERE p.category IS NOT NULL ORDER BY p.category")
@@ -82,4 +84,17 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     /** The five lowest-stock products at or below {@code threshold}, emptiest first. */
     List<Product> findTop5ByStockQuantityLessThanEqualOrderByStockQuantityAsc(int threshold);
+
+    // ---- Feature #8 (automatic notifications) — full sweeps, not capped like the Top5 above ----
+
+    /** Every active product with 0 &lt; stock &lt; threshold — feeds the low-stock notification sweep. */
+    @Query("SELECT p FROM Product p WHERE p.active = TRUE AND p.stockQuantity > 0 AND p.stockQuantity < :threshold")
+    List<Product> findLowStockActive(@Param("threshold") int threshold);
+
+    /** Every active product with no image set — feeds the "produs fără imagini" notification sweep. */
+    @Query("SELECT p FROM Product p WHERE p.active = TRUE AND (p.imageUrl IS NULL OR p.imageUrl = '')")
+    List<Product> findActiveWithNoImage();
+
+    /** Every inactive product — feeds the "produs inactiv" notification sweep. */
+    List<Product> findByActiveFalse();
 }

@@ -13,24 +13,25 @@ class JwtServiceTest {
 
     @Test
     void accessTokenRoundTrip() {
-        String token = jwtService.generateAccessToken("john@example.com", 42L);
+        String token = jwtService.generateAccessToken("john@example.com", 42L, 0);
         assertEquals("john@example.com", jwtService.extractEmail(token));
         assertEquals(42L, jwtService.extractUserId(token));
         assertTrue(jwtService.isTokenValid(token, "john@example.com"));
         assertFalse(jwtService.isTokenValid(token, "other@example.com"));
         assertFalse(jwtService.isRefreshToken(token));
+        assertEquals(0, jwtService.extractTokenVersion(token));
     }
 
     @Test
     void refreshTokenIsRecognized() {
-        String token = jwtService.generateRefreshToken("jane@example.com", 7L);
+        String token = jwtService.generateRefreshToken("jane@example.com", 7L, 0);
         assertTrue(jwtService.isRefreshToken(token));
         assertEquals("jane@example.com", jwtService.extractEmail(token));
     }
 
     @Test
     void tamperedTokenIsInvalid() {
-        String token = jwtService.generateAccessToken("john@example.com", 1L);
+        String token = jwtService.generateAccessToken("john@example.com", 1L, 0);
         String tampered = token.substring(0, token.length() - 2) + "xx";
         assertFalse(jwtService.isTokenValid(tampered, "john@example.com"));
     }

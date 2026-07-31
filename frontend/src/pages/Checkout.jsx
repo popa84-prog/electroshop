@@ -80,6 +80,7 @@ export default function Checkout() {
                 <img
                   src={resolveImage(i.imageUrl)}
                   alt={i.name}
+                  loading="lazy"
                   className="h-12 w-12 rounded object-cover"
                 />
                 <div className="flex-1 text-sm">

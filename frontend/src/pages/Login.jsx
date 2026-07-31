@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, verifyTwoFactor } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || '/';
@@ -11,6 +11,12 @@ export default function Login() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  // Feature #6: 2FA challenge step. Once login() reports requiresTwoFactor,
+  // the password screen is replaced by a 6-digit authenticator-code screen —
+  // no session exists yet until that code is verified.
+  const [twoFactorToken, setTwoFactorToken] = useState(null);
+  const [code, setCode] = useState('');
 
   // A stable starfield generated once.
   const stars = useMemo(
@@ -33,10 +39,28 @@ export default function Login() {
     setError(null);
     setLoading(true);
     try {
-      await login(form);
-      navigate(from, { replace: true });
+      const data = await login(form);
+      if (data.requiresTwoFactor) {
+        setTwoFactorToken(data.twoFactorToken);
+      } else {
+        navigate(from, { replace: true });
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Autentificare esuata.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyTwoFactor = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      await verifyTwoFactor(twoFactorToken, code);
+      navigate(from, { replace: true });
+    } catch (err) {
+      setError(err.response?.data?.message || 'Cod incorect.');
     } finally {
       setLoading(false);
     }
@@ -127,7 +151,7 @@ export default function Login() {
                 ELECTROSHOP
               </h1>
               <p className="mt-2 text-xs uppercase tracking-[0.35em] text-cyan-300/70">
-                Acces securizat
+                {twoFactorToken ? 'Verificare în doi pași' : 'Acces securizat'}
               </p>
             </div>
 
@@ -137,58 +161,105 @@ export default function Login() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-cyan-200/80">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  autoComplete="email"
-                  className="w-full rounded-xl border border-cyan-400/20 bg-white/5 px-4 py-3 text-sm text-cyan-50 placeholder-slate-500 outline-none transition focus:border-cyan-300/60 focus:bg-white/10 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.15)]"
-                  placeholder="nume@exemplu.com"
-                  value={form.email}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-cyan-200/80">
-                  Parola
-                </label>
-                <input
-                  type="password"
-                  name="password"
-                  autoComplete="current-password"
-                  className="w-full rounded-xl border border-cyan-400/20 bg-white/5 px-4 py-3 text-sm text-cyan-50 placeholder-slate-500 outline-none transition focus:border-cyan-300/60 focus:bg-white/10 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.15)]"
-                  placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;"
-                  value={form.password}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
+            {twoFactorToken ? (
+              <form onSubmit={handleVerifyTwoFactor} className="space-y-5">
+                <p className="text-center text-sm text-slate-400">
+                  Introdu codul din aplicația de autentificare (Google Authenticator, Authy etc.).
+                </p>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-cyan-200/80">
+                    Cod de verificare
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    className="w-full rounded-xl border border-cyan-400/20 bg-white/5 px-4 py-3 text-center text-lg tracking-[0.4em] text-cyan-50 placeholder-slate-500 outline-none transition focus:border-cyan-300/60 focus:bg-white/10 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.15)]"
+                    placeholder="000000"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    required
+                  />
+                </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-cyan-400 to-sky-500 px-4 py-3 text-sm font-semibold uppercase tracking-[0.15em] text-[#04060f] shadow-[0_0_30px_-6px_rgba(34,211,238,0.7)] transition hover:from-cyan-300 hover:to-sky-400 disabled:opacity-60"
-              >
-                {loading ? 'Se conecteaza...' : 'Conectare'}
-              </button>
-            </form>
+                <button
+                  type="submit"
+                  disabled={loading || code.length !== 6}
+                  className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-cyan-400 to-sky-500 px-4 py-3 text-sm font-semibold uppercase tracking-[0.15em] text-[#04060f] shadow-[0_0_30px_-6px_rgba(34,211,238,0.7)] transition hover:from-cyan-300 hover:to-sky-400 disabled:opacity-60"
+                >
+                  {loading ? 'Se verifică...' : 'Confirmă codul'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTwoFactorToken(null);
+                    setCode('');
+                    setError(null);
+                  }}
+                  className="w-full text-center text-xs text-slate-400 hover:text-cyan-300 hover:underline"
+                >
+                  ← Înapoi la autentificare
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-cyan-200/80">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    autoComplete="email"
+                    className="w-full rounded-xl border border-cyan-400/20 bg-white/5 px-4 py-3 text-sm text-cyan-50 placeholder-slate-500 outline-none transition focus:border-cyan-300/60 focus:bg-white/10 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.15)]"
+                    placeholder="nume@exemplu.com"
+                    value={form.email}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-cyan-200/80">
+                    Parola
+                  </label>
+                  <input
+                    type="password"
+                    name="password"
+                    autoComplete="current-password"
+                    className="w-full rounded-xl border border-cyan-400/20 bg-white/5 px-4 py-3 text-sm text-cyan-50 placeholder-slate-500 outline-none transition focus:border-cyan-300/60 focus:bg-white/10 focus:shadow-[0_0_0_3px_rgba(34,211,238,0.15)]"
+                    placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;"
+                    value={form.password}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
 
-            <p className="mt-6 text-center text-sm text-slate-400">
-              Nu ai cont?{' '}
-              <Link to="/register" className="font-medium text-cyan-300 hover:text-cyan-200 hover:underline">
-                Solicita acces
-              </Link>
-            </p>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-cyan-400 to-sky-500 px-4 py-3 text-sm font-semibold uppercase tracking-[0.15em] text-[#04060f] shadow-[0_0_30px_-6px_rgba(34,211,238,0.7)] transition hover:from-cyan-300 hover:to-sky-400 disabled:opacity-60"
+                >
+                  {loading ? 'Se conecteaza...' : 'Conectare'}
+                </button>
+              </form>
+            )}
 
-            <p className="mt-5 border-t border-white/5 pt-4 text-center text-[11px] leading-relaxed text-slate-500">
-              Acces exclusiv autentificat. Conturile noi sunt activate dupa
-              aprobarea administratorului.
-            </p>
+            {!twoFactorToken && (
+              <>
+                <p className="mt-6 text-center text-sm text-slate-400">
+                  Nu ai cont?{' '}
+                  <Link to="/register" className="font-medium text-cyan-300 hover:text-cyan-200 hover:underline">
+                    Solicita acces
+                  </Link>
+                </p>
+
+                <p className="mt-5 border-t border-white/5 pt-4 text-center text-[11px] leading-relaxed text-slate-500">
+                  Acces exclusiv autentificat. Conturile noi sunt activate dupa
+                  aprobarea administratorului.
+                </p>
+              </>
+            )}
           </div>
         </div>
       </div>

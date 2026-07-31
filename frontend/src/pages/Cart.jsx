@@ -37,6 +37,7 @@ export default function Cart() {
               <img
                 src={resolveImage(item.imageUrl)}
                 alt={item.name}
+                loading="lazy"
                 className="h-20 w-20 rounded-lg object-cover"
               />
               <div className="flex-1">

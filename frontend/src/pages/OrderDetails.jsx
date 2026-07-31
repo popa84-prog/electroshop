@@ -49,6 +49,7 @@ export default function OrderDetails() {
               <img
                 src={resolveImage(item.imageUrl)}
                 alt={item.productName}
+                loading="lazy"
                 className="h-16 w-16 rounded-lg object-cover"
               />
               <div className="flex-1">

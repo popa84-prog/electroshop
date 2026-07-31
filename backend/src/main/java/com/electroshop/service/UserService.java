@@ -64,6 +64,23 @@ public class UserService {
         return UserDto.from(userRepository.save(user));
     }
 
+    /** Manually clears a brute-force lock before its timer expires (feature #6). */
+    public UserDto unlock(Long id) {
+        User user = findEntity(id);
+        user.setLockedUntil(null);
+        user.setFailedLoginAttempts(0);
+        return UserDto.from(userRepository.save(user));
+    }
+
+    /** Admin override for a user who lost access to their authenticator device (feature #6). */
+    public UserDto adminDisableTwoFactor(Long id) {
+        User user = findEntity(id);
+        user.setTwoFactorEnabled(false);
+        user.setTwoFactorSecret(null);
+        user.setTwoFactorPendingSecret(null);
+        return UserDto.from(userRepository.save(user));
+    }
+
     /** Connection history (all users, or a single user when userId is provided). */
     @Transactional(readOnly = true)
     public Page<LoginEventDto> listLoginEvents(Long userId, Pageable pageable) {

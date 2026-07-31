@@ -46,7 +46,7 @@ public class CloudinaryService {
         return configured;
     }
 
-    /** Uploads the file bytes to the given folder and returns the delivered URL + public id. */
+    /** Uploads the file bytes to the given folder and returns the delivered URL + public id + metadata. */
     public UploadResult upload(MultipartFile file, String folder) {
         ensureConfigured();
         try {
@@ -58,10 +58,45 @@ public class CloudinaryService {
                             "resource_type", "image"));
             return new UploadResult(
                     (String) result.get("secure_url"),
-                    (String) result.get("public_id"));
+                    (String) result.get("public_id"),
+                    asInteger(result.get("width")),
+                    asInteger(result.get("height")),
+                    (String) result.get("format"),
+                    asLong(result.get("bytes")));
         } catch (IOException e) {
             throw new IllegalStateException("Încărcarea imaginii pe Cloudinary a eșuat: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Derives a thumbnail delivery URL (300×300, cropped, auto quality/format) from
+     * an original Cloudinary secure_url — no extra upload or API call needed, the
+     * transformation is generated on-the-fly by Cloudinary's CDN on first request.
+     * Returns the original URL unchanged if it doesn't look like a Cloudinary URL
+     * (e.g. a legacy manually-entered image URL).
+     */
+    public static String thumbnailUrl(String secureUrl) {
+        return withTransform(secureUrl, "w_300,h_300,c_fill,g_auto,q_auto,f_auto");
+    }
+
+    /** Derives a Full HD (max 1920px wide, never upscaled) delivery URL for full-size viewing. */
+    public static String fhdUrl(String secureUrl) {
+        return withTransform(secureUrl, "w_1920,c_limit,q_auto,f_auto");
+    }
+
+    private static String withTransform(String secureUrl, String transformation) {
+        if (secureUrl == null || !secureUrl.contains("/upload/")) {
+            return secureUrl;
+        }
+        return secureUrl.replaceFirst("/upload/", "/upload/" + transformation + "/");
+    }
+
+    private static Integer asInteger(Object o) {
+        return o instanceof Number n ? n.intValue() : null;
+    }
+
+    private static Long asLong(Object o) {
+        return o instanceof Number n ? n.longValue() : null;
     }
 
     /** Best-effort delete — a Cloudinary hiccup must not block DB cleanup. */
@@ -87,5 +122,5 @@ public class CloudinaryService {
         return s != null && !s.isBlank();
     }
 
-    public record UploadResult(String url, String publicId) {}
+    public record UploadResult(String url, String publicId, Integer width, Integer height, String format, Long bytes) {}
 }

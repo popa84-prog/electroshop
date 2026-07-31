@@ -8,10 +8,12 @@ import com.electroshop.exception.ResourceNotFoundException;
 import com.electroshop.model.Product;
 import com.electroshop.model.ProductImage;
 import com.electroshop.repository.ProductRepository;
+import com.electroshop.security.PermissionService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -42,14 +44,20 @@ public class ProductService {
     private final AuditService auditService;
     private final CloudinaryService cloudinaryService;
     private final ProductExportService productExportService;
+    private final PermissionService permissionService;
+    private final NotificationService notificationService;
 
     public ProductService(ProductRepository productRepository, AuditService auditService,
                           CloudinaryService cloudinaryService,
-                          ProductExportService productExportService) {
+                          ProductExportService productExportService,
+                          PermissionService permissionService,
+                          NotificationService notificationService) {
         this.productRepository = productRepository;
         this.auditService = auditService;
         this.cloudinaryService = cloudinaryService;
         this.productExportService = productExportService;
+        this.permissionService = permissionService;
+        this.notificationService = notificationService;
     }
 
     @Transactional(readOnly = true)
@@ -58,7 +66,7 @@ public class ProductService {
                                  Pageable pageable) {
         return productRepository.search(
                 blankToNull(search), blankToNull(category), blankToNull(subcategory),
-                blankToNull(brand), minPrice, maxPrice, inStock, false, null, false, pageable
+                blankToNull(brand), minPrice, maxPrice, inStock, false, null, false, true, pageable
         ).map(ProductDto::from);
     }
 
@@ -87,7 +95,7 @@ public class ProductService {
         Integer lowStockAtMost = "low_stock".equals(quickFilter) ? LOW_STOCK_THRESHOLD : null;
         return productRepository.search(
                 blankToNull(search), blankToNull(category), null, null, null, null,
-                inStock, outOfStock, lowStockAtMost, noImage, pageable
+                inStock, outOfStock, lowStockAtMost, noImage, false, pageable
         ).map(AdminProductDto::from);
     }
 
@@ -106,7 +114,7 @@ public class ProductService {
     @Transactional(readOnly = true)
     public byte[] exportProducts(String search, String format) {
         List<AdminProductDto> rows = productRepository.search(
-                blankToNull(search), null, null, null, null, null, false, false, null, false,
+                blankToNull(search), null, null, null, null, null, false, false, null, false, false,
                 PageRequest.of(0, MAX_EXPORT_ROWS, Sort.by("name").ascending())
         ).map(AdminProductDto::from).getContent();
 
@@ -185,6 +193,11 @@ public class ProductService {
     }
 
     public ProductDto create(ProductRequest req) {
+        // Note: unlike update(), creation does not gate PRODUCTS_PRICE — price is
+        // @NotNull/required on ProductRequest (a brand-new product needs an initial
+        // price to be usable at all), so there is no "old price" being protected
+        // here. The PRODUCTS_PRICE gate applies to *changing* an existing price
+        // (see update() below), which is where an Editor account's guardrail matters.
         Product p = new Product();
         apply(p, req);
         Product saved = productRepository.save(p);
@@ -196,14 +209,69 @@ public class ProductService {
     public ProductDto update(Long id, ProductRequest req) {
         Product p = findEntity(id);
         Integer oldStock = p.getStockQuantity();
+        BigDecimal oldPrice = p.getPrice();
+
+        // Feature #6 (granular permissions): editing a product's price specifically
+        // needs PRODUCTS_PRICE — Editor accounts can update everything else about a
+        // product (name, description, images, category...) but not the price.
+        boolean requestChangesPrice = oldPrice == null ? req.price() != null
+                : req.price() == null || oldPrice.compareTo(req.price()) != 0;
+        if (requestChangesPrice && !permissionService.has("PRODUCTS_PRICE")) {
+            throw new AccessDeniedException("Nu ai permisiunea de a modifica prețul acestui produs.");
+        }
+
         apply(p, req);
         Product saved = productRepository.save(p);
+
         String details = saved.getName();
-        if (oldStock != null && !oldStock.equals(saved.getStockQuantity())) {
+        boolean stockChanged = oldStock != null && !oldStock.equals(saved.getStockQuantity());
+        boolean priceChanged = oldPrice != null && saved.getPrice() != null
+                && oldPrice.compareTo(saved.getPrice()) != 0;
+        if (stockChanged) {
             details += " · stoc " + oldStock + " → " + saved.getStockQuantity();
         }
+        if (priceChanged) {
+            details += " · preț " + oldPrice + " → " + saved.getPrice() + " RON";
+        }
         auditService.log("PRODUCT_UPDATED", "Product", saved.getId(), details);
+
+        // Dedicated, itemized entries — feature #5 (istoric prețuri / istoric stoc),
+        // queried separately from the generic PRODUCT_UPDATED feed above so the
+        // per-product history popup can show only price/stock changes.
+        if (priceChanged) {
+            auditService.log("PRODUCT_PRICE_CHANGED", "Product", saved.getId(),
+                    oldPrice + " RON → " + saved.getPrice() + " RON");
+        }
+        if (stockChanged) {
+            auditService.log("PRODUCT_STOCK_CHANGED", "Product", saved.getId(),
+                    oldStock + " → " + saved.getStockQuantity() + " bucăți");
+            // Feature #8 — instant "stoc redus" notification on the crossing (the periodic
+            // sweep in NotificationService.reconcile() also catches products already low
+            // before this edit, e.g. right after this feature ships).
+            boolean crossedIntoLowStock = saved.getStockQuantity() > 0 && saved.getStockQuantity() < LOW_STOCK_THRESHOLD
+                    && (oldStock == null || oldStock >= LOW_STOCK_THRESHOLD);
+            if (crossedIntoLowStock) {
+                notificationService.notifyLowStock(saved);
+            }
+        }
         return ProductDto.from(saved);
+    }
+
+    /** Activates or deactivates a product (feature #5 — hides it from the public storefront without deleting it). */
+    public AdminProductDto setActive(Long id, boolean active) {
+        Product p = findEntity(id);
+        boolean changed = p.isActive() != active;
+        p.setActive(active);
+        Product saved = productRepository.save(p);
+        if (changed) {
+            auditService.log(active ? "PRODUCT_ACTIVATED" : "PRODUCT_DEACTIVATED",
+                    "Product", saved.getId(), saved.getName());
+            if (!active) {
+                // Feature #8 — "produs inactiv" notification, feeds the admin notification center.
+                notificationService.notifyProductDeactivated(saved);
+            }
+        }
+        return AdminProductDto.from(saved);
     }
 
     public ProductDto updateImage(Long id, String imageUrl) {
@@ -289,6 +357,10 @@ public class ProductService {
             CloudinaryService.UploadResult res =
                     cloudinaryService.upload(file, "electroshop/products/" + id);
             ProductImage img = new ProductImage(p, res.url(), res.publicId(), nextPos++);
+            img.setWidth(res.width());
+            img.setHeight(res.height());
+            img.setFormat(res.format());
+            img.setBytes(res.bytes());
             // First image on a product with no cover becomes the primary/cover.
             if (p.getImages().isEmpty() && !hasPrimary(p)) {
                 img.setPrimary(true);
@@ -343,6 +415,36 @@ public class ProductService {
         p.setImageUrl(target.getUrl());
         Product saved = productRepository.save(p);
         auditService.log("PRODUCT_IMAGE_PRIMARY", "Product", saved.getId(), saved.getName());
+        return ProductDto.detail(saved);
+    }
+
+    /**
+     * Reorders the product's image gallery (drag & drop in the admin UI). The
+     * caller must supply the full, ordered list of image ids belonging to the
+     * product — a partial list is rejected so the gallery can never end up with
+     * duplicate or missing positions.
+     */
+    public ProductDto reorderImages(Long id, List<Long> orderedImageIds) {
+        Product p = findEntity(id);
+        if (orderedImageIds == null || orderedImageIds.isEmpty()) {
+            throw new IllegalArgumentException("Lista de imagini pentru reordonare este goală.");
+        }
+        Set<Long> current = p.getImages().stream().map(ProductImage::getId).collect(java.util.stream.Collectors.toSet());
+        Set<Long> requested = new LinkedHashSet<>(orderedImageIds);
+        if (requested.size() != orderedImageIds.size() || !requested.equals(current)) {
+            throw new IllegalArgumentException(
+                    "Lista de reordonare trebuie să conțină exact imaginile existente ale produsului, fără duplicate.");
+        }
+        Map<Long, ProductImage> byId = new LinkedHashMap<>();
+        for (ProductImage img : p.getImages()) {
+            byId.put(img.getId(), img);
+        }
+        int pos = 0;
+        for (Long imageId : orderedImageIds) {
+            byId.get(imageId).setPosition(pos++);
+        }
+        Product saved = productRepository.save(p);
+        auditService.log("PRODUCT_IMAGE_REORDERED", "Product", saved.getId(), saved.getName());
         return ProductDto.detail(saved);
     }
 

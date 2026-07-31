@@ -4,11 +4,15 @@ import com.electroshop.dto.AuditLogDto;
 import com.electroshop.model.AuditLog;
 import com.electroshop.repository.AuditLogRepository;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 /**
  * Records who did what across the admin surface. Logging must never break the
@@ -17,10 +21,15 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AuditService {
 
-    private final AuditLogRepository repository;
+    /** Upper bound on how many rows a single export may contain — a report, not a dump. */
+    private static final int MAX_EXPORT_ROWS = 20_000;
 
-    public AuditService(AuditLogRepository repository) {
+    private final AuditLogRepository repository;
+    private final AuditLogExportService exportService;
+
+    public AuditService(AuditLogRepository repository, AuditLogExportService exportService) {
         this.repository = repository;
+        this.exportService = exportService;
     }
 
     public void log(String action, String entityType, Long entityId, String details) {
@@ -49,8 +58,28 @@ public class AuditService {
         return "system";
     }
 
+    /**
+     * Filtered activity feed — pass all-null filters for the unfiltered case
+     * (feature #5: filtrare după tip acțiune, and the per-product history
+     * popup, which passes entityType="Product" + entityId).
+     */
     @Transactional(readOnly = true)
-    public Page<AuditLogDto> list(Pageable pageable) {
-        return repository.findAllByOrderByCreatedAtDesc(pageable).map(AuditLogDto::from);
+    public Page<AuditLogDto> search(String action, String entityType, Long entityId, Pageable pageable) {
+        return repository.search(blankToNull(action), blankToNull(entityType), entityId, pageable)
+                .map(AuditLogDto::from);
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] export(String action, String entityType, Long entityId, String format) {
+        List<AuditLogDto> rows = repository.search(
+                blankToNull(action), blankToNull(entityType), entityId,
+                PageRequest.of(0, MAX_EXPORT_ROWS, Sort.by("createdAt").descending())
+        ).map(AuditLogDto::from).getContent();
+
+        return "csv".equalsIgnoreCase(format) ? exportService.toCsv(rows) : exportService.toExcel(rows);
+    }
+
+    private String blankToNull(String v) {
+        return (v == null || v.isBlank()) ? null : v;
     }
 }

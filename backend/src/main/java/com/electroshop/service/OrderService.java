@@ -2,6 +2,7 @@ package com.electroshop.service;
 
 import com.electroshop.dto.OrderDto;
 import com.electroshop.dto.OrderRequest;
+import com.electroshop.dto.SellProductRequest;
 import com.electroshop.exception.BadRequestException;
 import com.electroshop.exception.ResourceNotFoundException;
 import com.electroshop.model.*;
@@ -10,6 +11,8 @@ import com.electroshop.repository.ProductRepository;
 import com.electroshop.repository.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,20 +20,25 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class OrderService {
 
+    /** Below this (but above zero) triggers a low-stock notification — mirrors ProductService's threshold. */
+    private static final int LOW_STOCK_THRESHOLD = 5;
+
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final OrderExportService orderExportService;
     private final AuditService auditService;
+    private final NotificationService notificationService;
 
     public OrderService(OrderRepository orderRepository, ProductRepository productRepository,
                         UserRepository userRepository, OrderExportService orderExportService,
-                        AuditService auditService) {
+                        AuditService auditService, NotificationService notificationService) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
         this.userRepository = userRepository;
         this.orderExportService = orderExportService;
         this.auditService = auditService;
+        this.notificationService = notificationService;
     }
 
     @Transactional(readOnly = true)
@@ -79,7 +87,75 @@ public class OrderService {
         Order saved = orderRepository.save(order);
         auditService.log("ORDER_CREATED", "Order", saved.getId(),
                 "client " + user.getEmail() + " · total " + saved.getTotalAmount());
+        // Feature #8 — "comenzi noi" notification, feeds the admin notification center.
+        notificationService.notifyNewOrder(saved, user);
         return OrderDto.from(saved);
+    }
+
+    /**
+     * Feature #10 — the "VÂNDUT" popup on the admin products page: registers a
+     * walk-in / in-store sale in one shot. Deliberately built on top of the same
+     * Order/OrderItem tables the storefront checkout uses (rather than a separate
+     * "sales" table) so it needs no bespoke wiring — every dashboard number that
+     * already reads from orders (total revenue, "Comenzi" count, vânzări pe
+     * zile/luni/ani, comenzi după status, top produse vândute) picks the sale up
+     * automatically the next time the dashboard loads. The sale is recorded as a
+     * DELIVERED order since it's a completed, already-paid-for transaction, not
+     * something still working through a shipping pipeline.
+     */
+    public OrderDto sellProduct(Long productId, SellProductRequest req) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", productId));
+
+        if (req.quantity() > product.getStockQuantity()) {
+            throw new BadRequestException(
+                    "Stoc insuficient! Stoc disponibil: " + product.getStockQuantity() + " buc.");
+        }
+
+        User staff = currentStaffUser();
+
+        int oldStock = product.getStockQuantity();
+        product.setStockQuantity(oldStock - req.quantity());
+        productRepository.save(product);
+
+        Order order = new Order();
+        order.setUser(staff);
+        order.setStatus(OrderStatus.DELIVERED);
+        order.setShippingAddress("Vânzare directă în magazin (înregistrată din panoul admin)");
+
+        OrderItem item = new OrderItem();
+        item.setProduct(product);
+        item.setQuantity(req.quantity());
+        item.setUnitPrice(req.unitPrice());
+        order.addItem(item);
+        order.recalculateTotal();
+
+        Order saved = orderRepository.save(order);
+
+        auditService.log("PRODUCT_SOLD", "Product", product.getId(),
+                "Vândut " + req.quantity() + " bucăți din " + product.getName()
+                        + " · total " + order.getTotalAmount() + " RON · comandă #" + saved.getId());
+
+        // Feature #8 synergy — a sale that drops stock below the threshold fires the
+        // same low-stock notification a manual stock edit would (see ProductService.update()).
+        boolean crossedIntoLowStock = product.getStockQuantity() > 0 && product.getStockQuantity() < LOW_STOCK_THRESHOLD
+                && oldStock >= LOW_STOCK_THRESHOLD;
+        if (crossedIntoLowStock) {
+            notificationService.notifyLowStock(product);
+        }
+
+        return OrderDto.from(saved);
+    }
+
+    /** The admin currently performing the sale — recorded as the order's "user" (feature #10's "User" column). */
+    private User currentStaffUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth != null ? auth.getName() : null;
+        if (email == null) {
+            throw new BadRequestException("Sesiune invalidă. Reautentifică-te și încearcă din nou.");
+        }
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new BadRequestException("Utilizator inexistent."));
     }
 
     @Transactional(readOnly = true)

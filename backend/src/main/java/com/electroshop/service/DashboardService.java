@@ -64,9 +64,11 @@ public class DashboardService {
                     row[1] == null ? BigDecimal.ZERO : new BigDecimal(row[1].toString())));
         }
 
+        List<Object[]> ordersByDayRows = orderRepository.countOrdersByDay();
+
         DashboardStatsDto.Trend usersTrend = buildTrend(userRepository.countSignupsByDay());
         DashboardStatsDto.Trend productsTrend = buildTrend(productRepository.countCreatedByDay());
-        DashboardStatsDto.Trend ordersTrend = buildTrend(orderRepository.countOrdersByDay());
+        DashboardStatsDto.Trend ordersTrend = buildTrend(ordersByDayRows);
         DashboardStatsDto.Trend revenueTrend = buildTrend(salesRows);
 
         List<DashboardStatsDto.TopProduct> topProducts = buildTopProducts();
@@ -77,9 +79,41 @@ public class DashboardService {
                     p.getId(), p.getName(), p.getImageUrl(), p.getStockQuantity()));
         }
 
+        DashboardStatsDto.MonthlyRevenue monthlyRevenue = buildMonthlyRevenue(salesRows);
+
+        List<DashboardStatsDto.CountPoint> ordersByDay = new ArrayList<>();
+        for (Object[] row : ordersByDayRows) {
+            ordersByDay.add(new DashboardStatsDto.CountPoint(row[0].toString(), ((Number) row[1]).longValue()));
+        }
+
         return new DashboardStatsDto(totalUsers, totalProducts, totalOrders, revenue,
                 usersTrend, productsTrend, ordersTrend, revenueTrend,
-                byStatus, topProducts, salesByDay, lowStock);
+                byStatus, topProducts, salesByDay, lowStock, monthlyRevenue, ordersByDay);
+    }
+
+    /**
+     * Sums the same {@code salesRows} the daily chart already fetched into the
+     * current and previous *calendar* month (as opposed to {@code revenueTrend},
+     * which is a rolling 7-vs-7-day window) — feature #9's "venit lunar +
+     * comparație cu luna precedentă".
+     */
+    private DashboardStatsDto.MonthlyRevenue buildMonthlyRevenue(List<Object[]> salesRows) {
+        java.time.YearMonth thisMonth = java.time.YearMonth.now();
+        java.time.YearMonth lastMonth = thisMonth.minusMonths(1);
+        BigDecimal current = BigDecimal.ZERO;
+        BigDecimal previous = BigDecimal.ZERO;
+        for (Object[] row : salesRows) {
+            LocalDate day = LocalDate.parse(row[0].toString());
+            BigDecimal amount = row[1] == null ? BigDecimal.ZERO : new BigDecimal(row[1].toString());
+            java.time.YearMonth ym = java.time.YearMonth.from(day);
+            if (ym.equals(thisMonth)) {
+                current = current.add(amount);
+            } else if (ym.equals(lastMonth)) {
+                previous = previous.add(amount);
+            }
+        }
+        Double pct = changePct(current.doubleValue(), previous.doubleValue());
+        return new DashboardStatsDto.MonthlyRevenue(current, previous, pct);
     }
 
     /**

@@ -55,17 +55,25 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Public
                         .requestMatchers("/health").permitAll()
+                        // These /auth/2fa/**+logout-all sub-paths require a logged-in user, so they
+                        // must be matched (and win) BEFORE the blanket "/auth/**" permitAll below —
+                        // Spring Security evaluates requestMatchers in declaration order.
+                        .requestMatchers("/auth/2fa/setup", "/auth/2fa/confirm", "/auth/2fa/disable",
+                                "/auth/logout-all").authenticated()
                         .requestMatchers("/auth/**").permitAll()
                         // Private site: product browsing requires authentication. Only the
                         // company-info endpoint stays public (harmless contact details).
                         .requestMatchers(HttpMethod.GET, "/products/company-info").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
-                        // Admin-only
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/products/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/products/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/products/**").hasRole("ADMIN")
+                        // Admin panel — coarse gate here (any of the three admin roles may pass the
+                        // door); each controller method then enforces the exact permission it needs
+                        // via @PreAuthorize("@permissionService.has('...')") (feature #6: granular
+                        // per-role permissions instead of one all-or-nothing ADMIN gate).
+                        .requestMatchers("/admin/**").hasAnyRole("ADMIN", "MANAGER", "EDITOR")
+                        .requestMatchers(HttpMethod.POST, "/products/**").hasAnyRole("ADMIN", "MANAGER", "EDITOR")
+                        .requestMatchers(HttpMethod.PUT, "/products/**").hasAnyRole("ADMIN", "MANAGER", "EDITOR")
+                        .requestMatchers(HttpMethod.DELETE, "/products/**").hasAnyRole("ADMIN", "MANAGER", "EDITOR")
                         // Authenticated
                         .anyRequest().authenticated()
                 )

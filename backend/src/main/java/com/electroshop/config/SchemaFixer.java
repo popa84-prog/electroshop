@@ -37,6 +37,14 @@ public class SchemaFixer implements CommandLineRunner {
         // to avoid locking out anyone who registered before the approval feature.
         // Idempotent: new pending accounts store approved = 0 (not NULL) and are untouched.
         safeExecute("UPDATE users SET approved = TRUE WHERE approved IS NULL");
+
+        // Same grandfathering for the feature #6 security columns: MySQL's ADD COLUMN
+        // on an existing non-empty table can leave these NULL for pre-existing rows even
+        // though the Java field is a primitive with a default — best-effort, idempotent.
+        safeExecute("UPDATE users SET failed_login_attempts = 0 WHERE failed_login_attempts IS NULL");
+        safeExecute("UPDATE users SET token_version = 0 WHERE token_version IS NULL");
+        safeExecute("UPDATE users SET two_factor_enabled = FALSE WHERE two_factor_enabled IS NULL");
+        safeExecute("UPDATE login_events SET success = TRUE WHERE success IS NULL");
     }
 
     private void safeExecute(String sql) {

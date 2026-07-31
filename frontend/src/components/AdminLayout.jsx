@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { AdminChromeContext, Icon, adminDashboardItem, adminGroups, adminTabs } from './AdminNav';
+import { AdminChromeContext, Icon, adminGroups, filterNavForRoles } from './AdminNav';
+import { useAuth } from '../context/AuthContext';
+import ErrorBoundary from './ErrorBoundary';
+import NotificationBell from './NotificationBell';
 
 /**
  * Chrome shared by every admin screen.
@@ -55,6 +58,9 @@ export default function AdminLayout() {
   const contentRef = useRef(null);
   const [railOffset, setRailOffset] = useState(0);
   const [openGroups, setOpenGroups] = useState(readStoredGroups);
+  const { user, hasPermission } = useAuth();
+  // Feature #6: Manager/Editor only see the sections their permissions allow.
+  const { dashboardItem, groups, tabs } = filterNavForRoles(user?.roles, hasPermission);
 
   const toggleGroup = (key) => {
     setOpenGroups((prev) => {
@@ -158,7 +164,12 @@ export default function AdminLayout() {
             before the navigation links; `order` puts the rail on the left
             visually without changing that reading order. */}
         <div ref={contentRef} className="order-2 min-w-0 flex-1 lg:order-2">
-          <Outlet />
+          {/* Feature #7: a crash rendering one admin page must not blank the
+              whole panel — the rail stays usable and the operator can navigate
+              away. Keyed by pathname so switching pages clears a stale error. */}
+          <ErrorBoundary key={location.pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </div>
 
         {/* Persistent side rail — large screens, left-hand column */}
@@ -170,18 +181,23 @@ export default function AdminLayout() {
             aria-label="Secțiuni administrare"
             className="sticky top-20 rounded-xl border border-slate-200 bg-white p-2 shadow-sm"
           >
-            <p className="px-3 pb-2 pt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
-              Administrare
-            </p>
+            <div className="flex items-center justify-between px-3 pb-2 pt-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Administrare</p>
+              {/* Feature #8 — notification bell lives here since the panel has no top header bar. */}
+              <NotificationBell />
+            </div>
             <div className="max-h-[calc(100vh-8rem)] space-y-1 overflow-y-auto pb-1">
-              <NavLink to={adminDashboardItem.to} end={adminDashboardItem.end} className={linkClass}>
-                <Icon name={adminDashboardItem.icon} className="h-4 w-4 shrink-0" />
-                <span>{adminDashboardItem.label}</span>
-              </NavLink>
+              {dashboardItem && (
+                <>
+                  <NavLink to={dashboardItem.to} end={dashboardItem.end} className={linkClass}>
+                    <Icon name={dashboardItem.icon} className="h-4 w-4 shrink-0" />
+                    <span>{dashboardItem.label}</span>
+                  </NavLink>
+                  <div className="my-1 border-t border-slate-100" />
+                </>
+              )}
 
-              <div className="my-1 border-t border-slate-100" />
-
-              {adminGroups.map((g) => {
+              {groups.map((g) => {
                 const open = openGroups[g.key] !== false;
                 const panelId = `admin-group-${g.key}`;
                 return (
@@ -229,15 +245,18 @@ export default function AdminLayout() {
         {/* Scrollable strip — small screens */}
         <nav
           aria-label="Secțiuni administrare"
-          className="order-1 -mx-4 overflow-x-auto border-b border-slate-200 px-4 pb-3 lg:hidden"
+          className="order-1 -mx-4 flex items-center gap-2 border-b border-slate-200 px-4 pb-3 lg:hidden"
         >
-          <div className="flex gap-2">
-            {adminTabs.map((t) => (
+          <div className="flex flex-1 gap-2 overflow-x-auto">
+            {tabs.map((t) => (
               <NavLink key={t.to} to={t.to} end={t.end} className={mobileLinkClass}>
                 <Icon name={t.icon} className="h-4 w-4 shrink-0" />
                 {t.label}
               </NavLink>
             ))}
+          </div>
+          <div className="shrink-0">
+            <NotificationBell />
           </div>
         </nav>
       </div>

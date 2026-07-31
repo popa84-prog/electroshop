@@ -1,8 +1,12 @@
+import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { formatPrice, resolveImage } from '../utils/format';
 
-export default function ProductCard({ product, layout = 'grid' }) {
+// Feature #7 (performance): memoized so a grid of 12-96 cards only re-renders
+// the cards whose own `product`/`layout` props actually changed — e.g. filtering
+// the list, or the cart badge updating elsewhere, no longer re-renders every card.
+function ProductCard({ product, layout = 'grid' }) {
   const { addItem } = useCart();
   const outOfStock = product.stockQuantity <= 0;
 
@@ -12,7 +16,7 @@ export default function ProductCard({ product, layout = 'grid' }) {
         <Link to={`/products/${product.id}`} className="block shrink-0">
           <div className="h-24 w-24 overflow-hidden rounded-lg bg-champagne-100 sm:h-28 sm:w-28">
             <img
-              src={resolveImage(product.imageUrl)}
+              src={resolveImage(product.imageThumbUrl || product.imageUrl)}
               alt={product.name}
               loading="lazy"
               className="h-full w-full object-cover"
@@ -48,7 +52,7 @@ export default function ProductCard({ product, layout = 'grid' }) {
       <Link to={`/products/${product.id}`} className="block">
         <div className="aspect-[4/3] w-full overflow-hidden bg-champagne-100">
           <img
-            src={resolveImage(product.imageUrl)}
+            src={resolveImage(product.imageThumbUrl || product.imageUrl)}
             alt={product.name}
             loading="lazy"
             className="h-full w-full object-cover transition hover:scale-105"
@@ -74,3 +78,5 @@ export default function ProductCard({ product, layout = 'grid' }) {
     </div>
   );
 }
+
+export default memo(ProductCard);

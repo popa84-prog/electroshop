@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 /**
  * Small hand-drawn icon set (outline style, 24x24, single stroke) so the admin
@@ -98,6 +99,12 @@ const ICONS = {
       <path d="M9 6l6 6-6 6" />
     </svg>
   ),
+  bell: (props) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M6 9.5a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6.5H4c.5-1 2-2.5 2-6.5z" />
+      <path d="M9.5 19a2.5 2.5 0 0 0 5 0" />
+    </svg>
+  ),
 };
 
 /** Renders one of the icons above by name; falls back to a generic box so a typo never crashes the page. */
@@ -115,7 +122,12 @@ export function Icon({ name, className }) {
  * unchanged so anything that only needs "every section in order" — the
  * mobile strip, the legacy fallback bar — doesn't need to know about groups.
  */
-export const adminDashboardItem = { to: '/admin', label: 'Dashboard', icon: 'dashboard', end: true };
+// Feature #6: each item declares the admin-panel permission it needs so the
+// rail/strip can hide sections a Manager or Editor can't use — a UX nicety
+// only, the backend enforces the real gate on every request regardless.
+export const adminDashboardItem = {
+  to: '/admin', label: 'Dashboard', icon: 'dashboard', end: true, permission: 'DASHBOARD_VIEW',
+};
 
 export const adminGroups = [
   {
@@ -123,8 +135,8 @@ export const adminGroups = [
     label: 'Catalog',
     icon: 'tag',
     items: [
-      { to: '/admin/products', label: 'Produse', icon: 'box' },
-      { to: '/admin/suppliers', label: 'Furnizori', icon: 'truck' },
+      { to: '/admin/products', label: 'Produse', icon: 'box', permission: 'PRODUCTS_VIEW' },
+      { to: '/admin/suppliers', label: 'Furnizori', icon: 'truck', permission: 'SUPPLIERS_MANAGE' },
     ],
   },
   {
@@ -132,30 +144,48 @@ export const adminGroups = [
     label: 'Vânzări',
     icon: 'trend',
     items: [
-      { to: '/admin/orders', label: 'Comenzi', icon: 'cart' },
-      { to: '/admin/purchases', label: 'Cumpărări', icon: 'bag' },
+      { to: '/admin/orders', label: 'Comenzi', icon: 'cart', permission: 'ORDERS_VIEW' },
+      { to: '/admin/purchases', label: 'Cumpărări', icon: 'bag', permission: 'PURCHASES_MANAGE' },
     ],
   },
   {
     key: 'financial',
     label: 'Financiar',
     icon: 'banknote',
-    items: [{ to: '/admin/accounting', label: 'Contabilitate', icon: 'coins' }],
+    items: [{ to: '/admin/accounting', label: 'Contabilitate', icon: 'coins', permission: 'ACCOUNTING_VIEW' }],
   },
   {
     key: 'system',
     label: 'Sistem',
     icon: 'gear',
     items: [
-      { to: '/admin/users', label: 'Utilizatori', icon: 'users' },
-      { to: '/admin/login-events', label: 'Conectări', icon: 'globe' },
-      { to: '/admin/audit', label: 'Jurnal', icon: 'document' },
-      { to: '/admin/settings', label: 'Date firmă', icon: 'gear' },
+      { to: '/admin/notifications', label: 'Notificări', icon: 'bell', permission: 'DASHBOARD_VIEW' },
+      { to: '/admin/users', label: 'Utilizatori', icon: 'users', permission: 'USERS_MANAGE' },
+      { to: '/admin/login-events', label: 'Conectări', icon: 'globe', permission: 'USERS_MANAGE' },
+      { to: '/admin/audit', label: 'Jurnal', icon: 'document', permission: 'AUDIT_VIEW' },
+      { to: '/admin/settings', label: 'Date firmă', icon: 'gear', permission: 'SETTINGS_MANAGE' },
     ],
   },
 ];
 
 export const adminTabs = [adminDashboardItem, ...adminGroups.flatMap((g) => g.items)];
+
+/**
+ * Filters the nav structures above down to what the given roles can actually
+ * use. Falls back to showing everything when `roles` is unavailable (e.g.
+ * still loading) so the panel never flashes an empty rail.
+ */
+export function filterNavForRoles(roles, hasPermission) {
+  if (!roles || !hasPermission) {
+    return { dashboardItem: adminDashboardItem, groups: adminGroups, tabs: adminTabs };
+  }
+  const groups = adminGroups
+    .map((g) => ({ ...g, items: g.items.filter((t) => hasPermission(t.permission)) }))
+    .filter((g) => g.items.length > 0);
+  const dashboardItem = hasPermission(adminDashboardItem.permission) ? adminDashboardItem : null;
+  const tabs = [...(dashboardItem ? [dashboardItem] : []), ...groups.flatMap((g) => g.items)];
+  return { dashboardItem, groups, tabs };
+}
 
 /**
  * True while an admin page is rendered inside AdminLayout, which already draws
@@ -170,11 +200,14 @@ export const AdminChromeContext = createContext(false);
 
 export default function AdminNav() {
   const handledByLayout = useContext(AdminChromeContext);
+  const { user, hasPermission } = useAuth();
   if (handledByLayout) return null;
+
+  const { tabs } = filterNavForRoles(user?.roles, hasPermission);
 
   return (
     <div className="mb-6 flex flex-wrap gap-2 border-b border-slate-200 pb-3">
-      {adminTabs.map((t) => (
+      {tabs.map((t) => (
         <NavLink
           key={t.to}
           to={t.to}

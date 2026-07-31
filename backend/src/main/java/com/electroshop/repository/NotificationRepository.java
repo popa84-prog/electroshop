@@ -10,14 +10,14 @@ import org.springframework.data.repository.query.Param;
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
 
     @Query("""
-              SELECT n FROM Notification n
-                       WHERE (:type IS NULL OR n.type = :type)
-                         AND (:unreadOnly = FALSE OR n.read = FALSE)
-                       ORDER BY n.createdAt DESC
-                       """)
-      Page<Notification> search(@Param("type") String type,
-                                                              @Param("unreadOnly") boolean unreadOnly,
-                                                              Pageable pageable);
+            SELECT n FROM Notification n
+            WHERE (:type IS NULL OR n.type = :type)
+              AND (:unreadOnly = FALSE OR n.read = FALSE)
+            ORDER BY n.createdAt DESC
+            """)
+    Page<Notification> search(@Param("type") String type,
+                              @Param("unreadOnly") boolean unreadOnly,
+                              Pageable pageable);
 
     long countByReadFalse();
 

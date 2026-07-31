@@ -25,11 +25,47 @@ public record ProductDto(
         String brand,
         String sku,
         String imageUrl,
+        // Feature #7 (performance): a resized (300×300) variant of imageUrl for card
+        // grids — avoids the storefront loading full-size originals just to shrink
+        // them in CSS. Falls back to imageUrl unchanged for non-Cloudinary URLs.
+        String imageThumbUrl,
         List<ImageDto> images,
         LocalDateTime createdAt
 ) {
-    /** A single gallery image, as exposed to clients. */
-    public record ImageDto(Long id, String url, boolean primary) {}
+    /**
+     * A single gallery image, as exposed to clients. {@code thumbnailUrl} (300×300)
+     * and {@code fhdUrl} (max 1920px wide) are derived on the fly from {@code url}
+     * via Cloudinary URL transformations — no extra storage or upload cost.
+     * {@code width}/{@code height}/{@code format}/{@code bytes} are null for images
+     * uploaded before this metadata was captured.
+     */
+    public record ImageDto(
+            Long id,
+            String url,
+            String thumbnailUrl,
+            String fhdUrl,
+            boolean primary,
+            int position,
+            Integer width,
+            Integer height,
+            String format,
+            Long bytes
+    ) {}
+
+    private static ImageDto toImageDto(com.electroshop.model.ProductImage i) {
+        return new ImageDto(
+                i.getId(),
+                i.getUrl(),
+                com.electroshop.service.CloudinaryService.thumbnailUrl(i.getUrl()),
+                com.electroshop.service.CloudinaryService.fhdUrl(i.getUrl()),
+                i.isPrimary(),
+                i.getPosition(),
+                i.getWidth(),
+                i.getHeight(),
+                i.getFormat(),
+                i.getBytes()
+        );
+    }
 
     /** Lightweight view for lists — no gallery (uses imageUrl for the card). */
     public static ProductDto from(Product p) {
@@ -44,6 +80,7 @@ public record ProductDto(
                 p.getBrand(),
                 p.getSku(),
                 p.getImageUrl(),
+                com.electroshop.service.CloudinaryService.thumbnailUrl(p.getImageUrl()),
                 List.of(),
                 p.getCreatedAt()
         );
@@ -52,7 +89,8 @@ public record ProductDto(
     /** Full view including the image gallery. Must be called inside a transaction. */
     public static ProductDto detail(Product p) {
         List<ImageDto> imgs = p.getImages().stream()
-                .map(i -> new ImageDto(i.getId(), i.getUrl(), i.isPrimary()))
+                .sorted(java.util.Comparator.comparingInt(com.electroshop.model.ProductImage::getPosition))
+                .map(ProductDto::toImageDto)
                 .toList();
         return new ProductDto(
                 p.getId(),
@@ -65,6 +103,7 @@ public record ProductDto(
                 p.getBrand(),
                 p.getSku(),
                 p.getImageUrl(),
+                com.electroshop.service.CloudinaryService.thumbnailUrl(p.getImageUrl()),
                 imgs,
                 p.getCreatedAt()
         );

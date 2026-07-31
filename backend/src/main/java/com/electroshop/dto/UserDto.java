@@ -17,9 +17,15 @@ public record UserDto(
         LocalDateTime createdAt,
         LocalDateTime lastLoginAt,
         String lastLoginIp,
-        String lastLoginLocation
+        String lastLoginLocation,
+        // Feature #6 — never expose the secret itself, only whether 2FA is on and
+        // whether the account is currently brute-force-locked (+ until when).
+        boolean twoFactorEnabled,
+        boolean locked,
+        LocalDateTime lockedUntil
 ) {
     public static UserDto from(User u) {
+        boolean locked = u.getLockedUntil() != null && u.getLockedUntil().isAfter(LocalDateTime.now());
         return new UserDto(
                 u.getId(),
                 u.getFullName(),
@@ -30,7 +36,10 @@ public record UserDto(
                 u.getCreatedAt(),
                 u.getLastLoginAt(),
                 u.getLastLoginIp(),
-                u.getLastLoginLocation()
+                u.getLastLoginLocation(),
+                u.isTwoFactorEnabled(),
+                locked,
+                locked ? u.getLockedUntil() : null
         );
     }
 }

@@ -27,6 +27,7 @@ public record AdminProductDto(
         String sku,
         String imageUrl,
         List<ProductDto.ImageDto> images,
+        boolean active,
         LocalDateTime createdAt
 ) {
     /** Lightweight view for the admin table — no gallery (avoids N+1). */
@@ -36,9 +37,9 @@ public record AdminProductDto(
 
     /** Full view including the image gallery (single-product / edit). */
     public static AdminProductDto detail(Product p) {
-        List<ProductDto.ImageDto> imgs = p.getImages().stream()
-                .map(i -> new ProductDto.ImageDto(i.getId(), i.getUrl(), i.isPrimary()))
-                .toList();
+        // Reuses ProductDto.detail(...) solely to build the sorted, fully-populated
+        // image list (thumbnail/FHD URLs + dimensions) without duplicating that logic.
+        List<ProductDto.ImageDto> imgs = ProductDto.detail(p).images();
         return build(p, imgs);
     }
 
@@ -69,6 +70,7 @@ public record AdminProductDto(
                 p.getSku(),
                 p.getImageUrl(),
                 imgs,
+                p.isActive(),
                 p.getCreatedAt()
         );
     }

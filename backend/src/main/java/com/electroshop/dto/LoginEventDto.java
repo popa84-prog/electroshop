@@ -14,6 +14,8 @@ public record LoginEventDto(
         String city,
         String location,
         String userAgent,
+        boolean success,
+        String failureReason,
         LocalDateTime loginAt
 ) {
     public static LoginEventDto from(LoginEvent e) {
@@ -25,6 +27,6 @@ public record LoginEventDto(
         return new LoginEventDto(
                 e.getId(), e.getUserId(), e.getUserEmail(), e.getUserName(),
                 e.getIpAddress(), e.getCountry(), e.getCity(), loc,
-                e.getUserAgent(), e.getLoginAt());
+                e.getUserAgent(), e.isSuccess(), e.getFailureReason(), e.getLoginAt());
     }
 }

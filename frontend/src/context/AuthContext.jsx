@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import authService from '../api/authService';
 import { tokenStore } from '../api/axios';
+import { rolesHave } from '../utils/permissions';
 
 const AuthContext = createContext(null);
 
@@ -35,8 +36,19 @@ export function AuthProvider({ children }) {
     });
   };
 
+  // Feature #6: when the account has 2FA enabled, the API returns
+  // { requiresTwoFactor: true, twoFactorToken } instead of real tokens — no
+  // session is created yet, so the page must show a code-entry step next.
   const login = async (credentials) => {
     const data = await authService.login(credentials);
+    if (!data.requiresTwoFactor) {
+      handleAuthPayload(data);
+    }
+    return data;
+  };
+
+  const verifyTwoFactor = async (twoFactorToken, code) => {
+    const data = await authService.verifyTwoFactor({ twoFactorToken, code });
     handleAuthPayload(data);
     return data;
   };
@@ -52,15 +64,30 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  // "Deconectează toate sesiunile" (feature #6) — revokes every token issued so
+  // far server-side, then also clears this device's local session.
+  const logoutAllSessions = async () => {
+    try {
+      await authService.logoutAll();
+    } finally {
+      logout();
+    }
+  };
+
   const value = useMemo(
     () => ({
       user,
       loading,
       isAuthenticated: !!user,
       isAdmin: !!user?.roles?.includes('ROLE_ADMIN'),
+      // Feature #6: granular admin-panel permission check, e.g. hasPermission('PRODUCTS_DELETE').
+      // UX convenience only — the backend enforces the real gate on every request.
+      hasPermission: (permission) => rolesHave(user?.roles || [], permission),
       login,
+      verifyTwoFactor,
       register,
       logout,
+      logoutAllSessions,
     }),
     [user, loading]
   );

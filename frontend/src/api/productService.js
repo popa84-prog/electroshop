@@ -47,6 +47,11 @@ const productService = {
   // Batch delete. POST (not DELETE) because the call is not idempotent and
   // request bodies on DELETE are unreliable across proxies.
   bulkRemove: (ids) => api.post('/products/bulk-delete', { ids }).then((r) => r.data.data),
+  // Batch activate/deactivate — the products table's "Activează selectate" /
+  // "Dezactivează selectate" batch-toolbar actions. Same POST-with-body shape
+  // as bulkRemove, and returns { updated, notFound }.
+  bulkActivate: (ids) => api.post('/products/bulk-activate', { ids }).then((r) => r.data.data),
+  bulkDeactivate: (ids) => api.post('/products/bulk-deactivate', { ids }).then((r) => r.data.data),
   uploadImage: (id, file) => {
     const form = new FormData();
     form.append('file', file);

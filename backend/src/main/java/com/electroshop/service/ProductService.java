@@ -337,6 +337,55 @@ public class ProductService {
     public record BulkDeleteResult(int deleted, List<Long> notFound) {
     }
 
+    /**
+     * Activates or deactivates several products in one transaction (batch-selection
+     * toolbar in the admin products table). Mirrors {@link #deleteBulk}: ids are
+     * de-duplicated first, and an id that no longer exists is reported as "skipped"
+     * rather than failing the whole batch. Only products whose state actually
+     * changes get an individual audit entry and (when deactivating) a notification,
+     * exactly like the single-product {@link #setActive} — a product already in the
+     * requested state is left untouched and does not spam the audit log.
+     *
+     * @param ids    the products to update
+     * @param active {@code true} to activate, {@code false} to deactivate
+     * @return how many rows were actually changed and which ids were not found
+     */
+    public BulkActivateResult setActiveBulk(List<Long> ids, boolean active) {
+        List<Long> unique = new ArrayList<>(new LinkedHashSet<>(ids));
+        List<Long> notFound = new ArrayList<>();
+        int updated = 0;
+        for (Long id : unique) {
+            Product p = productRepository.findById(id).orElse(null);
+            if (p == null) {
+                notFound.add(id);
+                continue;
+            }
+            if (p.isActive() == active) {
+                continue;
+            }
+            p.setActive(active);
+            Product saved = productRepository.save(p);
+            auditService.log(active ? "PRODUCT_ACTIVATED" : "PRODUCT_DEACTIVATED",
+                    "Product", saved.getId(), saved.getName());
+            if (!active) {
+                notificationService.notifyProductDeactivated(saved);
+            }
+            updated++;
+        }
+        auditService.log(active ? "PRODUCTS_BULK_ACTIVATED" : "PRODUCTS_BULK_DEACTIVATED", "Product", null,
+                updated + (active ? " produse activate în masă" : " produse dezactivate în masă"));
+        return new BulkActivateResult(updated, notFound);
+    }
+
+    /**
+     * Outcome of a batch activate/deactivate.
+     *
+     * @param updated  number of rows whose active state actually changed
+     * @param notFound identifiers that no longer existed when the batch ran
+     */
+    public record BulkActivateResult(int updated, List<Long> notFound) {
+    }
+
     // ==============================================================
     //  Product image gallery (Cloudinary-hosted) — feature #5
     // ==============================================================

@@ -106,6 +106,10 @@ export default function AdminProducts() {
   const [previewHistory, setPreviewHistory] = useState([]);
   const [previewHistoryLoading, setPreviewHistoryLoading] = useState(false);
   const [activeBusyId, setActiveBusyId] = useState(null);
+  // Batch activate/deactivate — the selection toolbar's "Activează selectate" /
+  // "Dezactivează selectate" actions (mirrors the per-row toggleActive below,
+  // just running over every ticked product in one request).
+  const [bulkActiveBusy, setBulkActiveBusy] = useState(false);
 
   // Feature #10 — "VÂNDUT" quick-sale popup.
   const [saleProduct, setSaleProduct] = useState(null);
@@ -284,6 +288,41 @@ export default function AdminProducts() {
       showToast(err.response?.data?.message || 'Schimbarea stării produsului a eșuat.', 'error');
     } finally {
       setActiveBusyId(null);
+    }
+  };
+
+  // Batch counterpart of toggleActive — activates or deactivates every currently
+  // selected product in one request instead of clicking "Activează" per row.
+  const bulkSetActive = async (active) => {
+    const ids = selectedProducts.map((p) => p.id);
+    if (ids.length === 0) return;
+    setBulkActiveBusy(true);
+    try {
+      const result = active
+        ? await productService.bulkActivate(ids)
+        : await productService.bulkDeactivate(ids);
+      const count = result?.updated ?? ids.length;
+      showToast(
+        count === 0
+          ? active
+            ? 'Produsele selectate erau deja active.'
+            : 'Produsele selectate erau deja inactive.'
+          : active
+          ? `${count} ${count === 1 ? 'produs activat' : 'produse activate'}.`
+          : `${count} ${count === 1 ? 'produs dezactivat' : 'produse dezactivate'}.`,
+        'success'
+      );
+      setSelectedIds(new Set());
+      invalidateListCache(LIST_CACHE_NS);
+      load();
+    } catch (err) {
+      showToast(
+        err.response?.data?.message ||
+          (active ? 'Activarea în masă a eșuat.' : 'Dezactivarea în masă a eșuat.'),
+        'error'
+      );
+    } finally {
+      setBulkActiveBusy(false);
     }
   };
 
@@ -773,7 +812,23 @@ export default function AdminProducts() {
           </button>
           <button
             type="button"
-            className="ml-auto rounded-lg bg-red-600 px-3 py-1.5 font-medium text-white hover:bg-red-700"
+            className="ml-auto rounded-lg bg-brand-600 px-3 py-1.5 font-medium text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={bulkActiveBusy}
+            onClick={() => bulkSetActive(true)}
+          >
+            {bulkActiveBusy ? 'Se activează...' : '✓ Activează selectate'}
+          </button>
+          <button
+            type="button"
+            className="rounded-lg bg-slate-600 px-3 py-1.5 font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={bulkActiveBusy}
+            onClick={() => bulkSetActive(false)}
+          >
+            {bulkActiveBusy ? 'Se dezactivează...' : '⏸ Dezactivează selectate'}
+          </button>
+          <button
+            type="button"
+            className="rounded-lg bg-red-600 px-3 py-1.5 font-medium text-white hover:bg-red-700"
             onClick={() => askDelete(selectedProducts)}
           >
             🗑 Șterge selectate

@@ -15,31 +15,57 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Simple, self-contained in-memory per-IP token-bucket rate limiter applied to the
- * authentication endpoints, to slow down brute-force / credential-stuffing attempts.
+ * Simple, self-contained in-memory per-IP token-bucket rate limiter applied to
+ * sensitive API surfaces, to slow down brute-force / credential-stuffing and
+ * scripted-abuse attempts (feature #6: "rate limiting la API-uri sensibile").
  *
  * No external dependency: each client IP gets {@code capacity} tokens that refill
- * fully every {@code refillMinutes}.
+ * fully every {@code refillMinutes}. Two independent buckets are kept per IP —
+ * one (tight) for the auth endpoints where brute-forcing passwords/2FA codes is
+ * the concern, one (looser) for admin/product write operations where the concern
+ * is scripted abuse rather than password guessing — so a burst of normal admin
+ * clicks never trips the same limiter that guards login.
  */
 @Component
 @Order(1)
 public class RateLimitFilter extends OncePerRequestFilter {
 
-    private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
-    private final long capacity;
-    private final long refillIntervalMs;
+    private final Map<String, Bucket> authBuckets = new ConcurrentHashMap<>();
+    private final Map<String, Bucket> writeBuckets = new ConcurrentHashMap<>();
+
+    private final long authCapacity;
+    private final long authRefillIntervalMs;
+    private final long writeCapacity;
+    private final long writeRefillIntervalMs;
 
     public RateLimitFilter(
-            @Value("${app.ratelimit.auth.capacity}") long capacity,
-            @Value("${app.ratelimit.auth.refill-minutes}") long refillMinutes) {
-        this.capacity = capacity;
-        this.refillIntervalMs = refillMinutes * 60_000L;
+            @Value("${app.ratelimit.auth.capacity}") long authCapacity,
+            @Value("${app.ratelimit.auth.refill-minutes}") long authRefillMinutes,
+            @Value("${app.ratelimit.write.capacity}") long writeCapacity,
+            @Value("${app.ratelimit.write.refill-minutes}") long writeRefillMinutes) {
+        this.authCapacity = authCapacity;
+        this.authRefillIntervalMs = authRefillMinutes * 60_000L;
+        this.writeCapacity = writeCapacity;
+        this.writeRefillIntervalMs = writeRefillMinutes * 60_000L;
     }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        // Only rate-limit the auth endpoints (login/register/refresh).
-        return !request.getRequestURI().contains("/auth/");
+        return !isAuthEndpoint(request) && !isSensitiveWrite(request);
+    }
+
+    private boolean isAuthEndpoint(HttpServletRequest request) {
+        return request.getRequestURI().contains("/auth/");
+    }
+
+    /** Mutating (non-GET) calls into the admin panel or the product-mutation endpoints. */
+    private boolean isSensitiveWrite(HttpServletRequest request) {
+        String method = request.getMethod();
+        if ("GET".equalsIgnoreCase(method) || "OPTIONS".equalsIgnoreCase(method) || "HEAD".equalsIgnoreCase(method)) {
+            return false;
+        }
+        String uri = request.getRequestURI();
+        return uri.contains("/admin/") || uri.contains("/products/");
     }
 
     @Override
@@ -48,7 +74,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         String clientKey = resolveClientIp(request);
-        Bucket bucket = buckets.computeIfAbsent(clientKey, k -> new Bucket(capacity, refillIntervalMs));
+        boolean auth = isAuthEndpoint(request);
+        Map<String, Bucket> pool = auth ? authBuckets : writeBuckets;
+        long capacity = auth ? authCapacity : writeCapacity;
+        long refillIntervalMs = auth ? authRefillIntervalMs : writeRefillIntervalMs;
+
+        Bucket bucket = pool.computeIfAbsent(clientKey, k -> new Bucket(capacity, refillIntervalMs));
 
         if (bucket.tryConsume()) {
             filterChain.doFilter(request, response);

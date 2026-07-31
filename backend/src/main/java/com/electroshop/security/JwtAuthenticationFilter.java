@@ -44,8 +44,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+                // Only "access" tokens authenticate requests — a 2FA-pending or refresh
+                // token must never grant API access even if presented as a Bearer token.
+                boolean isAccessToken = "access".equals(jwtService.extractTokenType(token));
+                // A stale token (minted before a logout-all / session revoke bumped the
+                // user's tokenVersion) must stop working immediately, not just at expiry.
+                boolean tokenVersionMatches = userDetails instanceof UserPrincipal principal
+                        && jwtService.extractTokenVersion(token) == principal.getTokenVersion();
 
-                if (jwtService.isTokenValid(token, userDetails.getUsername()) && userDetails.isEnabled()) {
+                if (isAccessToken && tokenVersionMatches
+                        && jwtService.isTokenValid(token, userDetails.getUsername())
+                        && userDetails.isEnabled() && userDetails.isAccountNonLocked()) {
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(
                                     userDetails, null, userDetails.getAuthorities());

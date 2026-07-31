@@ -13,6 +13,9 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
+    /** Short window to complete a 2FA challenge after the password step succeeds. */
+    private static final long TWO_FACTOR_TOKEN_EXPIRATION_MS = 5 * 60 * 1000L;
+
     private final SecretKey key;
     private final long accessTokenExpirationMs;
     private final long refreshTokenExpirationMs;
@@ -27,21 +30,27 @@ public class JwtService {
         this.refreshTokenExpirationMs = refreshTokenExpirationMs;
     }
 
-    public String generateAccessToken(String email, Long userId) {
-        return buildToken(email, userId, "access", accessTokenExpirationMs);
+    public String generateAccessToken(String email, Long userId, int tokenVersion) {
+        return buildToken(email, userId, "access", accessTokenExpirationMs, tokenVersion);
     }
 
-    public String generateRefreshToken(String email, Long userId) {
-        return buildToken(email, userId, "refresh", refreshTokenExpirationMs);
+    public String generateRefreshToken(String email, Long userId, int tokenVersion) {
+        return buildToken(email, userId, "refresh", refreshTokenExpirationMs, tokenVersion);
     }
 
-    private String buildToken(String email, Long userId, String type, long expirationMs) {
+    /** Proof that the password step succeeded; only usable against /auth/2fa/verify. */
+    public String generateTwoFactorChallengeToken(String email, Long userId) {
+        return buildToken(email, userId, "2fa_pending", TWO_FACTOR_TOKEN_EXPIRATION_MS, 0);
+    }
+
+    private String buildToken(String email, Long userId, String type, long expirationMs, int tokenVersion) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + expirationMs);
         return Jwts.builder()
                 .subject(email)
                 .claim("uid", userId)
                 .claim("type", type)
+                .claim("tv", tokenVersion)
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(key)
@@ -60,6 +69,11 @@ public class JwtService {
         return extractClaim(token, claims -> claims.get("type", String.class));
     }
 
+    public int extractTokenVersion(String token) {
+        Integer tv = extractClaim(token, claims -> claims.get("tv", Integer.class));
+        return tv == null ? 0 : tv;
+    }
+
     public boolean isTokenValid(String token, String email) {
         try {
             return email.equals(extractEmail(token)) && !isExpired(token);
@@ -71,6 +85,14 @@ public class JwtService {
     public boolean isRefreshToken(String token) {
         try {
             return "refresh".equals(extractTokenType(token)) && !isExpired(token);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public boolean isTwoFactorChallengeToken(String token) {
+        try {
+            return "2fa_pending".equals(extractTokenType(token)) && !isExpired(token);
         } catch (Exception e) {
             return false;
         }

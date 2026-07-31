@@ -19,14 +19,19 @@ public class UserPrincipal implements UserDetails {
     private final String email;
     private final String password;
     private final boolean enabled;
+    private final boolean accountNonLocked;
+    private final int tokenVersion;
     private final Collection<? extends GrantedAuthority> authorities;
 
     public UserPrincipal(Long id, String email, String password, boolean enabled,
+                         boolean accountNonLocked, int tokenVersion,
                          Collection<? extends GrantedAuthority> authorities) {
         this.id = id;
         this.email = email;
         this.password = password;
         this.enabled = enabled;
+        this.accountNonLocked = accountNonLocked;
+        this.tokenVersion = tokenVersion;
         this.authorities = authorities;
     }
 
@@ -36,12 +41,17 @@ public class UserPrincipal implements UserDetails {
                 .map(Enum::name)
                 .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toList());
+        boolean notLocked = user.getLockedUntil() == null || user.getLockedUntil().isBefore(java.time.LocalDateTime.now());
         return new UserPrincipal(user.getId(), user.getEmail(), user.getPassword(),
-                user.isEnabled(), authorities);
+                user.isEnabled(), notLocked, user.getTokenVersion(), authorities);
     }
 
     public Long getId() {
         return id;
+    }
+
+    public int getTokenVersion() {
+        return tokenVersion;
     }
 
     @Override
@@ -66,7 +76,7 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return accountNonLocked;
     }
 
     @Override

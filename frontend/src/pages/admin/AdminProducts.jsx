@@ -5,6 +5,7 @@ import AdminNav from '../../components/AdminNav';
 import Modal from '../../components/Modal';
 import Pagination from '../../components/Pagination';
 import Spinner from '../../components/Spinner';
+import { showToast, ToastHost } from '../../components/Toast';
 import { formatPrice, resolveImage } from '../../utils/format';
 
 /** Selectable page sizes for the products table. */
@@ -13,6 +14,14 @@ const PAGE_SIZE_KEY = 'admin.products.pageSize';
 
 /** Word the operator must type to confirm a deletion. */
 const DELETE_KEYWORD = 'STERG';
+
+/** Quick-filter shortcuts (feature: filtre rapide) — mirrors the backend's `quickFilter` param. */
+const QUICK_FILTERS = [
+  { key: null, label: 'Toate' },
+  { key: 'low_stock', label: 'Stoc redus' },
+  { key: 'out_of_stock', label: 'Fără stoc' },
+  { key: 'no_image', label: 'Fără imagine' },
+];
 
 /** Remembers the chosen page size between visits; falls back to 10. */
 function readStoredPageSize() {
@@ -44,6 +53,7 @@ export default function AdminProducts() {
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [search, setSearch] = useState('');
+  const [quickFilter, setQuickFilter] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Multi-select: ids of the rows ticked on the current page.
@@ -74,6 +84,15 @@ export default function AdminProducts() {
   const [imgError, setImgError] = useState(null);
   const [dragOver, setDragOver] = useState(false);
 
+  // Inline edit (feature: editare rapidă direct în tabel) — { id, field } or null.
+  const [editingCell, setEditingCell] = useState(null);
+  const [editValue, setEditValue] = useState('');
+  const [editBusy, setEditBusy] = useState(false);
+
+  // Quick preview modal (feature: previzualizare produs)
+  const [previewProduct, setPreviewProduct] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
   const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
   const MAX_BYTES = 5 * 1024 * 1024;
 
@@ -94,7 +113,7 @@ export default function AdminProducts() {
     setLoading(true);
     // Admin endpoint: includes purchasePrice + profit (only visible to admins).
     adminService
-      .listAdminProducts({ page, size: pageSize, search })
+      .listAdminProducts({ page, size: pageSize, search, quickFilter: quickFilter || undefined })
       .then((data) => {
         setProducts(data.content);
         setTotalPages(data.totalPages);
@@ -104,13 +123,13 @@ export default function AdminProducts() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(load, [page, pageSize, search]);
+  useEffect(load, [page, pageSize, search, quickFilter]);
 
   // A tick only ever refers to a row the operator can currently see, so the
   // selection is dropped whenever the visible set changes.
   useEffect(() => {
     setSelectedIds(new Set());
-  }, [page, pageSize, search]);
+  }, [page, pageSize, search, quickFilter]);
 
   const allOnPageSelected = products.length > 0 && products.every((p) => selectedIds.has(p.id));
   const someOnPageSelected = products.some((p) => selectedIds.has(p.id));
@@ -159,6 +178,79 @@ export default function AdminProducts() {
     } catch {
       // Storage unavailable (private mode) — the choice simply is not remembered.
     }
+  };
+
+  const chooseQuickFilter = (key) => {
+    setPage(0);
+    setQuickFilter(key);
+  };
+
+  // ---- Inline edit (feature: editare rapidă) ----
+  // The backend's PUT /products/{id} replaces every field, so a save must
+  // resend the full current product payload with only the edited field changed.
+  const startEdit = (p, field) => {
+    setEditingCell({ id: p.id, field });
+    setEditValue(field === 'price' ? p.price : p.stockQuantity);
+  };
+
+  const cancelEdit = () => {
+    setEditingCell(null);
+    setEditValue('');
+  };
+
+  const saveEdit = async (p) => {
+    if (!editingCell || editingCell.id !== p.id) return;
+    const { field } = editingCell;
+    const numeric = Number(editValue);
+    if (editValue === '' || Number.isNaN(numeric) || numeric < 0) {
+      showToast('Valoare invalidă.', 'error');
+      cancelEdit();
+      return;
+    }
+    // No real change — skip the round-trip entirely.
+    if (numeric === Number(p[field])) {
+      cancelEdit();
+      return;
+    }
+    setEditBusy(true);
+    try {
+      const payload = {
+        name: p.name,
+        description: p.description || '',
+        price: field === 'price' ? numeric : Number(p.price),
+        purchasePrice: p.purchasePrice ?? null,
+        stockQuantity: field === 'stockQuantity' ? numeric : Number(p.stockQuantity),
+        category: p.category || '',
+        subcategory: p.subcategory || '',
+        brand: p.brand || '',
+        sku: p.sku || '',
+        imageUrl: p.imageUrl || '',
+      };
+      await productService.update(p.id, payload);
+      showToast('Produs actualizat.', 'success');
+      cancelEdit();
+      load();
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Actualizarea a eșuat.', 'error');
+    } finally {
+      setEditBusy(false);
+    }
+  };
+
+  // ---- Quick preview (feature: previzualizare produs) ----
+  const openPreview = (p) => {
+    setPreviewProduct(p);
+    setPreviewLoading(true);
+    adminService
+      .getAdminProduct(p.id)
+      .then((detail) => setPreviewProduct(detail))
+      .catch(() => {})
+      .finally(() => setPreviewLoading(false));
+  };
+
+  const closePreview = () => {
+    setPreviewProduct(null);
+    setPreviewLoading(false);
   };
 
   const openCreate = () => {
@@ -293,6 +385,7 @@ export default function AdminProducts() {
         await productService.uploadProductImages(saved.id, [imageFile]);
       }
       setModalOpen(false);
+      showToast(editing ? 'Produs actualizat.' : 'Produs creat.', 'success');
       load();
     } catch (err) {
       setError(err.response?.data?.message || 'Salvarea a eșuat.');
@@ -318,8 +411,9 @@ export default function AdminProducts() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+      showToast('Export finalizat.', 'success');
     } catch (err) {
-      alert(err.response?.data?.message || 'Exportul a eșuat.');
+      showToast(err.response?.data?.message || 'Exportul a eșuat.', 'error');
     } finally {
       setExporting(false);
     }
@@ -357,6 +451,7 @@ export default function AdminProducts() {
     setDeleteError(null);
     try {
       const ids = pending.map((p) => p.id);
+      const count = ids.length;
       if (ids.length === 1) {
         await productService.remove(ids[0]);
       } else {
@@ -368,6 +463,7 @@ export default function AdminProducts() {
         return next;
       });
       closeDelete();
+      showToast(count === 1 ? 'Produs șters.' : `${count} produse șterse.`, 'success');
       // Stepping back a page keeps the operator on a populated page when the
       // last rows of the final page were just removed.
       if (products.length === ids.length && page > 0) {
@@ -409,6 +505,7 @@ export default function AdminProducts() {
       } else {
         setImportDone(report);
         setImportReport(report);
+        showToast('Import finalizat.', 'success');
         load();
       }
     } catch (err) {
@@ -469,6 +566,24 @@ export default function AdminProducts() {
         )}
       </div>
 
+      {/* Quick filters (feature: filtre rapide) */}
+      <div className="mb-4 flex flex-wrap gap-2">
+        {QUICK_FILTERS.map((f) => (
+          <button
+            key={f.key ?? 'all'}
+            type="button"
+            onClick={() => chooseQuickFilter(f.key)}
+            className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
+              quickFilter === f.key
+                ? 'bg-brand-600 text-white'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
       {/* Batch action bar — only present while something is ticked */}
       {selectedIds.size > 0 && (
         <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-brand-200 bg-brand-50 px-4 py-2.5 text-sm">
@@ -494,6 +609,10 @@ export default function AdminProducts() {
 
       {loading ? (
         <Spinner />
+      ) : products.length === 0 ? (
+        <div className="card px-4 py-10 text-center text-sm text-slate-500">
+          Niciun produs nu corespunde filtrelor curente.
+        </div>
       ) : (
         <div className="card overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 text-sm">
@@ -534,23 +653,56 @@ export default function AdminProducts() {
                     />
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => openPreview(p)}
+                      className="flex items-center gap-3 text-left"
+                      title="Previzualizează"
+                    >
                       <img
                         src={resolveImage(p.imageUrl)}
                         alt={p.name}
                         className="h-10 w-10 rounded object-cover"
                       />
                       <div>
-                        <p className="font-medium text-slate-800">{p.name}</p>
+                        <p className="font-medium text-slate-800 hover:text-brand-600 hover:underline">
+                          {p.name}
+                        </p>
                         <p className="text-xs text-slate-500">{p.brand}</p>
                       </div>
-                    </div>
+                    </button>
                   </td>
                   <td className="px-4 py-3 text-slate-600">
                     {p.category}
                     {p.subcategory ? <span className="text-slate-400"> · {p.subcategory}</span> : null}
                   </td>
-                  <td className="px-4 py-3 font-medium">{formatPrice(p.price)}</td>
+                  <td className="px-4 py-3 font-medium">
+                    {editingCell?.id === p.id && editingCell.field === 'price' ? (
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="input w-28 py-1"
+                        autoFocus
+                        value={editValue}
+                        disabled={editBusy}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={() => saveEdit(p)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveEdit(p);
+                          if (e.key === 'Escape') cancelEdit();
+                        }}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => startEdit(p, 'price')}
+                        className="rounded px-1.5 py-0.5 hover:bg-slate-100"
+                        title="Editează prețul"
+                      >
+                        {formatPrice(p.price)}
+                      </button>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-graphite-600">
                     {p.purchasePrice != null ? formatPrice(p.purchasePrice) : '—'}
                   </td>
@@ -567,15 +719,36 @@ export default function AdminProducts() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`badge ${
-                        p.stockQuantity > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      {p.stockQuantity}
-                    </span>
+                    {editingCell?.id === p.id && editingCell.field === 'stockQuantity' ? (
+                      <input
+                        type="number"
+                        className="input w-20 py-1"
+                        autoFocus
+                        value={editValue}
+                        disabled={editBusy}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={() => saveEdit(p)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveEdit(p);
+                          if (e.key === 'Escape') cancelEdit();
+                        }}
+                      />
+                    ) : (
+                      <button type="button" onClick={() => startEdit(p, 'stockQuantity')} title="Editează stocul">
+                        <span
+                          className={`badge ${
+                            p.stockQuantity > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}
+                        >
+                          {p.stockQuantity}
+                        </span>
+                      </button>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right">
+                    <button onClick={() => openPreview(p)} className="mr-2 text-slate-600 hover:underline">
+                      Previzualizează
+                    </button>
                     <button onClick={() => openEdit(p)} className="mr-2 text-brand-600 hover:underline">
                       Editează
                     </button>
@@ -1020,6 +1193,102 @@ export default function AdminProducts() {
           </button>
         </div>
       </Modal>
+
+      {/* Quick preview (feature: previzualizare produs) */}
+      <Modal
+        open={!!previewProduct}
+        title={previewProduct?.name || 'Previzualizare produs'}
+        onClose={closePreview}
+        maxWidth="max-w-2xl"
+      >
+        {previewProduct && (
+          <div className="space-y-4">
+            <div className="flex items-start gap-4">
+              <img
+                src={resolveImage(previewProduct.imageUrl)}
+                alt={previewProduct.name}
+                className="h-28 w-28 flex-shrink-0 rounded-lg border border-slate-200 object-cover"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="text-lg font-semibold text-slate-800">{previewProduct.name}</p>
+                <p className="text-sm text-slate-500">
+                  {previewProduct.category}
+                  {previewProduct.subcategory ? ` · ${previewProduct.subcategory}` : ''}
+                  {previewProduct.brand ? ` · ${previewProduct.brand}` : ''}
+                </p>
+                {previewProduct.sku && (
+                  <p className="mt-1 text-xs text-slate-400">SKU: {previewProduct.sku}</p>
+                )}
+                <div className="mt-2 flex flex-wrap items-center gap-3">
+                  <span className="text-xl font-bold text-slate-800">
+                    {formatPrice(previewProduct.price)}
+                  </span>
+                  {previewProduct.purchasePrice != null && (
+                    <span className="text-sm text-graphite-500">
+                      Achiziție: {formatPrice(previewProduct.purchasePrice)}
+                    </span>
+                  )}
+                  {previewProduct.profit != null && (
+                    <span className="text-sm font-medium text-brand-700">
+                      Profit: {formatPrice(previewProduct.profit)}
+                      {previewProduct.marginPercent != null && ` · ${previewProduct.marginPercent}%`}
+                    </span>
+                  )}
+                  <span
+                    className={`badge ${
+                      previewProduct.stockQuantity > 0
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}
+                  >
+                    Stoc: {previewProduct.stockQuantity}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {previewProduct.description && (
+              <p className="whitespace-pre-line text-sm text-slate-600">{previewProduct.description}</p>
+            )}
+
+            {previewLoading ? (
+              <Spinner />
+            ) : (
+              previewProduct.images?.length > 0 && (
+                <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+                  {previewProduct.images.map((img) => (
+                    <img
+                      key={img.id}
+                      src={img.url}
+                      alt=""
+                      className="h-16 w-full rounded object-cover"
+                    />
+                  ))}
+                </div>
+              )
+            )}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button type="button" className="btn-secondary" onClick={closePreview}>
+                Închide
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => {
+                  const p = previewProduct;
+                  closePreview();
+                  openEdit(p);
+                }}
+              >
+                Editează
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <ToastHost />
     </div>
   );
 }

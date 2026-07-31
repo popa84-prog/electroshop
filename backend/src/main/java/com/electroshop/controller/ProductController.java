@@ -1,5 +1,6 @@
 package com.electroshop.controller;
 
+import com.electroshop.dto.AdminProductDto;
 import com.electroshop.dto.ApiResponse;
 import com.electroshop.dto.BulkIdsRequest;
 import com.electroshop.dto.CategoryStatDto;
@@ -8,8 +9,11 @@ import com.electroshop.dto.PageResponse;
 import com.electroshop.dto.ProductDto;
 import com.electroshop.dto.ProductImportResult;
 import com.electroshop.dto.ProductRequest;
+import com.electroshop.dto.ReorderImagesRequest;
+import com.electroshop.dto.SellProductRequest;
 import com.electroshop.service.CompanySettingsService;
 import com.electroshop.service.FileStorageService;
+import com.electroshop.service.OrderService;
 import com.electroshop.service.ProductImportService;
 import com.electroshop.service.ProductService;
 import jakarta.validation.Valid;
@@ -33,14 +37,17 @@ public class ProductController {
     private final FileStorageService fileStorageService;
     private final ProductImportService productImportService;
     private final CompanySettingsService companySettingsService;
+    private final OrderService orderService;
 
     public ProductController(ProductService productService, FileStorageService fileStorageService,
                              ProductImportService productImportService,
-                             CompanySettingsService companySettingsService) {
+                             CompanySettingsService companySettingsService,
+                             OrderService orderService) {
         this.productService = productService;
         this.fileStorageService = fileStorageService;
         this.productImportService = productImportService;
         this.companySettingsService = companySettingsService;
+        this.orderService = orderService;
     }
 
     /** Public company contact details for the storefront footer (feature #1). */
@@ -109,24 +116,51 @@ public class ProductController {
     // ---- Admin (secured in SecurityConfig + @PreAuthorize) ----
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permissionService.has('PRODUCTS_MANAGE')")
     public ResponseEntity<ApiResponse<ProductDto>> create(@Valid @RequestBody ProductRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Product created", productService.create(request)));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permissionService.has('PRODUCTS_MANAGE')")
     public ResponseEntity<ApiResponse<ProductDto>> update(@PathVariable Long id,
                                                           @Valid @RequestBody ProductRequest request) {
         return ResponseEntity.ok(ApiResponse.ok("Product updated", productService.update(id, request)));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permissionService.has('PRODUCTS_DELETE')")
     public ResponseEntity<ApiResponse<Object>> delete(@PathVariable Long id) {
         productService.delete(id);
         return ResponseEntity.ok(ApiResponse.ok("Product deleted", null));
+    }
+
+    /** Hides the product from the public storefront without deleting it (feature #5). */
+    @PostMapping("/{id}/activate")
+    @PreAuthorize("@permissionService.has('PRODUCTS_MANAGE')")
+    public ResponseEntity<ApiResponse<AdminProductDto>> activate(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.ok("Produs activat", productService.setActive(id, true)));
+    }
+
+    @PostMapping("/{id}/deactivate")
+    @PreAuthorize("@permissionService.has('PRODUCTS_MANAGE')")
+    public ResponseEntity<ApiResponse<AdminProductDto>> deactivate(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.ok("Produs dezactivat", productService.setActive(id, false)));
+    }
+
+    /**
+     * Feature #10 — "VÂNDUT": registers a quick in-store sale for this product.
+     * Decrements stock, creates a completed order (feeds the dashboard's revenue/
+     * order stats automatically) and returns the fresh {@link AdminProductDto} so
+     * the products table updates instantly without a full page reload.
+     */
+    @PostMapping("/{id}/sell")
+    @PreAuthorize("@permissionService.has('PRODUCTS_MANAGE')")
+    public ResponseEntity<ApiResponse<AdminProductDto>> sell(@PathVariable Long id,
+                                                             @Valid @RequestBody SellProductRequest request) {
+        orderService.sellProduct(id, request);
+        return ResponseEntity.ok(ApiResponse.ok("Vânzare înregistrată cu succes!", productService.adminGet(id)));
     }
 
     /**
@@ -138,7 +172,7 @@ public class ProductController {
      * consistently by proxies and HTTP clients.
      */
     @PostMapping("/bulk-delete")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permissionService.has('PRODUCTS_DELETE')")
     public ResponseEntity<ApiResponse<ProductService.BulkDeleteResult>> bulkDelete(
             @Valid @RequestBody BulkIdsRequest request) {
         ProductService.BulkDeleteResult result = productService.deleteBulk(request.getIds());
@@ -149,7 +183,7 @@ public class ProductController {
     }
 
     @PostMapping("/{id}/image")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permissionService.has('PRODUCTS_MANAGE')")
     public ResponseEntity<ApiResponse<ProductDto>> uploadImage(@PathVariable Long id,
                                                               @RequestParam("file") MultipartFile file) {
         String url = fileStorageService.store(file);
@@ -160,25 +194,34 @@ public class ProductController {
 
     /** Upload one or more product images (JPG/PNG/WebP) to Cloudinary. */
     @PostMapping("/{id}/images")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permissionService.has('PRODUCTS_MANAGE')")
     public ResponseEntity<ApiResponse<ProductDto>> uploadImages(@PathVariable Long id,
                                                                @RequestParam("files") MultipartFile[] files) {
         return ResponseEntity.ok(ApiResponse.ok("Imagini încărcate", productService.addImages(id, files)));
     }
 
     @DeleteMapping("/{id}/images/{imageId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permissionService.has('PRODUCTS_MANAGE')")
     public ResponseEntity<ApiResponse<ProductDto>> deleteImage(@PathVariable Long id,
                                                               @PathVariable Long imageId) {
         return ResponseEntity.ok(ApiResponse.ok("Imagine ștearsă", productService.deleteImage(id, imageId)));
     }
 
     @PutMapping("/{id}/images/{imageId}/primary")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permissionService.has('PRODUCTS_MANAGE')")
     public ResponseEntity<ApiResponse<ProductDto>> setPrimaryImage(@PathVariable Long id,
                                                                   @PathVariable Long imageId) {
         return ResponseEntity.ok(ApiResponse.ok("Imagine principală setată",
                 productService.setPrimaryImage(id, imageId)));
+    }
+
+    /** Reorders the image gallery (drag & drop) — body carries the full new order. */
+    @PutMapping("/{id}/images/reorder")
+    @PreAuthorize("@permissionService.has('PRODUCTS_MANAGE')")
+    public ResponseEntity<ApiResponse<ProductDto>> reorderImages(@PathVariable Long id,
+                                                                 @Valid @RequestBody ReorderImagesRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok("Ordinea imaginilor a fost salvată",
+                productService.reorderImages(id, request.imageIds())));
     }
 
     /**
@@ -187,7 +230,7 @@ public class ProductController {
      * are created/updated.
      */
     @PostMapping("/import")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permissionService.has('PRODUCTS_IMPORT')")
     public ResponseEntity<ApiResponse<ProductImportResult>> importExcel(
             @RequestParam("file") MultipartFile file,
             @RequestParam(name = "dryRun", defaultValue = "true") boolean dryRun,
@@ -205,7 +248,7 @@ public class ProductController {
      * field. Use dryRun=true first for a preview. Admin only.
      */
     @PostMapping("/sync-purchase-prices")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("@permissionService.has('PRODUCTS_IMPORT')")
     public ResponseEntity<ApiResponse<ProductImportResult>> syncPurchasePrices(
             @RequestParam("file") MultipartFile file,
             @RequestParam(name = "dryRun", defaultValue = "true") boolean dryRun) {

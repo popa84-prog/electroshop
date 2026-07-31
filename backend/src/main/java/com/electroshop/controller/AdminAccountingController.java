@@ -18,11 +18,12 @@ import java.time.LocalDate;
 
 /**
  * Admin endpoints for primary accounting: suppliers, purchases (stock intake),
- * and the sales-vs-purchases report. Secured to ROLE_ADMIN.
+ * and the sales-vs-purchases report. Suppliers/purchases need {@code SUPPLIERS_MANAGE}
+ * / {@code PURCHASES_MANAGE} (Admin + Manager); the financial report needs
+ * {@code ACCOUNTING_VIEW} (Admin only) — feature #6 granular permissions.
  */
 @RestController
 @RequestMapping("/admin")
-@PreAuthorize("hasRole('ADMIN')")
 public class AdminAccountingController {
 
     private final SupplierService supplierService;
@@ -39,6 +40,7 @@ public class AdminAccountingController {
     // ---------- Suppliers ----------
 
     @GetMapping("/suppliers")
+    @PreAuthorize("@permissionService.has('SUPPLIERS_MANAGE')")
     public ResponseEntity<ApiResponse<PageResponse<SupplierDto>>> listSuppliers(
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
@@ -49,23 +51,27 @@ public class AdminAccountingController {
     }
 
     @GetMapping("/suppliers/{id}")
+    @PreAuthorize("@permissionService.has('SUPPLIERS_MANAGE')")
     public ResponseEntity<ApiResponse<SupplierDto>> getSupplier(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok(supplierService.getById(id)));
     }
 
     @PostMapping("/suppliers")
+    @PreAuthorize("@permissionService.has('SUPPLIERS_MANAGE')")
     public ResponseEntity<ApiResponse<SupplierDto>> createSupplier(@Valid @RequestBody SupplierRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Supplier created", supplierService.create(request)));
     }
 
     @PutMapping("/suppliers/{id}")
+    @PreAuthorize("@permissionService.has('SUPPLIERS_MANAGE')")
     public ResponseEntity<ApiResponse<SupplierDto>> updateSupplier(@PathVariable Long id,
                                                                    @Valid @RequestBody SupplierRequest request) {
         return ResponseEntity.ok(ApiResponse.ok("Supplier updated", supplierService.update(id, request)));
     }
 
     @DeleteMapping("/suppliers/{id}")
+    @PreAuthorize("@permissionService.has('SUPPLIERS_MANAGE')")
     public ResponseEntity<ApiResponse<Object>> deleteSupplier(@PathVariable Long id) {
         supplierService.delete(id);
         return ResponseEntity.ok(ApiResponse.ok("Supplier deleted", null));
@@ -74,6 +80,7 @@ public class AdminAccountingController {
     // ---------- Purchases (stock intake) ----------
 
     @GetMapping("/purchases")
+    @PreAuthorize("@permissionService.has('PURCHASES_MANAGE')")
     public ResponseEntity<ApiResponse<PageResponse<PurchaseDto>>> listPurchases(
             @RequestParam(required = false) Long supplierId,
             @RequestParam(defaultValue = "0") int page,
@@ -84,17 +91,20 @@ public class AdminAccountingController {
     }
 
     @GetMapping("/purchases/{id}")
+    @PreAuthorize("@permissionService.has('PURCHASES_MANAGE')")
     public ResponseEntity<ApiResponse<PurchaseDto>> getPurchase(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok(purchaseService.getById(id)));
     }
 
     @PostMapping("/purchases")
+    @PreAuthorize("@permissionService.has('PURCHASES_MANAGE')")
     public ResponseEntity<ApiResponse<PurchaseDto>> createPurchase(@Valid @RequestBody PurchaseRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Purchase recorded", purchaseService.create(request)));
     }
 
     @DeleteMapping("/purchases/{id}")
+    @PreAuthorize("@permissionService.has('PURCHASES_MANAGE')")
     public ResponseEntity<ApiResponse<Object>> deletePurchase(@PathVariable Long id) {
         purchaseService.delete(id);
         return ResponseEntity.ok(ApiResponse.ok("Purchase deleted", null));
@@ -103,6 +113,7 @@ public class AdminAccountingController {
     // ---------- Accounting report ----------
 
     @GetMapping("/accounting/report")
+    @PreAuthorize("@permissionService.has('ACCOUNTING_VIEW')")
     public ResponseEntity<ApiResponse<AccountingReportDto>> report(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {

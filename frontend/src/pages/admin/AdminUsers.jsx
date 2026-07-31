@@ -5,8 +5,12 @@ import Modal from '../../components/Modal';
 import Pagination from '../../components/Pagination';
 import Spinner from '../../components/Spinner';
 import { formatDate } from '../../utils/format';
+import { ROLE_BADGE_STYLE, ROLE_LABELS } from '../../utils/permissions';
+import { useDebounce } from '../../hooks/useDebounce';
 
 const emptyForm = { fullName: '', email: '', password: '', enabled: true, roles: ['ROLE_USER'] };
+// Feature #6: Admin/Manager/Editor + the plain storefront-customer role.
+const ASSIGNABLE_ROLES = ['ROLE_USER', 'ROLE_EDITOR', 'ROLE_MANAGER', 'ROLE_ADMIN'];
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
@@ -32,10 +36,14 @@ export default function AdminUsers() {
       .catch(() => setPending([]));
   };
 
+  // Feature #7 (performance): debounce the search box so typing doesn't fire
+  // one request per keystroke.
+  const debouncedSearch = useDebounce(search, 350);
+
   const load = () => {
     setLoading(true);
     adminService
-      .listUsers({ page, size: 10, search })
+      .listUsers({ page, size: 10, search: debouncedSearch })
       .then((data) => {
         setUsers(data.content);
         setTotalPages(data.totalPages);
@@ -45,7 +53,7 @@ export default function AdminUsers() {
     loadPending();
   };
 
-  useEffect(load, [page, search]);
+  useEffect(load, [page, debouncedSearch]);
 
   const handleApprove = async (u) => {
     setApprovingId(u.id);
@@ -124,6 +132,26 @@ export default function AdminUsers() {
       load();
     } catch (err) {
       alert(err.response?.data?.message || 'Ștergerea a eșuat.');
+    }
+  };
+
+  // Feature #6 — brute-force lock override + lost-device 2FA reset.
+  const handleUnlock = async (u) => {
+    try {
+      await adminService.unlockUser(u.id);
+      load();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Deblocarea a eșuat.');
+    }
+  };
+
+  const handleDisableTwoFactor = async (u) => {
+    if (!window.confirm(`Dezactivezi autentificarea în doi pași pentru "${u.email}"?`)) return;
+    try {
+      await adminService.disableUserTwoFactor(u.id);
+      load();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Operația a eșuat.');
     }
   };
 
@@ -210,13 +238,8 @@ export default function AdminUsers() {
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
                       {u.roles.map((r) => (
-                        <span
-                          key={r}
-                          className={`badge ${
-                            r === 'ROLE_ADMIN' ? 'bg-purple-100 text-purple-800' : 'bg-slate-100 text-slate-700'
-                          }`}
-                        >
-                          {r.replace('ROLE_', '')}
+                        <span key={r} className={`badge ${ROLE_BADGE_STYLE[r] || 'bg-slate-100 text-slate-700'}`}>
+                          {ROLE_LABELS[r] || r.replace('ROLE_', '')}
                         </span>
                       ))}
                     </div>
@@ -232,6 +255,10 @@ export default function AdminUsers() {
                       </span>
                       {!u.approved && (
                         <span className="badge bg-amber-100 text-amber-800">În așteptare</span>
+                      )}
+                      {u.locked && <span className="badge bg-red-100 text-red-800">🔒 Blocat</span>}
+                      {u.twoFactorEnabled && (
+                        <span className="badge bg-cyan-100 text-cyan-800">🔑 2FA</span>
                       )}
                     </div>
                   </td>
@@ -249,6 +276,19 @@ export default function AdminUsers() {
                   </td>
                   <td className="px-4 py-3 text-slate-500">{formatDate(u.createdAt)}</td>
                   <td className="px-4 py-3 text-right">
+                    {u.locked && (
+                      <button onClick={() => handleUnlock(u)} className="mr-2 text-amber-600 hover:underline">
+                        Deblochează
+                      </button>
+                    )}
+                    {u.twoFactorEnabled && (
+                      <button
+                        onClick={() => handleDisableTwoFactor(u)}
+                        className="mr-2 text-amber-600 hover:underline"
+                      >
+                        Dezactivează 2FA
+                      </button>
+                    )}
                     <button onClick={() => openEdit(u)} className="mr-2 text-brand-600 hover:underline">
                       Editează
                     </button>
@@ -306,18 +346,21 @@ export default function AdminUsers() {
           </div>
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-600">Roluri</label>
-            <div className="flex gap-4">
-              {['ROLE_USER', 'ROLE_ADMIN'].map((r) => (
+            <div className="flex flex-wrap gap-4">
+              {ASSIGNABLE_ROLES.map((r) => (
                 <label key={r} className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"
                     checked={form.roles.includes(r)}
                     onChange={() => toggleRole(r)}
                   />
-                  {r.replace('ROLE_', '')}
+                  {ROLE_LABELS[r] || r.replace('ROLE_', '')}
                 </label>
               ))}
             </div>
+            <p className="mt-1.5 text-xs text-slate-400">
+              Editor: editează produse. Manager: și stoc, prețuri, comenzi, ștergeri. Admin: acces total.
+            </p>
           </div>
           <label className="flex items-center gap-2 text-sm">
             <input

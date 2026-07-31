@@ -5,8 +5,11 @@ import Modal from '../../components/Modal';
 import Pagination from '../../components/Pagination';
 import Spinner from '../../components/Spinner';
 import { formatPrice, formatDate, statusColor, resolveImage } from '../../utils/format';
+import { cachedList, invalidateListCache } from '../../utils/listCache';
 
 const STATUSES = ['PENDING', 'PAID', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
+/** Cache namespace for this page's list (feature #7 — cache pentru liste mari). */
+const LIST_CACHE_NS = 'admin-orders';
 
 export default function AdminOrders() {
   const [orders, setOrders] = useState([]);
@@ -47,8 +50,10 @@ export default function AdminOrders() {
 
   const load = () => {
     setLoading(true);
-    adminService
-      .listOrders({ page, size: 10, status: statusFilter })
+    const params = { page, size: 10, status: statusFilter };
+    // Feature #7: short-TTL cache — paging back within a few seconds skips the
+    // network round-trip entirely.
+    cachedList(LIST_CACHE_NS, params, () => adminService.listOrders(params))
       .then((data) => {
         setOrders(data.content);
         setTotalPages(data.totalPages);
@@ -63,6 +68,7 @@ export default function AdminOrders() {
     setSavingStatus(true);
     try {
       const updated = await adminService.updateOrderStatus(order.id, status);
+      invalidateListCache(LIST_CACHE_NS);
       setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
       if (detail?.id === updated.id) setDetail(updated);
     } catch (err) {
@@ -92,6 +98,7 @@ export default function AdminOrders() {
     if (!window.confirm(`Ștergi comanda #${order.id}?`)) return;
     try {
       await adminService.deleteOrder(order.id);
+      invalidateListCache(LIST_CACHE_NS);
       load();
     } catch (err) {
       alert(err.response?.data?.message || 'Ștergerea a eșuat.');
@@ -215,6 +222,7 @@ export default function AdminOrders() {
                   <img
                     src={resolveImage(it.imageUrl)}
                     alt={it.productName}
+                    loading="lazy"
                     className="h-10 w-10 rounded object-cover"
                   />
                   <div className="flex-1 text-sm">

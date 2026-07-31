@@ -98,6 +98,8 @@ const ACTIVITY_META = {
   ORDER_STATUS_CHANGED: { icon: 'refresh', tone: 'text-amber-600 bg-amber-50', label: 'Status comandă schimbat', category: 'orders' },
   ORDER_DELETED: { icon: 'trash', tone: 'text-red-600 bg-red-50', label: 'Comandă ștearsă', category: 'orders' },
   COMPANY_SETTINGS_UPDATED: { icon: 'gear', tone: 'text-slate-600 bg-slate-100', label: 'Date firmă actualizate', category: 'system' },
+  // Feature #10 — "VÂNDUT" quick sale from the products page.
+  PRODUCT_SOLD: { icon: 'cart', tone: 'text-green-600 bg-green-50', label: 'Vânzare directă (VÂNDUT)', category: 'orders' },
 };
 const DEFAULT_ACTIVITY_META = { icon: 'document', tone: 'text-slate-600 bg-slate-100', label: null, category: 'system' };
 
@@ -120,6 +122,17 @@ const SALES_VIEWS = [
   { key: 'month', label: 'Luni' },
   { key: 'year', label: 'Ani' },
 ];
+
+/** Aggregates a {date, value} series (already daily) into day/month/year buckets. */
+function aggregateByView(points, view, valueKey) {
+  if (view === 'day') return points;
+  const map = new Map();
+  for (const p of points) {
+    const key = view === 'month' ? String(p.date).slice(0, 7) : String(p.date).slice(0, 4);
+    map.set(key, (map.get(key) || 0) + Number(p[valueKey] || 0));
+  }
+  return Array.from(map, ([date, value]) => ({ date, [valueKey]: value }));
+}
 
 /** A trailing moving average of `key` over the given window, added as `avg` on each point. */
 function withMovingAverage(data, key, window) {
@@ -218,11 +231,26 @@ function SalesTooltip({ active, payload, label }) {
   );
 }
 
+function OrdersTooltip({ active, payload, label }) {
+  if (!active || !payload || !payload.length) return null;
+  const count = payload.find((p) => p.dataKey === 'count')?.value;
+  if (count == null) return null;
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-md">
+      <p className="mb-1 font-semibold text-slate-700">{label}</p>
+      <p className="text-slate-600">
+        Comenzi: <span className="font-medium text-slate-900">{count}</span>
+      </p>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [activity, setActivity] = useState([]);
   const [loading, setLoading] = useState(true);
   const [salesView, setSalesView] = useState('day');
+  const [ordersView, setOrdersView] = useState('day');
   const [activityFilter, setActivityFilter] = useState('all');
 
   useEffect(() => {
@@ -246,7 +274,15 @@ export default function AdminDashboard() {
     return Array.from(map, ([date, amount]) => ({ date, amount }));
   }, [stats, salesView]);
 
+  const ordersData = useMemo(
+    () => aggregateByView(stats?.ordersByDay || [], ordersView, 'count'),
+    [stats, ordersView]
+  );
+
   const totalForStatus = (stats?.ordersByStatus || []).reduce((sum, s) => sum + s.count, 0);
+
+  const monthly = stats?.monthlyRevenue;
+  const monthlyUp = (monthly?.changePct ?? 0) >= 0;
 
   const filteredActivity = useMemo(() => {
     if (activityFilter === 'all') return activity;
@@ -302,7 +338,7 @@ export default function AdminDashboard() {
           <>
             <div className="grid gap-6 lg:grid-cols-2">
               <div className="card p-5">
-                <div className="mb-4 flex items-center justify-between">
+                <div className="mb-1 flex items-center justify-between">
                   <h2 className="font-semibold text-slate-800">Vânzări</h2>
                   <div className="flex overflow-hidden rounded-lg border border-slate-200 text-sm">
                     {SALES_VIEWS.map((v) => (
@@ -317,6 +353,21 @@ export default function AdminDashboard() {
                     ))}
                   </div>
                 </div>
+                {/* Feature #9 — "venit lunar + comparație cu luna precedentă": a
+                    calendar-month comparison, distinct from the 7-vs-7-day badges
+                    on the stat cards above. */}
+                {monthly && (
+                  <p className="mb-3 text-sm text-slate-500">
+                    Venit luna aceasta: <span className="font-semibold text-slate-800">{formatPrice(monthly.current)}</span>
+                    {monthly.changePct != null && (
+                      <span className={`ml-2 font-semibold ${monthlyUp ? 'text-green-600' : 'text-red-600'}`}>
+                        {monthlyUp ? '▲' : '▼'} {Math.abs(monthly.changePct)}% față de luna trecută
+                      </span>
+                    )}
+                    {' '}
+                    <span className="text-slate-400">(luna trecută: {formatPrice(monthly.previous)})</span>
+                  </p>
+                )}
                 <ResponsiveContainer width="100%" height={280}>
                   <LineChart data={salesData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -402,6 +453,54 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+            {/* Feature #9 — "grafic evoluție comenzi": order-count history, with the
+                same zile/luni/ani granularity as the Vânzări chart above but tracking
+                order volume rather than revenue. */}
+            <div className="card p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="font-semibold text-slate-800">Evoluția comenzilor</h2>
+                <div className="flex overflow-hidden rounded-lg border border-slate-200 text-sm">
+                  {SALES_VIEWS.map((v) => (
+                    <button
+                      key={v.key}
+                      type="button"
+                      className={`px-3 py-1 ${ordersView === v.key ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
+                      onClick={() => setOrdersView(v.key)}
+                    >
+                      {v.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {ordersData.length === 0 ? (
+                <p className="py-8 text-center text-sm text-slate-500">Nicio comandă încă.</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={240}>
+                  <AreaChart data={ordersData}>
+                    <defs>
+                      <linearGradient id="orders-evolution-fill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                        <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                    <Tooltip content={<OrdersTooltip />} />
+                    <Area
+                      type="monotone"
+                      dataKey="count"
+                      name="Comenzi"
+                      stroke="#8b5cf6"
+                      strokeWidth={2}
+                      fill="url(#orders-evolution-fill)"
+                      isAnimationActive={false}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+
             <div className="grid gap-6 lg:grid-cols-2">
               <div className="card p-5">
                 <h2 className="mb-4 font-semibold text-slate-800">Top produse vândute</h2>
@@ -428,6 +527,7 @@ export default function AdminDashboard() {
                           <img
                             src={resolveImage(p.imageUrl)}
                             alt={p.name}
+                            loading="lazy"
                             className="h-10 w-10 shrink-0 rounded object-cover"
                           />
                           <div className="min-w-0 flex-1">
@@ -526,6 +626,7 @@ export default function AdminDashboard() {
                       <img
                         src={resolveImage(p.imageUrl)}
                         alt={p.name}
+                        loading="lazy"
                         className="h-9 w-9 shrink-0 rounded object-cover"
                       />
                       <div className="min-w-0">

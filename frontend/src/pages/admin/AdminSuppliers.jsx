@@ -4,6 +4,7 @@ import AdminNav from '../../components/AdminNav';
 import Modal from '../../components/Modal';
 import Pagination from '../../components/Pagination';
 import Spinner from '../../components/Spinner';
+import { useDebounce } from '../../hooks/useDebounce';
 
 const emptyForm = {
   name: '',
@@ -28,10 +29,14 @@ export default function AdminSuppliers() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
+  // Feature #7 (performance): debounce the search box so typing doesn't fire
+  // one request per keystroke.
+  const debouncedSearch = useDebounce(search, 350);
+
   const load = () => {
     setLoading(true);
     adminService
-      .listSuppliers({ page, size: 10, search })
+      .listSuppliers({ page, size: 10, search: debouncedSearch })
       .then((data) => {
         setSuppliers(data.content);
         setTotalPages(data.totalPages);
@@ -40,7 +45,7 @@ export default function AdminSuppliers() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(load, [page, search]);
+  useEffect(load, [page, debouncedSearch]);
 
   const openCreate = () => {
     setEditing(null);

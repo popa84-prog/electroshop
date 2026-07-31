@@ -6,7 +6,13 @@ import Modal from '../../components/Modal';
 import Pagination from '../../components/Pagination';
 import Spinner from '../../components/Spinner';
 import { showToast, ToastHost } from '../../components/Toast';
-import { formatPrice, resolveImage } from '../../utils/format';
+import { formatPrice, resolveImage, formatDate } from '../../utils/format';
+import { ACTION_LABELS } from '../../utils/auditLabels';
+import { useDebounce } from '../../hooks/useDebounce';
+import { cachedList, invalidateListCache } from '../../utils/listCache';
+
+/** Cache namespace for this page's list (feature #7 — cache pentru liste mari). */
+const LIST_CACHE_NS = 'admin-products';
 
 /** Selectable page sizes for the products table. */
 const PAGE_SIZES = [10, 20, 50, 100, 200];
@@ -78,11 +84,14 @@ export default function AdminProducts() {
   const [error, setError] = useState(null);
   const [imageFile, setImageFile] = useState(null);
 
-  // Image gallery manager (feature #5)
+  // Image gallery manager (feature #5 + Task 4: reorder, delete confirm, dimensions)
   const [images, setImages] = useState([]);
   const [imgBusy, setImgBusy] = useState(false);
   const [imgError, setImgError] = useState(null);
   const [dragOver, setDragOver] = useState(false);
+  const [confirmDeleteImageId, setConfirmDeleteImageId] = useState(null);
+  const [dragImageId, setDragImageId] = useState(null);
+  const [dragOverImageId, setDragOverImageId] = useState(null);
 
   // Inline edit (feature: editare rapidă direct în tabel) — { id, field } or null.
   const [editingCell, setEditingCell] = useState(null);
@@ -92,6 +101,18 @@ export default function AdminProducts() {
   // Quick preview modal (feature: previzualizare produs)
   const [previewProduct, setPreviewProduct] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  // Per-product audit history shown in the preview popup (feature #5 — istoric
+  // prețuri / istoric stoc / istoric imagini).
+  const [previewHistory, setPreviewHistory] = useState([]);
+  const [previewHistoryLoading, setPreviewHistoryLoading] = useState(false);
+  const [activeBusyId, setActiveBusyId] = useState(null);
+
+  // Feature #10 — "VÂNDUT" quick-sale popup.
+  const [saleProduct, setSaleProduct] = useState(null);
+  const [saleQuantity, setSaleQuantity] = useState('1');
+  const [salePrice, setSalePrice] = useState('');
+  const [saleBusy, setSaleBusy] = useState(false);
+  const [saleError, setSaleError] = useState(null);
 
   const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
   const MAX_BYTES = 5 * 1024 * 1024;
@@ -109,11 +130,18 @@ export default function AdminProducts() {
   // added and a quantity-weighted average purchase price.
   const [restockMode, setRestockMode] = useState(false);
 
+  // Feature #7 (performance): the input stays instantly responsive, but the
+  // actual request only fires 350ms after the operator stops typing — instead
+  // of one API call per keystroke.
+  const debouncedSearch = useDebounce(search, 350);
+
   const load = () => {
     setLoading(true);
+    const params = { page, size: pageSize, search: debouncedSearch, quickFilter: quickFilter || undefined };
     // Admin endpoint: includes purchasePrice + profit (only visible to admins).
-    adminService
-      .listAdminProducts({ page, size: pageSize, search, quickFilter: quickFilter || undefined })
+    // Feature #7: short-TTL cache — paging back to a page/filter combo seen in
+    // the last few seconds skips the network round-trip entirely.
+    cachedList(LIST_CACHE_NS, params, () => adminService.listAdminProducts(params))
       .then((data) => {
         setProducts(data.content);
         setTotalPages(data.totalPages);
@@ -123,13 +151,13 @@ export default function AdminProducts() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(load, [page, pageSize, search, quickFilter]);
+  useEffect(load, [page, pageSize, debouncedSearch, quickFilter]);
 
   // A tick only ever refers to a row the operator can currently see, so the
   // selection is dropped whenever the visible set changes.
   useEffect(() => {
     setSelectedIds(new Set());
-  }, [page, pageSize, search, quickFilter]);
+  }, [page, pageSize, debouncedSearch, quickFilter]);
 
   const allOnPageSelected = products.length > 0 && products.every((p) => selectedIds.has(p.id));
   const someOnPageSelected = products.some((p) => selectedIds.has(p.id));
@@ -229,6 +257,7 @@ export default function AdminProducts() {
       await productService.update(p.id, payload);
       showToast('Produs actualizat.', 'success');
       cancelEdit();
+      invalidateListCache(LIST_CACHE_NS);
       load();
     } catch (err) {
       showToast(err.response?.data?.message || 'Actualizarea a eșuat.', 'error');
@@ -237,20 +266,105 @@ export default function AdminProducts() {
     }
   };
 
+  // ---- Activate / deactivate (feature #5) — hides a product from the storefront
+  // without deleting it; every toggle is written to the audit log. ----
+  const toggleActive = async (p) => {
+    setActiveBusyId(p.id);
+    try {
+      if (p.active) {
+        await productService.deactivate(p.id);
+        showToast(`${p.name} a fost dezactivat.`, 'success');
+      } else {
+        await productService.activate(p.id);
+        showToast(`${p.name} a fost activat.`, 'success');
+      }
+      invalidateListCache(LIST_CACHE_NS);
+      load();
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Schimbarea stării produsului a eșuat.', 'error');
+    } finally {
+      setActiveBusyId(null);
+    }
+  };
+
+  // ---- Feature #10 — "VÂNDUT": one-click quick sale from the products table.
+  // Decrements stock, creates a completed order (dashboard picks it up on its own —
+  // see OrderService.sellProduct) and refreshes this row instantly. ----
+  const openSell = (p) => {
+    setSaleProduct(p);
+    setSaleQuantity('1');
+    setSalePrice(p.price != null ? String(p.price) : '');
+    setSaleError(null);
+  };
+
+  const closeSell = () => {
+    if (saleBusy) return;
+    setSaleProduct(null);
+    setSaleError(null);
+  };
+
+  const saleQtyNum = Number(saleQuantity);
+  const salePriceNum = Number(salePrice);
+  const saleTotal = (Number.isFinite(saleQtyNum) ? saleQtyNum : 0) * (Number.isFinite(salePriceNum) ? salePriceNum : 0);
+  // Real-time validation (feature #10.C) — flips the moment the operator types a
+  // quantity beyond what's in stock, no need to submit first to find out.
+  const saleInsufficientStock =
+    saleProduct != null && Number.isFinite(saleQtyNum) && saleQtyNum > saleProduct.stockQuantity;
+
+  const confirmSell = async () => {
+    if (!saleProduct) return;
+    if (!Number.isFinite(saleQtyNum) || saleQtyNum < 1) {
+      setSaleError('Introdu o cantitate validă (cel puțin 1).');
+      return;
+    }
+    if (saleQtyNum > saleProduct.stockQuantity) {
+      setSaleError('Stoc insuficient!');
+      return;
+    }
+    if (!Number.isFinite(salePriceNum) || salePriceNum <= 0) {
+      setSaleError('Introdu un preț valid.');
+      return;
+    }
+    setSaleBusy(true);
+    setSaleError(null);
+    try {
+      await productService.sell(saleProduct.id, { quantity: saleQtyNum, unitPrice: salePriceNum });
+      invalidateListCache(LIST_CACHE_NS);
+      showToast('Vânzare înregistrată cu succes!', 'success');
+      setSaleProduct(null);
+      load();
+    } catch (err) {
+      setSaleError(err.response?.data?.message || 'Vânzarea a eșuat.');
+    } finally {
+      setSaleBusy(false);
+    }
+  };
+
   // ---- Quick preview (feature: previzualizare produs) ----
   const openPreview = (p) => {
     setPreviewProduct(p);
     setPreviewLoading(true);
+    setPreviewHistory([]);
+    setPreviewHistoryLoading(true);
     adminService
       .getAdminProduct(p.id)
       .then((detail) => setPreviewProduct(detail))
       .catch(() => {})
       .finally(() => setPreviewLoading(false));
+    // Recent audit trail for this product — price/stock changes, image edits,
+    // activate/deactivate. Best-effort: the preview still works if this fails.
+    adminService
+      .listAuditLogs({ entityType: 'Product', entityId: p.id, size: 8 })
+      .then((data) => setPreviewHistory(data.content || []))
+      .catch(() => setPreviewHistory([]))
+      .finally(() => setPreviewHistoryLoading(false));
   };
 
   const closePreview = () => {
     setPreviewProduct(null);
     setPreviewLoading(false);
+    setPreviewHistory([]);
+    setPreviewHistoryLoading(false);
   };
 
   const openCreate = () => {
@@ -259,6 +373,7 @@ export default function AdminProducts() {
     setImageFile(null);
     setImages([]);
     setImgError(null);
+    setConfirmDeleteImageId(null);
     setError(null);
     setModalOpen(true);
   };
@@ -280,6 +395,7 @@ export default function AdminProducts() {
     setImageFile(null);
     setImages(p.images || []);
     setImgError(null);
+    setConfirmDeleteImageId(null);
     setError(null);
     setModalOpen(true);
     // Fetch full admin detail for images + the exact purchase price.
@@ -326,6 +442,16 @@ export default function AdminProducts() {
     }
   };
 
+  // Delete needs a second click to confirm (mirrors the double-confirm pattern
+  // used for deleting products, scaled down since a single image is low-stakes
+  // but still irreversible on Cloudinary).
+  const askDeleteImage = (imageId) => {
+    setImgError(null);
+    setConfirmDeleteImageId((cur) => (cur === imageId ? cur : imageId));
+  };
+
+  const cancelDeleteImage = () => setConfirmDeleteImageId(null);
+
   const handleDeleteImage = async (imageId) => {
     if (!editing) return;
     setImgBusy(true);
@@ -337,6 +463,51 @@ export default function AdminProducts() {
       setImgError(err.response?.data?.message || 'Ștergerea imaginii a eșuat.');
     } finally {
       setImgBusy(false);
+      setConfirmDeleteImageId(null);
+    }
+  };
+
+  // ---- Reorder gallery (drag & drop, Task 4) ----
+  const handleImageDragStart = (imageId) => {
+    setDragImageId(imageId);
+  };
+
+  const handleImageDragOver = (e, imageId) => {
+    e.preventDefault();
+    if (imageId !== dragImageId) setDragOverImageId(imageId);
+  };
+
+  const handleImageDragEnd = () => {
+    setDragImageId(null);
+    setDragOverImageId(null);
+  };
+
+  const handleImageDrop = async (e, targetImageId) => {
+    e.preventDefault();
+    setDragOverImageId(null);
+    if (!editing || dragImageId == null || dragImageId === targetImageId) {
+      setDragImageId(null);
+      return;
+    }
+    const fromIndex = images.findIndex((i) => i.id === dragImageId);
+    const toIndex = images.findIndex((i) => i.id === targetImageId);
+    setDragImageId(null);
+    if (fromIndex === -1 || toIndex === -1) return;
+
+    const reordered = [...images];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+    const previous = images;
+    setImages(reordered); // optimistic — snappy drag & drop feel
+    try {
+      const detail = await productService.reorderProductImages(
+        editing.id,
+        reordered.map((i) => i.id)
+      );
+      syncGallery(detail);
+    } catch (err) {
+      setImages(previous); // revert on failure
+      setImgError(err.response?.data?.message || 'Reordonarea imaginilor a eșuat.');
     }
   };
 
@@ -386,6 +557,7 @@ export default function AdminProducts() {
       }
       setModalOpen(false);
       showToast(editing ? 'Produs actualizat.' : 'Produs creat.', 'success');
+      invalidateListCache(LIST_CACHE_NS);
       load();
     } catch (err) {
       setError(err.response?.data?.message || 'Salvarea a eșuat.');
@@ -464,6 +636,7 @@ export default function AdminProducts() {
       });
       closeDelete();
       showToast(count === 1 ? 'Produs șters.' : `${count} produse șterse.`, 'success');
+      invalidateListCache(LIST_CACHE_NS);
       // Stepping back a page keeps the operator on a populated page when the
       // last rows of the final page were just removed.
       if (products.length === ids.length && page > 0) {
@@ -506,6 +679,7 @@ export default function AdminProducts() {
         setImportDone(report);
         setImportReport(report);
         showToast('Import finalizat.', 'success');
+        invalidateListCache(LIST_CACHE_NS);
         load();
       }
     } catch (err) {
@@ -662,11 +836,15 @@ export default function AdminProducts() {
                       <img
                         src={resolveImage(p.imageUrl)}
                         alt={p.name}
+                        loading="lazy"
                         className="h-10 w-10 rounded object-cover"
                       />
                       <div>
-                        <p className="font-medium text-slate-800 hover:text-brand-600 hover:underline">
+                        <p className="flex items-center gap-1.5 font-medium text-slate-800 hover:text-brand-600 hover:underline">
                           {p.name}
+                          {!p.active && (
+                            <span className="badge bg-slate-200 text-slate-600">Inactiv</span>
+                          )}
                         </p>
                         <p className="text-xs text-slate-500">{p.brand}</p>
                       </div>
@@ -746,11 +924,26 @@ export default function AdminProducts() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={() => openSell(p)}
+                      disabled={p.stockQuantity <= 0}
+                      title={p.stockQuantity <= 0 ? 'Stoc epuizat' : 'Înregistrează o vânzare'}
+                      className="mr-2 inline-flex items-center gap-1 rounded-md bg-green-600 px-2.5 py-1 font-medium text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                    >
+                      💵 Vândut
+                    </button>
                     <button onClick={() => openPreview(p)} className="mr-2 text-slate-600 hover:underline">
                       Previzualizează
                     </button>
                     <button onClick={() => openEdit(p)} className="mr-2 text-brand-600 hover:underline">
                       Editează
+                    </button>
+                    <button
+                      onClick={() => toggleActive(p)}
+                      disabled={activeBusyId === p.id}
+                      className="mr-2 text-graphite-600 hover:underline disabled:opacity-50"
+                    >
+                      {p.active ? 'Dezactivează' : 'Activează'}
                     </button>
                     <button onClick={() => askDelete([p])} className="text-red-600 hover:underline">
                       Șterge
@@ -763,6 +956,97 @@ export default function AdminProducts() {
         </div>
       )}
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+
+      {/* Feature #10 — "VÂNDUT" quick-sale popup */}
+      <Modal
+        open={saleProduct != null}
+        title={saleProduct ? `VÂNDUT — ${saleProduct.name}` : 'VÂNDUT'}
+        onClose={closeSell}
+        maxWidth="max-w-md"
+      >
+        {saleProduct && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 rounded-lg border border-slate-200 p-3">
+              <img
+                src={resolveImage(saleProduct.imageUrl)}
+                alt={saleProduct.name}
+                className="h-12 w-12 shrink-0 rounded object-cover"
+              />
+              <div className="min-w-0">
+                <p className="truncate font-medium text-slate-800">{saleProduct.name}</p>
+                <p className="text-xs text-slate-500">
+                  Stoc disponibil:{' '}
+                  <span className={saleProduct.stockQuantity > 0 ? 'text-slate-700' : 'text-red-600'}>
+                    {saleProduct.stockQuantity} buc.
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-slate-600">Cantitate vândută</span>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  className={`input ${saleInsufficientStock ? 'border-red-400 focus:border-red-500 focus:ring-red-200' : ''}`}
+                  value={saleQuantity}
+                  disabled={saleBusy}
+                  autoFocus
+                  onChange={(e) => {
+                    setSaleQuantity(e.target.value);
+                    setSaleError(null);
+                  }}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-slate-600">Preț per bucată</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className="input"
+                  value={salePrice}
+                  disabled={saleBusy}
+                  onChange={(e) => {
+                    setSalePrice(e.target.value);
+                    setSaleError(null);
+                  }}
+                />
+              </label>
+            </div>
+
+            {saleInsufficientStock && (
+              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                Stoc insuficient! Ai doar {saleProduct.stockQuantity} buc. în stoc.
+              </p>
+            )}
+            {saleError && !saleInsufficientStock && (
+              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">{saleError}</p>
+            )}
+
+            <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2.5">
+              <span className="text-sm font-medium text-slate-600">Total</span>
+              <span className="text-lg font-bold text-slate-900">{formatPrice(saleTotal)}</span>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-1">
+              <button type="button" className="btn-secondary" onClick={closeSell} disabled={saleBusy}>
+                Anulează
+              </button>
+              <button
+                type="button"
+                className="rounded-lg bg-green-600 px-4 py-2 font-medium text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={confirmSell}
+                disabled={saleBusy || saleInsufficientStock}
+              >
+                {saleBusy ? 'Se înregistrează...' : 'Confirmă vânzarea'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* Delete confirmation — step 1: review what is about to be removed */}
       <Modal
@@ -970,41 +1254,91 @@ export default function AdminProducts() {
               </div>
 
               {images.length > 0 && (
-                <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4">
-                  {images.map((img) => (
-                    <div
-                      key={img.id}
-                      className="group relative overflow-hidden rounded-lg border border-slate-200"
-                    >
-                      <img src={img.url} alt="" className="h-24 w-full object-cover" />
-                      {img.primary && (
-                        <span className="absolute left-1 top-1 rounded bg-brand-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                          Principală
-                        </span>
-                      )}
-                      <div className="absolute inset-x-0 bottom-0 flex items-center gap-1 bg-black/50 p-1 opacity-0 transition group-hover:opacity-100">
-                        {!img.primary && (
-                          <button
-                            type="button"
-                            onClick={() => handleSetPrimary(img.id)}
-                            disabled={imgBusy}
-                            className="rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-medium text-slate-700 hover:bg-white"
-                          >
-                            ★ Principală
-                          </button>
+                <>
+                  <p className="mt-3 text-xs text-slate-400">
+                    Trage o imagine pentru a schimba ordinea din galerie.
+                  </p>
+                  <div className="mt-1 grid grid-cols-3 gap-3 sm:grid-cols-4">
+                    {images.map((img) => (
+                      <div
+                        key={img.id}
+                        draggable
+                        onDragStart={() => handleImageDragStart(img.id)}
+                        onDragOver={(e) => handleImageDragOver(e, img.id)}
+                        onDragLeave={() =>
+                          setDragOverImageId((cur) => (cur === img.id ? null : cur))
+                        }
+                        onDrop={(e) => handleImageDrop(e, img.id)}
+                        onDragEnd={handleImageDragEnd}
+                        className={`group relative cursor-grab overflow-hidden rounded-lg border transition active:cursor-grabbing ${
+                          dragOverImageId === img.id
+                            ? 'border-brand-500 ring-2 ring-brand-300'
+                            : 'border-slate-200'
+                        } ${dragImageId === img.id ? 'opacity-40' : ''}`}
+                      >
+                        <img
+                          src={img.thumbnailUrl || img.url}
+                          alt=""
+                          loading="lazy"
+                          className="h-24 w-full object-cover"
+                          draggable={false}
+                        />
+                        {img.primary && (
+                          <span className="absolute left-1 top-1 rounded bg-brand-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                            Principală
+                          </span>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteImage(img.id)}
-                          disabled={imgBusy}
-                          className="ml-auto rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-medium text-white hover:bg-red-700"
-                        >
-                          ✕
-                        </button>
+                        {img.width && img.height && (
+                          <span className="absolute bottom-0 right-0 rounded-tl bg-black/60 px-1 py-0.5 text-[9px] text-white">
+                            {img.width}×{img.height}
+                            {img.format ? ` · ${img.format.toUpperCase()}` : ''}
+                          </span>
+                        )}
+                        <div className="absolute inset-x-0 top-0 flex items-center gap-1 bg-black/50 p-1 opacity-0 transition group-hover:opacity-100">
+                          {!img.primary && (
+                            <button
+                              type="button"
+                              onClick={() => handleSetPrimary(img.id)}
+                              disabled={imgBusy}
+                              className="rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-medium text-slate-700 hover:bg-white"
+                            >
+                              ★ Principală
+                            </button>
+                          )}
+                          {confirmDeleteImageId === img.id ? (
+                            <span className="ml-auto flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteImage(img.id)}
+                                disabled={imgBusy}
+                                className="rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-semibold text-white hover:bg-red-700"
+                              >
+                                Sigur?
+                              </button>
+                              <button
+                                type="button"
+                                onClick={cancelDeleteImage}
+                                disabled={imgBusy}
+                                className="rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-medium text-slate-700 hover:bg-white"
+                              >
+                                Anulează
+                              </button>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => askDeleteImage(img.id)}
+                              disabled={imgBusy}
+                              className="ml-auto rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-medium text-white hover:bg-red-700"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
           ) : (
@@ -1207,6 +1541,7 @@ export default function AdminProducts() {
               <img
                 src={resolveImage(previewProduct.imageUrl)}
                 alt={previewProduct.name}
+                loading="lazy"
                 className="h-28 w-28 flex-shrink-0 rounded-lg border border-slate-200 object-cover"
               />
               <div className="min-w-0 flex-1">
@@ -1259,14 +1594,39 @@ export default function AdminProducts() {
                   {previewProduct.images.map((img) => (
                     <img
                       key={img.id}
-                      src={img.url}
+                      src={img.thumbnailUrl || img.url}
                       alt=""
+                      loading="lazy"
                       className="h-16 w-full rounded object-cover"
                     />
                   ))}
                 </div>
               )
             )}
+
+            {/* Istoric (feature #5) — preț, stoc, imagini, activare/dezactivare */}
+            <div>
+              <p className="mb-1 text-sm font-medium text-slate-600">Istoric recent</p>
+              {previewHistoryLoading ? (
+                <Spinner />
+              ) : previewHistory.length === 0 ? (
+                <p className="text-xs text-slate-400">Nicio activitate înregistrată pentru acest produs.</p>
+              ) : (
+                <ul className="max-h-40 space-y-1.5 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
+                  {previewHistory.map((h) => (
+                    <li key={h.id} className="flex items-start justify-between gap-3">
+                      <span className="text-slate-600">
+                        <span className="font-medium text-slate-700">
+                          {ACTION_LABELS[h.action] || h.action}
+                        </span>
+                        {h.details ? ` — ${h.details}` : ''}
+                      </span>
+                      <span className="shrink-0 text-slate-400">{formatDate(h.createdAt)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
 
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" className="btn-secondary" onClick={closePreview}>

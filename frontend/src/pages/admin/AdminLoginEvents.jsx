@@ -19,6 +19,16 @@ function fmt(dt) {
   }
 }
 
+// Feature #6: "loguri pentru autentificări reușite/eșuate" — human labels for
+// the machine-readable failureReason the backend records on a failed attempt.
+const FAILURE_LABELS = {
+  bad_credentials: 'Parolă greșită',
+  account_locked: 'Cont blocat (brute-force)',
+  account_disabled: 'Cont dezactivat',
+  not_approved: 'Cont neaprobat',
+  bad_2fa_code: 'Cod 2FA greșit',
+};
+
 function shortDevice(ua) {
   if (!ua) return '—';
   let os = '';
@@ -72,6 +82,7 @@ export default function AdminLoginEvents() {
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50 text-left text-slate-500">
               <tr>
+                <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Utilizator</th>
                 <th className="px-4 py-3">Adresă IP</th>
                 <th className="px-4 py-3">Locație</th>
@@ -82,6 +93,18 @@ export default function AdminLoginEvents() {
             <tbody className="divide-y divide-slate-100">
               {events.map((e) => (
                 <tr key={e.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3">
+                    {e.success ? (
+                      <span className="badge bg-green-100 text-green-800">✓ Reușită</span>
+                    ) : (
+                      <span
+                        className="badge bg-red-100 text-red-800"
+                        title={FAILURE_LABELS[e.failureReason] || e.failureReason || ''}
+                      >
+                        ✕ {FAILURE_LABELS[e.failureReason] || 'Eșuată'}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <p className="font-medium text-slate-800">{e.userName || '—'}</p>
                     <p className="text-xs text-slate-500">{e.userEmail}</p>

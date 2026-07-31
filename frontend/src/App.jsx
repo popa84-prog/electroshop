@@ -1,8 +1,9 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import Layout from './components/Layout';
 import AdminLayout from './components/AdminLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import RequireAuth from './components/RequireAuth';
+import ErrorBoundary from './components/ErrorBoundary';
 
 import Home from './pages/Home';
 import Products from './pages/Products';
@@ -25,10 +26,16 @@ import AdminAccounting from './pages/admin/AdminAccounting';
 import AdminAuditLog from './pages/admin/AdminAuditLog';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminLoginEvents from './pages/admin/AdminLoginEvents';
+import AdminNotifications from './pages/admin/AdminNotifications';
 
 export default function App() {
+  const location = useLocation();
   return (
-    <Routes>
+    // Feature #7: a rendering crash on any one page shows a recoverable
+    // fallback instead of the whole app going blank; keyed by pathname so
+    // navigating to a different page automatically clears a stale error.
+    <ErrorBoundary key={location.pathname}>
+      <Routes>
       {/* Standalone auth pages — the only thing an unauthenticated visitor can reach */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
@@ -87,11 +94,13 @@ export default function App() {
           <Route path="audit" element={<AdminAuditLog />} />
           <Route path="settings" element={<AdminSettings />} />
           <Route path="login-events" element={<AdminLoginEvents />} />
+          <Route path="notifications" element={<AdminNotifications />} />
         </Route>
 
           <Route path="*" element={<NotFound />} />
         </Route>
       </Route>
-    </Routes>
+      </Routes>
+    </ErrorBoundary>
   );
 }

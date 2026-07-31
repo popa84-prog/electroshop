@@ -182,6 +182,34 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.ok(message, result));
     }
 
+    /**
+     * Activates several products in one call — the batch-selection toolbar's
+     * "Activează selectate" action. An id that no longer exists is reported as
+     * skipped rather than failing the whole batch, exactly like bulk-delete.
+     */
+    @PostMapping("/bulk-activate")
+    @PreAuthorize("@permissionService.has('PRODUCTS_MANAGE')")
+    public ResponseEntity<ApiResponse<ProductService.BulkActivateResult>> bulkActivate(
+            @Valid @RequestBody BulkIdsRequest request) {
+        ProductService.BulkActivateResult result = productService.setActiveBulk(request.getIds(), true);
+        String message = result.updated() == 1
+                ? "1 produs activat"
+                : result.updated() + " produse activate";
+        return ResponseEntity.ok(ApiResponse.ok(message, result));
+    }
+
+    /** Deactivates several products in one call — the batch-selection toolbar's counterpart action. */
+    @PostMapping("/bulk-deactivate")
+    @PreAuthorize("@permissionService.has('PRODUCTS_MANAGE')")
+    public ResponseEntity<ApiResponse<ProductService.BulkActivateResult>> bulkDeactivate(
+            @Valid @RequestBody BulkIdsRequest request) {
+        ProductService.BulkActivateResult result = productService.setActiveBulk(request.getIds(), false);
+        String message = result.updated() == 1
+                ? "1 produs dezactivat"
+                : result.updated() + " produse dezactivate";
+        return ResponseEntity.ok(ApiResponse.ok(message, result));
+    }
+
     @PostMapping("/{id}/image")
     @PreAuthorize("@permissionService.has('PRODUCTS_MANAGE')")
     public ResponseEntity<ApiResponse<ProductDto>> uploadImage(@PathVariable Long id,

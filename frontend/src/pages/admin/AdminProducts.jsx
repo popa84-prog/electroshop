@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import productService from '../../api/productService';
 import adminService from '../../api/adminService';
+import orderService from '../../api/orderService';
 import AdminNav from '../../components/AdminNav';
 import Modal from '../../components/Modal';
 import Pagination from '../../components/Pagination';
@@ -111,12 +112,16 @@ export default function AdminProducts() {
   // just running over every ticked product in one request).
   const [bulkActiveBusy, setBulkActiveBusy] = useState(false);
 
-  // Feature #10 — "VÂNDUT" quick-sale popup.
-  const [saleProduct, setSaleProduct] = useState(null);
-  const [saleQuantity, setSaleQuantity] = useState('1');
-  const [salePrice, setSalePrice] = useState('');
-  const [saleBusy, setSaleBusy] = useState(false);
-  const [saleError, setSaleError] = useState(null);
+  // Feature #10 — "VÂNDUT" quick-sale cart. The operator adds one or more
+  // distinct products (each with its own quantity/price — "3 of this, 1 of
+  // that") by clicking 💵 on each row, then reviews and finalizes the whole
+  // cart as ONE order from the floating bar / modal below. Cart state is
+  // intentionally independent of the table's page/search/filter state so it
+  // survives while the operator searches for the next product to add.
+  const [saleCart, setSaleCart] = useState([]);
+  const [saleCartOpen, setSaleCartOpen] = useState(false);
+  const [saleCartBusy, setSaleCartBusy] = useState(false);
+  const [saleCartError, setSaleCartError] = useState(null);
 
   const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
   const MAX_BYTES = 5 * 1024 * 1024;
@@ -326,56 +331,91 @@ export default function AdminProducts() {
     }
   };
 
-  // ---- Feature #10 — "VÂNDUT": one-click quick sale from the products table.
-  // Decrements stock, creates a completed order (dashboard picks it up on its own —
-  // see OrderService.sellProduct) and refreshes this row instantly. ----
-  const openSell = (p) => {
-    setSaleProduct(p);
-    setSaleQuantity('1');
-    setSalePrice(p.price != null ? String(p.price) : '');
-    setSaleError(null);
+  // ---- Feature #10 — "VÂNDUT" sale cart: click 💵 on any number of rows to
+  // build up a multi-product sale ("3 of this, 1 of that"), then finalize the
+  // whole cart as ONE order (see OrderService.sellBatch on the backend). ----
+
+  /** Adds a row to the cart, or bumps its quantity by 1 if it's already there. */
+  const addToSaleCart = (p) => {
+    setSaleCart((prev) => {
+      const existing = prev.find((l) => l.productId === p.id);
+      if (existing) {
+        if (existing.quantity >= p.stockQuantity) {
+          showToast(`Doar ${p.stockQuantity} buc. în stoc din ${p.name}.`, 'error');
+          return prev;
+        }
+        return prev.map((l) => (l.productId === p.id ? { ...l, quantity: l.quantity + 1 } : l));
+      }
+      showToast(`${p.name} adăugat în vânzare.`, 'success');
+      return [
+        ...prev,
+        {
+          productId: p.id,
+          name: p.name,
+          imageUrl: p.imageUrl,
+          stockQuantity: p.stockQuantity,
+          quantity: 1,
+          unitPrice: p.price != null ? String(p.price) : '0',
+        },
+      ];
+    });
   };
 
-  const closeSell = () => {
-    if (saleBusy) return;
-    setSaleProduct(null);
-    setSaleError(null);
+  const removeFromSaleCart = (productId) => {
+    setSaleCart((prev) => prev.filter((l) => l.productId !== productId));
   };
 
-  const saleQtyNum = Number(saleQuantity);
-  const salePriceNum = Number(salePrice);
-  const saleTotal = (Number.isFinite(saleQtyNum) ? saleQtyNum : 0) * (Number.isFinite(salePriceNum) ? salePriceNum : 0);
-  // Real-time validation (feature #10.C) — flips the moment the operator types a
-  // quantity beyond what's in stock, no need to submit first to find out.
-  const saleInsufficientStock =
-    saleProduct != null && Number.isFinite(saleQtyNum) && saleQtyNum > saleProduct.stockQuantity;
+  const updateSaleCartLine = (productId, field, value) => {
+    setSaleCartError(null);
+    setSaleCart((prev) => prev.map((l) => (l.productId === productId ? { ...l, [field]: value } : l)));
+  };
 
-  const confirmSell = async () => {
-    if (!saleProduct) return;
-    if (!Number.isFinite(saleQtyNum) || saleQtyNum < 1) {
-      setSaleError('Introdu o cantitate validă (cel puțin 1).');
+  const clearSaleCart = () => {
+    setSaleCart([]);
+    setSaleCartError(null);
+  };
+
+  const saleCartCount = saleCart.reduce((sum, l) => sum + (Number(l.quantity) || 0), 0);
+  const saleCartTotal = saleCart.reduce((sum, l) => {
+    const qty = Number(l.quantity);
+    const price = Number(l.unitPrice);
+    return sum + (Number.isFinite(qty) ? qty : 0) * (Number.isFinite(price) ? price : 0);
+  }, 0);
+
+  const confirmSaleCart = async () => {
+    if (saleCart.length === 0) return;
+    const lines = saleCart.map((l) => ({
+      productId: l.productId,
+      quantity: Number(l.quantity),
+      unitPrice: Number(l.unitPrice),
+    }));
+    const invalidLine = saleCart.find((l) => {
+      const qty = Number(l.quantity);
+      const price = Number(l.unitPrice);
+      return !Number.isFinite(qty) || qty < 1 || !Number.isFinite(price) || price <= 0;
+    });
+    if (invalidLine) {
+      setSaleCartError(`Cantitate/preț invalid pentru "${invalidLine.name}".`);
       return;
     }
-    if (saleQtyNum > saleProduct.stockQuantity) {
-      setSaleError('Stoc insuficient!');
+    const overStock = saleCart.find((l) => Number(l.quantity) > l.stockQuantity);
+    if (overStock) {
+      setSaleCartError(`Stoc insuficient pentru "${overStock.name}" — doar ${overStock.stockQuantity} buc.`);
       return;
     }
-    if (!Number.isFinite(salePriceNum) || salePriceNum <= 0) {
-      setSaleError('Introdu un preț valid.');
-      return;
-    }
-    setSaleBusy(true);
-    setSaleError(null);
+    setSaleCartBusy(true);
+    setSaleCartError(null);
     try {
-      await productService.sell(saleProduct.id, { quantity: saleQtyNum, unitPrice: salePriceNum });
+      await orderService.adminSale(lines);
       invalidateListCache(LIST_CACHE_NS);
       showToast('Vânzare înregistrată cu succes!', 'success');
-      setSaleProduct(null);
+      clearSaleCart();
+      setSaleCartOpen(false);
       load();
     } catch (err) {
-      setSaleError(err.response?.data?.message || 'Vânzarea a eșuat.');
+      setSaleCartError(err.response?.data?.message || 'Vânzarea a eșuat.');
     } finally {
-      setSaleBusy(false);
+      setSaleCartBusy(false);
     }
   };
 
@@ -980,12 +1020,21 @@ export default function AdminProducts() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button
-                      onClick={() => openSell(p)}
+                      onClick={() => addToSaleCart(p)}
                       disabled={p.stockQuantity <= 0}
-                      title={p.stockQuantity <= 0 ? 'Stoc epuizat' : 'Înregistrează o vânzare'}
+                      title={
+                        p.stockQuantity <= 0
+                          ? 'Stoc epuizat'
+                          : 'Adaugă în vânzare — poți adăuga mai multe produse înainte de a finaliza'
+                      }
                       className="mr-2 inline-flex items-center gap-1 rounded-md bg-green-600 px-2.5 py-1 font-medium text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-slate-300"
                     >
                       💵 Vândut
+                      {saleCart.some((l) => l.productId === p.id) && (
+                        <span className="ml-0.5 rounded-full bg-white/25 px-1.5 text-xs font-bold">
+                          {saleCart.find((l) => l.productId === p.id).quantity}
+                        </span>
+                      )}
                     </button>
                     <button onClick={() => openPreview(p)} className="mr-2 text-slate-600 hover:underline">
                       Previzualizează
@@ -1012,95 +1061,127 @@ export default function AdminProducts() {
       )}
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />
 
-      {/* Feature #10 — "VÂNDUT" quick-sale popup */}
-      <Modal
-        open={saleProduct != null}
-        title={saleProduct ? `VÂNDUT — ${saleProduct.name}` : 'VÂNDUT'}
-        onClose={closeSell}
-        maxWidth="max-w-md"
-      >
-        {saleProduct && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 rounded-lg border border-slate-200 p-3">
-              <img
-                src={resolveImage(saleProduct.imageUrl)}
-                alt={saleProduct.name}
-                className="h-12 w-12 shrink-0 rounded object-cover"
-              />
-              <div className="min-w-0">
-                <p className="truncate font-medium text-slate-800">{saleProduct.name}</p>
-                <p className="text-xs text-slate-500">
-                  Stoc disponibil:{' '}
-                  <span className={saleProduct.stockQuantity > 0 ? 'text-slate-700' : 'text-red-600'}>
-                    {saleProduct.stockQuantity} buc.
-                  </span>
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block">
-                <span className="mb-1 block text-sm font-medium text-slate-600">Cantitate vândută</span>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  className={`input ${saleInsufficientStock ? 'border-red-400 focus:border-red-500 focus:ring-red-200' : ''}`}
-                  value={saleQuantity}
-                  disabled={saleBusy}
-                  autoFocus
-                  onChange={(e) => {
-                    setSaleQuantity(e.target.value);
-                    setSaleError(null);
-                  }}
-                />
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-sm font-medium text-slate-600">Preț per bucată</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  className="input"
-                  value={salePrice}
-                  disabled={saleBusy}
-                  onChange={(e) => {
-                    setSalePrice(e.target.value);
-                    setSaleError(null);
-                  }}
-                />
-              </label>
-            </div>
-
-            {saleInsufficientStock && (
-              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
-                Stoc insuficient! Ai doar {saleProduct.stockQuantity} buc. în stoc.
-              </p>
-            )}
-            {saleError && !saleInsufficientStock && (
-              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">{saleError}</p>
-            )}
-
-            <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2.5">
-              <span className="text-sm font-medium text-slate-600">Total</span>
-              <span className="text-lg font-bold text-slate-900">{formatPrice(saleTotal)}</span>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-1">
-              <button type="button" className="btn-secondary" onClick={closeSell} disabled={saleBusy}>
-                Anulează
-              </button>
-              <button
-                type="button"
-                className="rounded-lg bg-green-600 px-4 py-2 font-medium text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
-                onClick={confirmSell}
-                disabled={saleBusy || saleInsufficientStock}
-              >
-                {saleBusy ? 'Se înregistrează...' : 'Confirmă vânzarea'}
-              </button>
-            </div>
+      {/* Feature #10 — "VÂNDUT" sale-cart floating bar. Stays visible (fixed to the
+          bottom of the viewport) while the operator searches/paginates to add more
+          products, so building "3 of this, 1 of that" doesn't lose progress. */}
+      {saleCart.length > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-green-200 bg-white px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.08)]">
+          <div className="mx-auto flex max-w-[1680px] flex-wrap items-center gap-3">
+            <span className="font-medium text-slate-700">
+              🛒 {saleCartCount} {saleCartCount === 1 ? 'produs' : 'produse'} · {saleCart.length}{' '}
+              {saleCart.length === 1 ? 'articol' : 'articole'} distincte
+            </span>
+            <span className="text-lg font-bold text-slate-900">{formatPrice(saleCartTotal)}</span>
+            <button type="button" className="text-sm text-slate-500 hover:underline" onClick={clearSaleCart}>
+              Golește coșul
+            </button>
+            <button
+              type="button"
+              className="ml-auto rounded-lg bg-green-600 px-4 py-2 font-medium text-white transition hover:bg-green-700"
+              onClick={() => setSaleCartOpen(true)}
+            >
+              Finalizează vânzarea →
+            </button>
           </div>
-        )}
+        </div>
+      )}
+
+      {/* Sale-cart review/finalize modal — every distinct product added, with an
+          editable quantity and price per line (feature #10, multi-product). */}
+      <Modal
+        open={saleCartOpen}
+        title={`VÂNDUT — ${saleCart.length} ${saleCart.length === 1 ? 'produs' : 'produse'}`}
+        onClose={() => !saleCartBusy && setSaleCartOpen(false)}
+        maxWidth="max-w-lg"
+      >
+        <div className="space-y-4">
+          {saleCart.length === 0 ? (
+            <p className="py-6 text-center text-sm text-slate-500">
+              Coșul e gol. Închide fereastra și adaugă produse cu butonul 💵 Vândut din tabel.
+            </p>
+          ) : (
+            <div className="max-h-[50vh] space-y-3 overflow-y-auto pr-1">
+              {saleCart.map((line) => {
+                const lineQty = Number(line.quantity);
+                const lineOverStock = Number.isFinite(lineQty) && lineQty > line.stockQuantity;
+                return (
+                  <div key={line.productId} className="flex items-center gap-3 rounded-lg border border-slate-200 p-2.5">
+                    <img
+                      src={resolveImage(line.imageUrl)}
+                      alt={line.name}
+                      className="h-12 w-12 shrink-0 rounded object-cover"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-slate-800">{line.name}</p>
+                      <p className="text-xs text-slate-500">Stoc: {line.stockQuantity} buc.</p>
+                    </div>
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      aria-label={`Cantitate — ${line.name}`}
+                      className={`input w-16 py-1 text-center ${lineOverStock ? 'border-red-400 focus:border-red-500 focus:ring-red-200' : ''}`}
+                      value={line.quantity}
+                      disabled={saleCartBusy}
+                      onChange={(e) => updateSaleCartLine(line.productId, 'quantity', e.target.value)}
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      aria-label={`Preț per bucată — ${line.name}`}
+                      className="input w-24 py-1"
+                      value={line.unitPrice}
+                      disabled={saleCartBusy}
+                      onChange={(e) => updateSaleCartLine(line.productId, 'unitPrice', e.target.value)}
+                    />
+                    <span className="w-20 shrink-0 text-right text-sm font-semibold text-slate-800">
+                      {formatPrice((Number(line.quantity) || 0) * (Number(line.unitPrice) || 0))}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeFromSaleCart(line.productId)}
+                      disabled={saleCartBusy}
+                      className="shrink-0 text-slate-400 hover:text-red-600 disabled:opacity-50"
+                      title="Elimină din vânzare"
+                      aria-label={`Elimină ${line.name} din vânzare`}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {saleCartError && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">{saleCartError}</p>
+          )}
+
+          <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2.5">
+            <span className="text-sm font-medium text-slate-600">Total ({saleCartCount} buc.)</span>
+            <span className="text-lg font-bold text-slate-900">{formatPrice(saleCartTotal)}</span>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setSaleCartOpen(false)}
+              disabled={saleCartBusy}
+            >
+              Continuă cumpărăturile
+            </button>
+            <button
+              type="button"
+              className="rounded-lg bg-green-600 px-4 py-2 font-medium text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={confirmSaleCart}
+              disabled={saleCartBusy || saleCart.length === 0}
+            >
+              {saleCartBusy ? 'Se înregistrează...' : 'Confirmă vânzarea'}
+            </button>
+          </div>
+        </div>
       </Modal>
 
       {/* Delete confirmation — step 1: review what is about to be removed */}

@@ -4,6 +4,7 @@ import com.electroshop.dto.ApiResponse;
 import com.electroshop.dto.OrderDto;
 import com.electroshop.dto.OrderRequest;
 import com.electroshop.dto.PageResponse;
+import com.electroshop.dto.SellBatchRequest;
 import com.electroshop.security.UserPrincipal;
 import com.electroshop.service.OrderService;
 import jakarta.validation.Valid;
@@ -12,6 +13,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -49,5 +51,20 @@ public class OrderController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok(orderService.getUserOrder(principal.getId(), id)));
+    }
+
+    /**
+     * Multi-product "VÂNDUT" quick sale — the admin products table's sale-cart
+     * finalizer. Registers several distinct products (each with its own quantity
+     * and price) as ONE order in a single call. See {@link OrderService#sellBatch}.
+     * Explicitly gated on PRODUCTS_MANAGE: unlike {@link #placeOrder}, this is not
+     * a self-service endpoint — the URL sits under /orders, which otherwise only
+     * requires the caller to be authenticated.
+     */
+    @PostMapping("/admin-sale")
+    @PreAuthorize("@permissionService.has('PRODUCTS_MANAGE')")
+    public ResponseEntity<ApiResponse<OrderDto>> adminSale(@Valid @RequestBody SellBatchRequest request) {
+        OrderDto order = orderService.sellBatch(request);
+        return ResponseEntity.ok(ApiResponse.ok("Vânzare înregistrată cu succes!", order));
     }
 }

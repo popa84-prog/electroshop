@@ -2,6 +2,7 @@ package com.electroshop.service;
 
 import com.electroshop.dto.OrderDto;
 import com.electroshop.dto.OrderRequest;
+import com.electroshop.dto.SellBatchRequest;
 import com.electroshop.dto.SellProductRequest;
 import com.electroshop.exception.BadRequestException;
 import com.electroshop.exception.ResourceNotFoundException;
@@ -15,6 +16,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @Service
 @Transactional
@@ -143,6 +147,87 @@ public class OrderService {
         if (crossedIntoLowStock) {
             notificationService.notifyLowStock(product);
         }
+
+        return OrderDto.from(saved);
+    }
+
+    /**
+     * Multi-product counterpart of {@link #sellProduct} — the "VÂNDUT" popup's cart
+     * mode. Registers several distinct products as ONE walk-in sale/order instead of
+     * one order per product, so a customer buying "3 of this, 1 of that" shows up as
+     * a single order with several line items instead of several separate orders.
+     * <p>
+     * Stock is validated for every line BEFORE anything is written — if any line asks
+     * for more than is in stock, the whole batch is rejected and no product's stock
+     * is touched. Duplicate product ids in the same batch are summed into a single
+     * effective line first, so adding the same product twice behaves exactly like one
+     * line with the combined quantity (keeping the price of its first occurrence).
+     */
+    public OrderDto sellBatch(SellBatchRequest req) {
+        Map<Long, SellBatchRequest.Line> merged = new LinkedHashMap<>();
+        for (SellBatchRequest.Line line : req.items()) {
+            merged.merge(line.productId(), line,
+                    (existing, incoming) -> new SellBatchRequest.Line(
+                            existing.productId(), existing.quantity() + incoming.quantity(), existing.unitPrice()));
+        }
+
+        // Load + validate stock for every line before mutating anything, so a
+        // single insufficient-stock line rejects the whole batch cleanly.
+        Map<Long, Product> products = new LinkedHashMap<>();
+        for (SellBatchRequest.Line line : merged.values()) {
+            Product product = productRepository.findById(line.productId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Product", line.productId()));
+            if (line.quantity() > product.getStockQuantity()) {
+                throw new BadRequestException("Stoc insuficient pentru \"" + product.getName()
+                        + "\"! Stoc disponibil: " + product.getStockQuantity() + " buc.");
+            }
+            products.put(line.productId(), product);
+        }
+
+        User staff = currentStaffUser();
+        Order order = new Order();
+        order.setUser(staff);
+        order.setStatus(OrderStatus.DELIVERED);
+        order.setShippingAddress("Vânzare directă în magazin (înregistrată din panoul admin)");
+
+        for (SellBatchRequest.Line line : merged.values()) {
+            OrderItem item = new OrderItem();
+            item.setProduct(products.get(line.productId()));
+            item.setQuantity(line.quantity());
+            item.setUnitPrice(line.unitPrice());
+            order.addItem(item);
+        }
+        order.recalculateTotal();
+        Order saved = orderRepository.save(order);
+
+        // Apply the stock decrements and per-product audit trail now that the order
+        // (and its id, used in each entry's details) exists.
+        StringBuilder summary = new StringBuilder();
+        for (SellBatchRequest.Line line : merged.values()) {
+            Product product = products.get(line.productId());
+            int oldStock = product.getStockQuantity();
+            product.setStockQuantity(oldStock - line.quantity());
+            productRepository.save(product);
+
+            auditService.log("PRODUCT_SOLD", "Product", product.getId(),
+                    "Vândut " + line.quantity() + " bucăți din " + product.getName()
+                            + " · comandă multi-produs #" + saved.getId());
+
+            if (summary.length() > 0) {
+                summary.append(", ");
+            }
+            summary.append(line.quantity()).append("× ").append(product.getName());
+
+            // Feature #8 synergy — same low-stock notification a manual stock edit would fire.
+            boolean crossedIntoLowStock = product.getStockQuantity() > 0 && product.getStockQuantity() < LOW_STOCK_THRESHOLD
+                    && oldStock >= LOW_STOCK_THRESHOLD;
+            if (crossedIntoLowStock) {
+                notificationService.notifyLowStock(product);
+            }
+        }
+
+        auditService.log("PRODUCT_SOLD", "Order", saved.getId(),
+                "Vânzare multi-produs: " + summary + " · total " + saved.getTotalAmount() + " RON · comandă #" + saved.getId());
 
         return OrderDto.from(saved);
     }

@@ -84,6 +84,10 @@ public class OrderService {
             orderItem.setProduct(product);
             orderItem.setQuantity(item.quantity());
             orderItem.setUnitPrice(product.getPrice());
+            // Snapshot the acquisition cost at sale time so the accounting report's
+            // gross-margin figure stays accurate even if the product's purchase
+            // price is edited afterwards.
+            orderItem.setCostPrice(product.getPurchasePrice());
             order.addItem(orderItem);
         }
 
@@ -131,6 +135,8 @@ public class OrderService {
         item.setProduct(product);
         item.setQuantity(req.quantity());
         item.setUnitPrice(req.unitPrice());
+        // Snapshot the acquisition cost at sale time — see OrderItem.costPrice.
+        item.setCostPrice(product.getPurchasePrice());
         order.addItem(item);
         order.recalculateTotal();
 
@@ -191,10 +197,13 @@ public class OrderService {
         order.setShippingAddress("Vânzare directă în magazin (înregistrată din panoul admin)");
 
         for (SellBatchRequest.Line line : merged.values()) {
+            Product lineProduct = products.get(line.productId());
             OrderItem item = new OrderItem();
-            item.setProduct(products.get(line.productId()));
+            item.setProduct(lineProduct);
             item.setQuantity(line.quantity());
             item.setUnitPrice(line.unitPrice());
+            // Snapshot the acquisition cost at sale time — see OrderItem.costPrice.
+            item.setCostPrice(lineProduct.getPurchasePrice());
             order.addItem(item);
         }
         order.recalculateTotal();

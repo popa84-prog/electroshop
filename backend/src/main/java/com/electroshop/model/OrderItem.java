@@ -32,9 +32,20 @@ public class OrderItem {
     @Column(nullable = false)
     private Integer quantity;
 
-    // Snapshot of the price at purchase time
+    // Snapshot of the sale price at purchase time
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal unitPrice;
+
+    // Snapshot of the product's acquisition/purchase price at the moment this
+    // item was sold — used to compute real gross margin (COGS) in the accounting
+    // report, without being retroactively distorted if the product's current
+    // purchase price is edited later. Nullable because: (a) it is only populated
+    // going forward from the release that introduced it — order items created
+    // before that carry a null value here and the accounting report falls back
+    // to the product's CURRENT purchase price for those; and (b) a product's
+    // acquisition price can itself be unset (unknown) at the time of sale.
+    @Column(name = "cost_price", precision = 12, scale = 2)
+    private BigDecimal costPrice;
 
     public BigDecimal getSubtotal() {
         if (unitPrice == null || quantity == null) {

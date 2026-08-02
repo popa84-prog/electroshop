@@ -85,7 +85,12 @@ export default function AdminAccounting() {
         <div className="space-y-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Stat label="Venituri (vânzări)" value={formatPrice(report.salesTotal)} tone="green" icon="📈" />
-            <Stat label="Cheltuieli (cumpărări)" value={formatPrice(report.purchasesTotal)} tone="red" icon="📉" />
+            <Stat
+              label="Cost marfă vândută"
+              value={formatPrice(report.cogsTotal)}
+              tone="red"
+              icon="📦"
+            />
             <Stat
               label="Rezultat (profit)"
               value={formatPrice(report.profit)}
@@ -95,13 +100,24 @@ export default function AdminAccounting() {
             <Stat label="Marjă" value={`${Number(report.marginPercent).toFixed(1)}%`} tone="blue" icon="％" />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="card p-4 text-sm text-slate-600">
               <span className="font-medium">Comenzi (vânzări):</span> {report.salesCount}
             </div>
             <div className="card p-4 text-sm text-slate-600">
-              <span className="font-medium">Intrări (cumpărări):</span> {report.purchasesCount}
+              <span className="font-medium">Achiziții furnizori (cash):</span>{' '}
+              {formatPrice(report.purchasesTotal)} · {report.purchasesCount}{' '}
+              {report.purchasesCount === 1 ? 'intrare' : 'intrări'}
             </div>
+            {Number(report.itemsWithUnknownCost) > 0 && (
+              <div className="card p-4 text-sm text-amber-700 sm:col-span-2 lg:col-span-2">
+                <span className="font-medium">⚠ Atenție:</span> {report.itemsWithUnknownCost}{' '}
+                {Number(report.itemsWithUnknownCost) === 1 ? 'bucată vândută are' : 'bucăți vândute au'} preț de
+                achiziție necunoscut și {Number(report.itemsWithUnknownCost) === 1 ? 'nu este inclusă' : 'nu sunt incluse'}{' '}
+                în costul mărfii vândute de mai sus — setează prețul de achiziție al produsului respectiv pentru un
+                rezultat exact.
+              </div>
+            )}
           </div>
 
           <div className="card p-5">
@@ -120,8 +136,12 @@ export default function AdminAccounting() {
           </div>
 
           <p className="text-xs text-slate-400">
-            Contabilitate primară pe bază de casă: venituri din comenzile plasate (exceptând cele anulate)
-            minus cheltuielile cu marfa (intrări de la furnizori) în perioada selectată.
+            Rezultatul (profitul) se calculează ca marjă reală pe marfa efectiv vândută: pentru fiecare produs
+            din comenzile plasate în perioada selectată (exceptând cele anulate), se scade din prețul de vânzare
+            prețul de achiziție al acelui produs, înmulțit cu cantitatea vândută — la fel ca profitul afișat în
+            tabelul de produse. Achizițiile de la furnizori (secțiunea „Achiziții furnizori") sunt afișate separat,
+            informativ, și nu mai sunt scăzute din profit — ele reprezintă banii cheltuiți pentru reaprovizionarea
+            stocului în perioadă, indiferent dacă acel stoc a fost deja vândut sau nu.
           </p>
         </div>
       )}

@@ -205,12 +205,11 @@ export default function Home() {
     <div className="space-y-16 sm:space-y-24">
       {/* ─────────────── 1. Cinematic hero (reactor core) ─────────────── */}
       <section className="relative overflow-hidden rounded-[1.75rem] border border-[rgba(255,255,255,0.14)] px-6 py-16 sm:px-12 sm:py-24 tv:py-32">
-        {/* Layer 1 — the animated gradient field. */}
-        <span
-          aria-hidden="true"
-          className="absolute inset-0 -z-20 animate-xx-gradient bg-xx-deep"
-          style={{ backgroundSize: '220% 220%' }}
-        />
+        {/* Layer 1 — the gradient field. Static: an earlier version panned this
+            background continuously (`animate-xx-gradient`, 12s infinite loop),
+            which read as a distracting, unstoppable shimmer behind the hero
+            copy rather than as deliberate motion design. */}
+        <span aria-hidden="true" className="absolute inset-0 -z-20 bg-xx-deep" />
         {/* Layer 2 — the reactor light pools. */}
         <span aria-hidden="true" className="absolute inset-0 -z-10 bg-xx-reactor opacity-90" />
         {/* Layer 3 — the ambient edge light: a bright inner rim that fades inward. */}
@@ -219,11 +218,9 @@ export default function Home() {
           className="pointer-events-none absolute inset-0 rounded-[1.75rem]"
           style={{ boxShadow: 'inset 0 0 120px -40px rgba(34,232,245,0.85), inset 0 1px 0 0 rgba(255,255,255,0.16)' }}
         />
-        {/* Layer 4 — a slow vertical scan, the single ambient motion of the hero. */}
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 h-40 animate-xx-scan bg-gradient-to-b from-[rgba(34,232,245,0.16)] to-transparent"
-        />
+        {/* A slow vertical scan used to sweep this band on an infinite loop
+            (`animate-xx-scan`) — the same "transitory effect" family removed
+            from every input field and the benefit cards below. Removed. */}
 
         <div className="relative max-w-3xl">
           <p className="xx-eyebrow">ElectroShop · XXII</p>
@@ -255,7 +252,7 @@ export default function Home() {
       <section aria-label="Beneficii" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {benefits.map((benefit, index) => (
           <Reveal key={benefit.title} delay={index * 70} className="h-full">
-            <div className="xx-scanning card card-static flex h-full items-start gap-3 p-4">
+            <div className="card card-static flex h-full items-start gap-3 p-4">
               <span
                 aria-hidden="true"
                 className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[rgba(255,255,255,0.13)] bg-[rgba(255,255,255,0.05)]"

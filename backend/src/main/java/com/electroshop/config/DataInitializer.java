@@ -4,6 +4,7 @@ import com.electroshop.model.*;
 import com.electroshop.repository.ProductRepository;
 import com.electroshop.repository.RoleRepository;
 import com.electroshop.repository.UserRepository;
+import com.electroshop.service.OfferService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -22,13 +23,16 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final PasswordEncoder passwordEncoder;
+    private final OfferService offerService;
 
     public DataInitializer(RoleRepository roleRepository, UserRepository userRepository,
-                           ProductRepository productRepository, PasswordEncoder passwordEncoder) {
+                           ProductRepository productRepository, PasswordEncoder passwordEncoder,
+                           OfferService offerService) {
         this.roleRepository = roleRepository;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
         this.passwordEncoder = passwordEncoder;
+        this.offerService = offerService;
     }
 
     @Override
@@ -95,6 +99,12 @@ public class DataInitializer implements CommandLineRunner {
                     new BigDecimal("1699.00"), 40,
                     "https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=600");
         }
+
+        // Ofertele implicite: promoția de transport gratuit și banda de beneficii,
+        // exact cum erau scrise în pagina principală înainte de mutarea lor în
+        // baza de date. Metoda se oprește singură dacă există deja oferte, deci
+        // rularea la fiecare pornire nu are efecte secundare.
+        offerService.seedDefaults();
     }
 
     private void seedProduct(String name, String brand, String category, String description,

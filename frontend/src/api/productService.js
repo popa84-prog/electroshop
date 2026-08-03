@@ -41,6 +41,14 @@ const productService = {
   create: (payload) => api.post('/products', payload).then((r) => r.data.data),
   update: (id, payload) => api.put(`/products/${id}`, payload).then((r) => r.data.data),
   remove: (id) => api.delete(`/products/${id}`).then((r) => r.data),
+  // Permanently removes a product AND its historical order/purchase line
+  // items — the explicit, irreversible override offered only after a normal
+  // remove()/bulkRemove() reports the product was deactivated instead of
+  // deleted (it has sales/purchase history). Requires PRODUCTS_FORCE_DELETE
+  // (Admin-only by default) — a Manager-role call gets a 403 like any other
+  // permission-gated endpoint.
+  forceRemove: (id) => api.delete(`/products/${id}/force`).then((r) => r.data),
+  bulkForceRemove: (ids) => api.post('/products/bulk-force-delete', { ids }).then((r) => r.data.data),
   // Hide/show on the storefront without deleting (feature #5).
   activate: (id) => api.post(`/products/${id}/activate`).then((r) => r.data.data),
   deactivate: (id) => api.post(`/products/${id}/deactivate`).then((r) => r.data.data),

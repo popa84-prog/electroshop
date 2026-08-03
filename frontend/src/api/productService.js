@@ -10,6 +10,10 @@ const productService = {
   // Real categories ranked by how many products they hold.
   topCategories: (limit = 4) =>
     api.get('/products/top-categories', { params: { limit } }).then((r) => r.data.data),
+  // Ofertele afișabile acum într-o zonă: 'HOME_PROMO' (modulul mare) sau
+  // 'BENEFIT_BAR' (banda de patru cartonașe). Vezi ProductController#offers.
+  offers: (placement = 'HOME_PROMO') =>
+    api.get('/products/offers', { params: { placement } }).then((r) => r.data.data),
 
   importProducts: (file, dryRun = true, restock = false) => {
     const form = new FormData();

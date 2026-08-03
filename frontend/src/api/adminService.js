@@ -80,6 +80,14 @@ const adminService = {
     api.get('/admin/notifications/unread-count').then((r) => r.data.data),
   markNotificationRead: (id) => api.post(`/admin/notifications/${id}/read`).then((r) => r.data.data),
   markAllNotificationsRead: () => api.post('/admin/notifications/read-all').then((r) => r.data),
+
+  // Offers (oferte comerciale — promoția de pe prima pagină + banda de beneficii)
+  listOffers: (params = {}) => api.get('/admin/offers', { params }).then((r) => r.data.data),
+  getOffer: (id) => api.get(`/admin/offers/${id}`).then((r) => r.data.data),
+  createOffer: (payload) => api.post('/admin/offers', payload).then((r) => r.data.data),
+  updateOffer: (id, payload) => api.put(`/admin/offers/${id}`, payload).then((r) => r.data.data),
+  toggleOffer: (id) => api.post(`/admin/offers/${id}/toggle`).then((r) => r.data.data),
+  deleteOffer: (id) => api.delete(`/admin/offers/${id}`).then((r) => r.data),
 };
 
 export default adminService;

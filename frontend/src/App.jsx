@@ -14,6 +14,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Orders from './pages/Orders';
 import OrderDetails from './pages/OrderDetails';
+import Retur from './pages/Retur';
+import Garantie from './pages/Garantie';
 import NotFound from './pages/NotFound';
 
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -21,6 +23,7 @@ import AdminProducts from './pages/admin/AdminProducts';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminSuppliers from './pages/admin/AdminSuppliers';
+import AdminOffers from './pages/admin/AdminOffers';
 import AdminPurchases from './pages/admin/AdminPurchases';
 import AdminAccounting from './pages/admin/AdminAccounting';
 import AdminAuditLog from './pages/admin/AdminAuditLog';
@@ -47,6 +50,8 @@ export default function App() {
           <Route path="/products" element={<Products />} />
           <Route path="/products/:id" element={<ProductDetails />} />
           <Route path="/cart" element={<Cart />} />
+          <Route path="/retur" element={<Retur />} />
+          <Route path="/garantie" element={<Garantie />} />
 
         {/* Authenticated users */}
         <Route
@@ -89,6 +94,7 @@ export default function App() {
           <Route path="users" element={<AdminUsers />} />
           <Route path="orders" element={<AdminOrders />} />
           <Route path="suppliers" element={<AdminSuppliers />} />
+          <Route path="offers" element={<AdminOffers />} />
           <Route path="purchases" element={<AdminPurchases />} />
           <Route path="accounting" element={<AdminAccounting />} />
           <Route path="audit" element={<AdminAuditLog />} />

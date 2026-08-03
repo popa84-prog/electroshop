@@ -24,6 +24,22 @@ export default function Modal({ open, title, onClose, children, maxWidth = 'max-
   const panelRef = useRef(null);
   const restoreRef = useRef(null);
 
+  // `onClose` is passed as a brand-new inline arrow function by every caller
+  // on every parent re-render — and the parent re-renders on every single
+  // keystroke in any field inside the dialog, because typing updates form
+  // state one level up. If the focus-management effect below depended on
+  // `onClose` directly, it would tear down and re-run on every keystroke:
+  // its cleanup unconditionally restores focus to whatever opened the
+  // dialog, then its body re-schedules a fresh "focus the first control"
+  // pass — wrenching focus out of the field the operator is actively typing
+  // into, over and over. Keeping the latest callback in a ref lets the
+  // effect read a live `onClose` without `onClose`'s identity being part of
+  // its dependency array.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
   useEffect(() => {
     if (!open) return undefined;
 
@@ -36,20 +52,27 @@ export default function Modal({ open, title, onClose, children, maxWidth = 'max-
     const onKeyDown = (event) => {
       if (event.key === 'Escape') {
         event.stopPropagation();
-        onClose?.();
+        onCloseRef.current?.();
       }
     };
     document.addEventListener('keydown', onKeyDown);
 
-    // Focus the first control inside the panel; fall back to the panel itself
-    // so the dialog is never left with focus outside it.
+    // Focus the first genuine form control inside the panel — never the
+    // close button, even though it sits earlier in the DOM (the header is
+    // rendered before the form). Landing focus on "✕" first is what made a
+    // freshly opened dialog feel like it was fighting the operator; falling
+    // back to the panel itself keeps the dialog from being left with focus
+    // outside it when it has no fields at all (a plain confirmation, say).
     const frame = requestAnimationFrame(() => {
       const panel = panelRef.current;
       if (!panel) return;
-      const focusable = panel.querySelector(
-        'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+      const field = panel.querySelector(
+        'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])'
       );
-      (focusable || panel).focus({ preventScroll: true });
+      const anyFocusable = panel.querySelector(
+        'button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+      );
+      (field || anyFocusable || panel).focus({ preventScroll: true });
     });
 
     return () => {
@@ -59,7 +82,7 @@ export default function Modal({ open, title, onClose, children, maxWidth = 'max-
       const restore = restoreRef.current;
       if (restore && typeof restore.focus === 'function') restore.focus({ preventScroll: true });
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 

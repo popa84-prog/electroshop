@@ -1,8 +1,18 @@
+import HoloLoader from './xxii/HoloLoader';
+
+/**
+ * XXII — TASK 8 (load animations).
+ *
+ * Kept as its own module rather than replaced by `HoloLoader` at every call
+ * site: roughly thirty screens import `Spinner`, and re-pointing all of them
+ * would be thirty edits for zero behavioural gain. The component now renders
+ * the XXII loader plus its label, so the whole app upgrades from one file.
+ */
 export default function Spinner({ label = 'Se încarcă...' }) {
   return (
-    <div className="flex items-center justify-center gap-3 py-16 text-slate-500">
-      <span className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600" />
-      <span className="text-sm">{label}</span>
+    <div className="flex items-center justify-center gap-3 py-16">
+      <HoloLoader size="md" label={label} />
+      <span className="text-sm xx-ink-muted">{label}</span>
     </div>
   );
 }

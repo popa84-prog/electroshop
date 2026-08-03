@@ -143,18 +143,21 @@ export default function AdminLayout() {
     };
   }, [location.pathname]);
 
-  // A left accent bar rather than a solid fill reads as "current section"
-  // without competing with the icon or label for attention.
+  // XXII — the active section is marked by a neon accent bar plus a faint
+  // gradient wash. The bar carries the state; the wash only reinforces it, so
+  // the marker survives forced-colors mode where the wash is dropped.
   const linkClass = ({ isActive }) =>
-    `flex items-center gap-2.5 rounded-lg border-l-2 py-2 pl-2.5 pr-3 text-sm font-medium transition ${
+    `flex items-center gap-2.5 rounded-lg border-l-2 py-2 pl-2.5 pr-3 text-sm font-medium transition-all duration-xx ease-xx ${
       isActive
-        ? 'border-brand-600 bg-brand-50 text-brand-700'
-        : 'border-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900'
+        ? 'border-[color:var(--xx-cyan)] bg-[rgba(34,232,245,0.1)] text-[color:var(--xx-ink)] shadow-[inset_0_0_24px_-10px_rgba(34,232,245,0.65)]'
+        : 'border-transparent text-[color:var(--xx-ink-muted)] hover:border-[rgba(122,60,255,0.55)] hover:bg-[rgba(255,255,255,0.05)] hover:text-[color:var(--xx-ink)]'
     }`;
 
   const mobileLinkClass = ({ isActive }) =>
-    `flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition ${
-      isActive ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+    `flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 py-2 text-sm font-medium transition-all duration-xx ease-xx ${
+      isActive
+        ? 'border-[rgba(34,232,245,0.5)] bg-[rgba(34,232,245,0.12)] text-[color:var(--xx-ink)] shadow-[0_0_28px_-10px_rgba(34,232,245,0.8)]'
+        : 'border-[rgba(255,255,255,0.1)] text-[color:var(--xx-ink-muted)] hover:border-[rgba(122,60,255,0.5)] hover:text-[color:var(--xx-ink)]'
     }`;
 
   return (
@@ -179,10 +182,10 @@ export default function AdminLayout() {
         >
           <nav
             aria-label="Secțiuni administrare"
-            className="sticky top-20 rounded-xl border border-slate-200 bg-white p-2 shadow-sm"
+            className="sticky top-20 rounded-[1.25rem] border border-[rgba(255,255,255,0.12)] bg-[rgba(9,10,26,0.72)] p-2 shadow-[0_28px_70px_-32px_rgba(0,0,0,0.95),0_0_48px_-18px_rgba(122,60,255,0.55)] backdrop-blur-glass-lg"
           >
             <div className="flex items-center justify-between px-3 pb-2 pt-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Administrare</p>
+              <p className="xx-eyebrow mb-0">Control Center</p>
               {/* Feature #8 — notification bell lives here since the panel has no top header bar. */}
               <NotificationBell />
             </div>
@@ -193,7 +196,7 @@ export default function AdminLayout() {
                     <Icon name={dashboardItem.icon} className="h-4 w-4 shrink-0" />
                     <span>{dashboardItem.label}</span>
                   </NavLink>
-                  <div className="my-1 border-t border-slate-100" />
+                  <div className="my-1 border-t border-[rgba(255,255,255,0.1)]" />
                 </>
               )}
 
@@ -207,20 +210,20 @@ export default function AdminLayout() {
                       onClick={() => toggleGroup(g.key)}
                       aria-expanded={open}
                       aria-controls={panelId}
-                      className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 transition hover:bg-slate-50 hover:text-slate-700"
+                      className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--xx-ink-dim)] transition-colors duration-xx hover:bg-[rgba(255,255,255,0.05)] hover:text-[color:var(--xx-ink)]"
                     >
-                      <Icon name={g.icon} className="h-4 w-4 shrink-0 text-slate-400" />
+                      <Icon name={g.icon} className="h-4 w-4 shrink-0 text-[color:var(--xx-purple)]" />
                       <span className="flex-1 text-left">{g.label}</span>
                       <Icon
                         name="chevron"
-                        className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform duration-200 ${
+                        className={`h-3.5 w-3.5 shrink-0 transition-transform duration-xx ease-xx ${
                           open ? 'rotate-90' : ''
                         }`}
                       />
                     </button>
                     <div
                       id={panelId}
-                      className={`grid transition-all duration-200 ease-out ${
+                      className={`grid transition-all duration-xxslow ease-xx ${
                         open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
                       }`}
                     >
@@ -245,9 +248,9 @@ export default function AdminLayout() {
         {/* Scrollable strip — small screens */}
         <nav
           aria-label="Secțiuni administrare"
-          className="order-1 -mx-4 flex items-center gap-2 border-b border-slate-200 px-4 pb-3 lg:hidden"
+          className="order-1 -mx-4 flex items-center gap-2 border-b border-[rgba(255,255,255,0.1)] px-4 pb-3 lg:hidden"
         >
-          <div className="flex flex-1 gap-2 overflow-x-auto">
+          <div className="xx-no-scrollbar flex flex-1 gap-2 overflow-x-auto">
             {tabs.map((t) => (
               <NavLink key={t.to} to={t.to} end={t.end} className={mobileLinkClass}>
                 <Icon name={t.icon} className="h-4 w-4 shrink-0" />

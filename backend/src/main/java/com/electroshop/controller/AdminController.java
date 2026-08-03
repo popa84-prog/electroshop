@@ -70,6 +70,11 @@ public class AdminController {
             @RequestParam(defaultValue = "false") boolean inStock,
             // Quick-filter shortcut (feature #3): "low_stock" | "out_of_stock" | "no_image".
             @RequestParam(required = false) String quickFilter,
+            // "Sortează" dropdown (feature: sortare catalog) — see resolveProductSort
+            // for the whitelist that keeps these two params safe to pass straight
+            // through from the client.
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String direction,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         // The table lets the operator pick the page size, so the value is
@@ -78,8 +83,25 @@ public class AdminController {
         int safeSize = Math.max(1, Math.min(size, 200));
         int safePage = Math.max(0, page);
         Page<AdminProductDto> result = productService.adminList(search, category, inStock, quickFilter,
-                PageRequest.of(safePage, safeSize, Sort.by("createdAt").descending()));
+                PageRequest.of(safePage, safeSize, resolveProductSort(sortBy, direction)));
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(result)));
+    }
+
+    /**
+     * Whitelists the "Sortează" dropdown's field/direction pair into a JPA
+     * {@link Sort}. Only {@code name}, {@code price} and {@code stockQuantity}
+     * are accepted as explicit choices — anything else (including a hand-crafted
+     * request probing for other entity properties) silently falls back to
+     * {@code createdAt}, so this endpoint can never throw on bad input or leak
+     * schema details through an error message the way handing {@code sortBy}
+     * straight to {@code Sort.by(...)} would.
+     */
+    private Sort resolveProductSort(String sortBy, String direction) {
+        String field = switch (sortBy == null ? "" : sortBy) {
+            case "name", "price", "stockQuantity" -> sortBy;
+            default -> "createdAt";
+        };
+        return "asc".equalsIgnoreCase(direction) ? Sort.by(field).ascending() : Sort.by(field).descending();
     }
 
     @GetMapping("/products/{id}")

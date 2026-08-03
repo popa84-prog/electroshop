@@ -1,11 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminNav from '../../components/AdminNav';
+import Modal from '../../components/Modal';
 import adminService from '../../api/adminService';
 import authService from '../../api/authService';
 import { useAuth } from '../../context/AuthContext';
-import Spinner from '../../components/Spinner';
 import { showToast } from '../../components/Toast';
+import {
+  GeoIcon,
+  HoloInput,
+  HoloLoader,
+  NeonBadge,
+  NeonButton,
+  Reveal,
+  SectionHeader,
+} from '../../components/xxii';
 
 const empty = {
   legalName: '',
@@ -29,6 +38,17 @@ const empty = {
   invoiceNotes: '',
 };
 
+/**
+ * XXII — TASK 6 / TASK 9 (Quantum Control Center: panouri modulare).
+ *
+ * Ecranul de setări este o secvență de panouri, nu un formular lung. Fiecare
+ * panou este o unitate de sens închisă — identitate, adresă, bancă, contact,
+ * TVA, opțional — și fiecare primește propria pictogramă geometrică, astfel
+ * încât operatorul să găsească secțiunea căutată prin formă, nu prin citirea
+ * fiecărui titlu.
+ *
+ * Panourile intră cu `Reveal`, decalate, în ordinea în care sunt completate.
+ */
 export default function AdminSettings() {
   const [form, setForm] = useState(empty);
   const [loading, setLoading] = useState(true);
@@ -82,7 +102,7 @@ export default function AdminSettings() {
     return (
       <div>
         <AdminNav />
-        <Spinner />
+        <HoloLoader label="Se încarcă datele firmei" />
       </div>
     );
   }
@@ -90,33 +110,44 @@ export default function AdminSettings() {
   return (
     <div>
       <AdminNav />
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold text-slate-800">Date firmă & facturare</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Completează datele firmei tale. Ele apar automat pe facturile PDF generate din comenzi.
-          Poți reveni oricând să le actualizezi.
-        </p>
-      </div>
+
+      <SectionHeader
+        eyebrow="Configurare"
+        title="Date firmă & facturare"
+        as="h1"
+        subtitle="Datele completate aici apar automat pe facturile PDF generate din comenzi. Poți reveni oricând să le actualizezi."
+      />
 
       <TwoFactorSection />
 
+      {/* Starea salvării — niciodată doar culoare: fiecare casetă poartă pictogramă și text. */}
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>
+        <div
+          role="alert"
+          className="mb-4 flex items-center gap-2 rounded-[0.9rem] border border-[rgba(255,90,122,0.4)] bg-[rgba(255,90,122,0.1)] px-4 py-2.5 text-sm text-[#ff8fa8]"
+        >
+          <GeoIcon name="alert" className="h-4 w-4 shrink-0" />
+          {error}
+        </div>
       )}
       {saved && (
-        <div className="mb-4 rounded-lg bg-green-50 px-4 py-2 text-sm text-green-700">
-          ✓ Datele au fost salvate.
+        <div
+          role="status"
+          className="mb-4 flex items-center gap-2 rounded-[0.9rem] border border-[rgba(31,172,121,0.4)] bg-[rgba(31,172,121,0.1)] px-4 py-2.5 text-sm text-[#7ee9bd]"
+        >
+          <GeoIcon name="check" className="h-4 w-4 shrink-0" />
+          Datele au fost salvate.
         </div>
       )}
 
-      <form onSubmit={submit} className="space-y-6">
-        <Section title="Identitate firmă">
+      <form onSubmit={submit} className="space-y-5">
+        <Section title="Identitate firmă" icon="shield" delay={0}>
           <Field label="Denumire legală" name="legalName" value={form.legalName} onChange={change} placeholder="ELECTROSHOP SRL" />
           <Field label="CUI / CIF" name="cui" value={form.cui} onChange={change} placeholder="RO12345678" />
           <Field label="Nr. Reg. Com." name="regCom" value={form.regCom} onChange={change} placeholder="J40/1234/2020" />
         </Section>
 
-        <Section title="Adresă sediu">
+        <Section title="Adresă sediu" icon="globe" delay={60}>
           <Field label="Adresă (stradă, nr.)" name="address" value={form.address} onChange={change} wide />
           <Field label="Oraș / localitate" name="city" value={form.city} onChange={change} />
           <Field label="Județ" name="county" value={form.county} onChange={change} />
@@ -124,34 +155,48 @@ export default function AdminSettings() {
           <Field label="Cod poștal" name="postalCode" value={form.postalCode} onChange={change} />
         </Section>
 
-        <Section title="Cont bancar">
+        <Section title="Cont bancar" icon="coins" delay={120}>
           <Field label="IBAN" name="iban" value={form.iban} onChange={change} placeholder="RO49AAAA1B31007593840000" wide />
           <Field label="Banca" name="bankName" value={form.bankName} onChange={change} />
         </Section>
 
-        <Section title="Contact">
+        <Section title="Contact" icon="user" delay={180}>
           <Field label="Telefon" name="phone" value={form.phone} onChange={change} />
           <Field label="Email" name="email" value={form.email} onChange={change} />
           <Field label="Website" name="website" value={form.website} onChange={change} />
         </Section>
 
-        <Section title="TVA & facturare">
-          <label className="flex items-center gap-2 text-sm text-slate-700 sm:col-span-2">
-            <input type="checkbox" name="vatPayer" checked={form.vatPayer} onChange={change} />
+        <Section title="TVA & facturare" icon="document" delay={240}>
+          <label className="flex cursor-pointer items-center gap-2.5 rounded-[0.8rem] border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3.5 py-2.5 text-sm text-[#c9d4ff] transition-colors duration-200 hover:border-[rgba(34,232,245,0.4)] sm:col-span-2">
+            <input
+              type="checkbox"
+              name="vatPayer"
+              checked={form.vatPayer}
+              onChange={change}
+              className="h-4 w-4 cursor-pointer accent-[#22e8f5]"
+            />
             Firmă plătitoare de TVA
           </label>
           <Field label="Cotă TVA (%)" name="vatRate" type="number" step="0.01" value={form.vatRate} onChange={change} />
           <Field label="Seria facturii" name="invoiceSeries" value={form.invoiceSeries} onChange={change} placeholder="ELS" />
-          <Field label="Următorul nr. factură" name="invoiceNextNumber" type="number" value={form.invoiceNextNumber} onChange={change} />
+          <Field
+            label="Următorul nr. factură"
+            name="invoiceNextNumber"
+            type="number"
+            value={form.invoiceNextNumber}
+            onChange={change}
+            hint="Următoarea factură emisă va primi acest număr."
+          />
         </Section>
 
-        <Section title="Opțional">
+        <Section title="Opțional" icon="sparkle" delay={300}>
           <Field label="URL logo (apare pe factură)" name="logoUrl" value={form.logoUrl} onChange={change} wide />
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-slate-600">Mențiuni pe factură</label>
-            <textarea
+            <HoloInput
+              as="textarea"
+              label="Mențiuni pe factură"
               name="invoiceNotes"
-              className="input min-h-[80px]"
+              className="min-h-[80px]"
               value={form.invoiceNotes}
               onChange={change}
               placeholder="Ex: Factura este valabilă fără semnătură și ștampilă."
@@ -160,29 +205,39 @@ export default function AdminSettings() {
         </Section>
 
         <div className="flex justify-end gap-2">
-          <button type="submit" className="btn-primary" disabled={saving}>
+          <NeonButton
+            type="submit"
+            disabled={saving}
+            charging={saving}
+            pulse={!saving}
+            icon={<GeoIcon name="check" className="h-4 w-4" />}
+          >
             {saving ? 'Se salvează...' : 'Salvează datele'}
-          </button>
+          </NeonButton>
         </div>
       </form>
     </div>
   );
 }
 
-function Section({ title, children }) {
+function Section({ title, icon, delay = 0, children }) {
   return (
-    <div className="card p-5">
-      <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">{title}</h2>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">{children}</div>
-    </div>
+    <Reveal delay={delay}>
+      <div className="card card-static p-5">
+        <h2 className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] xx-ink-muted">
+          <GeoIcon name={icon} className="h-4 w-4" />
+          {title}
+        </h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">{children}</div>
+      </div>
+    </Reveal>
   );
 }
 
 function Field({ label, wide, ...props }) {
   return (
     <div className={wide ? 'sm:col-span-2' : ''}>
-      <label className="mb-1 block text-sm font-medium text-slate-600">{label}</label>
-      <input className="input" {...props} />
+      <HoloInput label={label} {...props} />
     </div>
   );
 }
@@ -192,6 +247,17 @@ function Field({ label, wide, ...props }) {
  * (no QR image is rendered — the environment this was built in has no
  * verified way to add a QR-code library — so the code/URI is shown for
  * manual/copy-paste entry into any TOTP authenticator app instead).
+ *
+ * XXII — două schimbări dincolo de suprafață:
+ *
+ *   1. `window.confirm` pentru deconectarea tuturor sesiunilor a fost înlocuit
+ *      cu un dialog al aplicației. Dialogul nativ blochează firul de execuție,
+ *      nu poate fi stilizat și, pe mobil, apare rupt de restul interfeței.
+ *      Acțiunea este ireversibilă, deci merită o confirmare care spune explicit
+ *      ce se întâmplă.
+ *   2. Cheia secretă și linkul otpauth au acum butoane de copiere. Sunt șiruri
+ *      lungi care se selectează greu cu degetul pe ecran mic, iar o greșeală de
+ *      copiere înseamnă un cont 2FA nefuncțional.
  */
 function TwoFactorSection() {
   const { logoutAllSessions } = useAuth();
@@ -202,6 +268,8 @@ function TwoFactorSection() {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
+  const [confirmLogoutAll, setConfirmLogoutAll] = useState(false);
+  const [copied, setCopied] = useState(null);
 
   const refreshStatus = () => {
     setLoadingStatus(true);
@@ -260,121 +328,238 @@ function TwoFactorSection() {
     }
   };
 
+  // Clipboard access can be denied (insecure context, permission policy); the
+  // fallback is simply not showing the "copiat" confirmation, never an error
+  // the operator has to dismiss.
+  const copy = async (value, key) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(key);
+      window.setTimeout(() => setCopied((current) => (current === key ? null : current)), 1800);
+    } catch {
+      showToast('Copierea automată nu este disponibilă. Selectează textul manual.', 'error');
+    }
+  };
+
+  const runLogoutAll = async () => {
+    setConfirmLogoutAll(false);
+    await logoutAllSessions();
+    navigate('/login');
+  };
+
   return (
-    <div className="card mb-6 p-5">
-      <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-slate-500">
-        Securitate — Autentificare în doi pași (2FA)
-      </h2>
-      <p className="mb-4 text-sm text-slate-500">
-        Protejează contul tău de Admin cu un cod suplimentar generat de o aplicație de autentificare
-        (Google Authenticator, Microsoft Authenticator, Authy etc.).
-      </p>
-
-      {msg && (
-        <div
-          className={`mb-4 rounded-lg px-4 py-2 text-sm ${
-            msg.type === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'
-          }`}
-        >
-          {msg.text}
+    <>
+      <Reveal className="card card-static mb-6 p-5">
+        <div className="mb-1 flex flex-wrap items-center gap-2">
+          <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] xx-ink-muted">
+            <GeoIcon name="shield" className="h-4 w-4" />
+            Securitate — Autentificare în doi pași (2FA)
+          </h2>
+          {!loadingStatus && (
+            <NeonBadge tone={status?.twoFactorEnabled ? 'good' : 'warning'}>
+              {status?.twoFactorEnabled ? 'Activă' : 'Inactivă'}
+            </NeonBadge>
+          )}
         </div>
-      )}
-
-      {loadingStatus ? (
-        <Spinner />
-      ) : status?.twoFactorEnabled ? (
-        <div className="space-y-3">
-          <p className="text-sm text-green-700">✓ Autentificarea în doi pași este activă pe contul tău.</p>
-          <form onSubmit={disable} className="flex flex-wrap items-end gap-2">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-600">
-                Cod curent (pentru a dezactiva)
-              </label>
-              <input
-                className="input w-40"
-                inputMode="numeric"
-                maxLength={6}
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="000000"
-                required
-              />
-            </div>
-            <button type="submit" className="btn-secondary" disabled={busy || code.length !== 6}>
-              {busy ? 'Se procesează...' : 'Dezactivează 2FA'}
-            </button>
-          </form>
-        </div>
-      ) : setup ? (
-        <form onSubmit={confirmSetup} className="space-y-3">
-          <div className="rounded-lg bg-slate-50 p-4">
-            <p className="mb-2 text-sm text-slate-600">
-              1. Adaugă manual un cont în aplicația de autentificare folosind cheia de mai jos, sau
-              copiază linkul otpauth și importă-l.
-            </p>
-            <p className="mb-1 text-xs font-medium text-slate-500">Cheie secretă</p>
-            <code className="mb-3 block break-all rounded bg-white px-3 py-2 text-sm font-mono text-slate-800">
-              {setup.secret}
-            </code>
-            <p className="mb-1 text-xs font-medium text-slate-500">Link otpauth://</p>
-            <code className="block break-all rounded bg-white px-3 py-2 text-xs font-mono text-slate-600">
-              {setup.otpAuthUrl}
-            </code>
-          </div>
-          <div className="flex flex-wrap items-end gap-2">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-600">
-                2. Introdu codul generat pentru a confirma
-              </label>
-              <input
-                className="input w-40"
-                inputMode="numeric"
-                maxLength={6}
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="000000"
-                autoFocus
-                required
-              />
-            </div>
-            <button type="submit" className="btn-primary" disabled={busy || code.length !== 6}>
-              {busy ? 'Se verifică...' : 'Confirmă și activează'}
-            </button>
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => {
-                setSetup(null);
-                setCode('');
-                setMsg(null);
-              }}
-            >
-              Anulează
-            </button>
-          </div>
-        </form>
-      ) : (
-        <button type="button" className="btn-primary" onClick={startSetup} disabled={busy}>
-          {busy ? 'Se pregătește...' : 'Activează 2FA'}
-        </button>
-      )}
-
-      <div className="mt-5 border-t border-slate-100 pt-4">
-        <p className="mb-2 text-xs text-slate-500">
-          Ai suspiciunea că un dispozitiv sau o sesiune neautorizată are acces la contul tău?
+        <p className="mb-4 text-sm xx-ink-muted">
+          Protejează contul tău de Admin cu un cod suplimentar generat de o aplicație de autentificare
+          (Google Authenticator, Microsoft Authenticator, Authy etc.).
         </p>
-        <button
-          type="button"
-          className="text-sm font-medium text-red-600 hover:underline"
-          onClick={async () => {
-            if (!window.confirm('Deconectezi toate sesiunile active de pe toate dispozitivele?')) return;
-            await logoutAllSessions();
-            navigate('/login');
-          }}
-        >
-          Deconectează toate sesiunile
-        </button>
-      </div>
-    </div>
+
+        {msg && (
+          <div
+            role="alert"
+            className={`mb-4 flex items-center gap-2 rounded-[0.9rem] border px-4 py-2.5 text-sm ${
+              msg.type === 'error'
+                ? 'border-[rgba(255,90,122,0.4)] bg-[rgba(255,90,122,0.1)] text-[#ff8fa8]'
+                : 'border-[rgba(31,172,121,0.4)] bg-[rgba(31,172,121,0.1)] text-[#7ee9bd]'
+            }`}
+          >
+            <GeoIcon name={msg.type === 'error' ? 'alert' : 'check'} className="h-4 w-4 shrink-0" />
+            {msg.text}
+          </div>
+        )}
+
+        {loadingStatus ? (
+          <HoloLoader inline size="sm" label="Se verifică starea 2FA" />
+        ) : status?.twoFactorEnabled ? (
+          <div className="space-y-3">
+            <p className="flex items-center gap-2 text-sm text-[#7ee9bd]">
+              <GeoIcon name="check" className="h-4 w-4 shrink-0" />
+              Autentificarea în doi pași este activă pe contul tău.
+            </p>
+            <form onSubmit={disable} className="flex flex-wrap items-start gap-3">
+              <div className="w-40">
+                <HoloInput
+                  label="Cod curent (pentru a dezactiva)"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="000000"
+                  autoComplete="one-time-code"
+                  required
+                  status={code.length === 0 ? null : code.length === 6 ? 'valid' : null}
+                />
+              </div>
+              <NeonButton
+                type="submit"
+                variant="secondary"
+                className="mt-6"
+                disabled={busy || code.length !== 6}
+                charging={busy}
+              >
+                {busy ? 'Se procesează...' : 'Dezactivează 2FA'}
+              </NeonButton>
+            </form>
+          </div>
+        ) : setup ? (
+          <form onSubmit={confirmSetup} className="space-y-3">
+            <div className="rounded-[1rem] border border-[rgba(34,232,245,0.28)] bg-[rgba(34,232,245,0.06)] p-4">
+              <p className="mb-3 text-sm xx-ink-muted">
+                1. Adaugă manual un cont în aplicația de autentificare folosind cheia de mai jos, sau
+                copiază linkul otpauth și importă-l.
+              </p>
+
+              <p className="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] xx-ink-muted">
+                Cheie secretă
+              </p>
+              <div className="mb-3 flex items-stretch gap-2">
+                <code className="block flex-1 break-all rounded-[0.7rem] border border-[rgba(255,255,255,0.12)] bg-[rgba(9,11,28,0.6)] px-3 py-2 font-mono text-sm text-[#e8ecff]">
+                  {setup.secret}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => copy(setup.secret, 'secret')}
+                  title="Copiază cheia secretă"
+                  aria-label="Copiază cheia secretă"
+                  className="inline-flex w-10 shrink-0 items-center justify-center rounded-[0.7rem] border border-[rgba(255,255,255,0.12)] text-[#c9d4ff] transition-colors duration-200 hover:border-[rgba(34,232,245,0.5)] hover:text-[#22e8f5]"
+                >
+                  <GeoIcon name={copied === 'secret' ? 'check' : 'layers'} className="h-4 w-4" />
+                </button>
+              </div>
+
+              <p className="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] xx-ink-muted">
+                Link otpauth://
+              </p>
+              <div className="flex items-stretch gap-2">
+                <code className="block flex-1 break-all rounded-[0.7rem] border border-[rgba(255,255,255,0.12)] bg-[rgba(9,11,28,0.6)] px-3 py-2 font-mono text-xs xx-ink-muted">
+                  {setup.otpAuthUrl}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => copy(setup.otpAuthUrl, 'url')}
+                  title="Copiază linkul otpauth"
+                  aria-label="Copiază linkul otpauth"
+                  className="inline-flex w-10 shrink-0 items-center justify-center rounded-[0.7rem] border border-[rgba(255,255,255,0.12)] text-[#c9d4ff] transition-colors duration-200 hover:border-[rgba(34,232,245,0.5)] hover:text-[#22e8f5]"
+                >
+                  <GeoIcon name={copied === 'url' ? 'check' : 'layers'} className="h-4 w-4" />
+                </button>
+              </div>
+
+              <p aria-live="polite" className="mt-2 h-4 text-xs text-[#7ee9bd]">
+                {copied ? 'Copiat în clipboard.' : ''}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-start gap-3">
+              <div className="w-40">
+                <HoloInput
+                  label="2. Introdu codul generat"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="000000"
+                  autoComplete="one-time-code"
+                  autoFocus
+                  required
+                  status={code.length === 0 ? null : code.length === 6 ? 'valid' : null}
+                />
+              </div>
+              <NeonButton
+                type="submit"
+                className="mt-6"
+                disabled={busy || code.length !== 6}
+                charging={busy}
+                icon={<GeoIcon name="shield" className="h-4 w-4" />}
+              >
+                {busy ? 'Se verifică...' : 'Confirmă și activează'}
+              </NeonButton>
+              <NeonButton
+                type="button"
+                variant="ghost"
+                className="mt-6"
+                onClick={() => {
+                  setSetup(null);
+                  setCode('');
+                  setMsg(null);
+                }}
+              >
+                Anulează
+              </NeonButton>
+            </div>
+          </form>
+        ) : (
+          <NeonButton
+            type="button"
+            onClick={startSetup}
+            disabled={busy}
+            charging={busy}
+            icon={<GeoIcon name="shield" className="h-4 w-4" />}
+          >
+            {busy ? 'Se pregătește...' : 'Activează 2FA'}
+          </NeonButton>
+        )}
+
+        <div className="mt-5 border-t border-[rgba(255,255,255,0.08)] pt-4">
+          <p className="mb-2 text-xs xx-ink-muted">
+            Ai suspiciunea că un dispozitiv sau o sesiune neautorizată are acces la contul tău?
+          </p>
+          <NeonButton
+            type="button"
+            variant="danger"
+            size="sm"
+            icon={<GeoIcon name="bolt" className="h-4 w-4" />}
+            onClick={() => setConfirmLogoutAll(true)}
+          >
+            Deconectează toate sesiunile
+          </NeonButton>
+        </div>
+      </Reveal>
+
+      {/*
+        Dialogul stă în afara lui `Reveal`, nu în interiorul lui. `Reveal` lasă
+        `filter: blur(0px)` pe element și după ce animația s-a încheiat, iar un
+        `filter` diferit de `none` creează un bloc de conținere pentru
+        `position: fixed` — un dialog randat înăuntru s-ar poziționa față de
+        card, nu față de fereastră, și ar apărea decalat pe pagină.
+      */}
+      <Modal
+        open={confirmLogoutAll}
+        title="Deconectezi toate sesiunile?"
+        onClose={() => setConfirmLogoutAll(false)}
+        maxWidth="max-w-md"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 rounded-[0.9rem] border border-[rgba(255,90,122,0.4)] bg-[rgba(255,90,122,0.1)] p-4">
+            <GeoIcon name="alert" className="mt-0.5 h-5 w-5 shrink-0" accent="#ff8fa8" />
+            <p className="text-sm text-[#ff8fa8]">
+              Toate sesiunile active de pe toate dispozitivele vor fi închise, inclusiv aceasta. Vei
+              fi redirecționat către pagina de autentificare și va trebui să te conectezi din nou.
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <NeonButton type="button" variant="ghost" onClick={() => setConfirmLogoutAll(false)}>
+              Anulează
+            </NeonButton>
+            <NeonButton type="button" variant="danger" onClick={runLogoutAll}>
+              Deconectează tot
+            </NeonButton>
+          </div>
+        </div>
+      </Modal>
+    </>
   );
 }

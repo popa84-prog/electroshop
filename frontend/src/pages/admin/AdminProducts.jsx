@@ -59,6 +59,26 @@ const QUICK_FILTERS = [
   { key: 'no_image', label: 'Fără imagine', icon: 'zoom' },
 ];
 
+/**
+ * Sort options offered in the "Sortează" dropdown — each maps to a
+ * `sortBy`/`direction` pair the backend's `/admin/products` endpoint
+ * understands directly (see AdminController#listProducts). The combined
+ * `value` (`field:direction`) is what the <select> actually stores, so a
+ * single onChange can set both pieces of state at once.
+ */
+const SORT_OPTIONS = [
+  { value: 'createdAt:desc', label: 'Cele mai noi', sortBy: 'createdAt', direction: 'desc' },
+  { value: 'createdAt:asc', label: 'Cele mai vechi', sortBy: 'createdAt', direction: 'asc' },
+  { value: 'name:asc', label: 'Nume A-Z', sortBy: 'name', direction: 'asc' },
+  { value: 'name:desc', label: 'Nume Z-A', sortBy: 'name', direction: 'desc' },
+  { value: 'price:asc', label: 'Preț crescător', sortBy: 'price', direction: 'asc' },
+  { value: 'price:desc', label: 'Preț descrescător', sortBy: 'price', direction: 'desc' },
+  { value: 'stockQuantity:asc', label: 'Stoc crescător', sortBy: 'stockQuantity', direction: 'asc' },
+  { value: 'stockQuantity:desc', label: 'Stoc descrescător', sortBy: 'stockQuantity', direction: 'desc' },
+];
+const SORT_KEY = 'admin.products.sort';
+const DEFAULT_SORT = SORT_OPTIONS[0].value;
+
 /** Remembers the chosen page size between visits; falls back to 10. */
 function readStoredPageSize() {
   try {
@@ -76,6 +96,16 @@ function readStoredViewMode() {
     return VIEW_MODES.includes(stored) ? stored : 'table';
   } catch {
     return 'table';
+  }
+}
+
+/** Remembers the chosen sort order between visits; falls back to "newest first". */
+function readStoredSort() {
+  try {
+    const stored = window.localStorage.getItem(SORT_KEY);
+    return SORT_OPTIONS.some((o) => o.value === stored) ? stored : DEFAULT_SORT;
+  } catch {
+    return DEFAULT_SORT;
   }
 }
 
@@ -102,10 +132,10 @@ export default function AdminProducts() {
   const [quickFilter, setQuickFilter] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // XXII — the slide-in filter panel (TASK 6). Collapsed by default so the
-  // table starts higher up the screen; the active-filter count stays visible on
-  // the trigger, so nothing is ever filtered invisibly.
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  // The filters/sort strip is always on screen — it used to be a collapsible
+  // panel, but an operator filtering or re-sorting the catalogue all day needs
+  // it available at a glance, not one extra click away every time.
+  const [sortValue, setSortValue] = useState(readStoredSort);
   const [viewMode, setViewMode] = useState(readStoredViewMode);
 
   // Multi-select: ids of the rows ticked on the current page.
@@ -202,12 +232,23 @@ export default function AdminProducts() {
   // of one API call per keystroke.
   const debouncedSearch = useDebounce(search, 350);
 
+  // The active SORT_OPTIONS entry — resolves the combined `field:direction`
+  // value stored in state back into the two params the backend expects.
+  const activeSort = SORT_OPTIONS.find((o) => o.value === sortValue) ?? SORT_OPTIONS[0];
+
   const load = () => {
     setLoading(true);
-    const params = { page, size: pageSize, search: debouncedSearch, quickFilter: quickFilter || undefined };
+    const params = {
+      page,
+      size: pageSize,
+      search: debouncedSearch,
+      quickFilter: quickFilter || undefined,
+      sortBy: activeSort.sortBy,
+      direction: activeSort.direction,
+    };
     // Admin endpoint: includes purchasePrice + profit (only visible to admins).
-    // Feature #7: short-TTL cache — paging back to a page/filter combo seen in
-    // the last few seconds skips the network round-trip entirely.
+    // Feature #7: short-TTL cache — paging back to a page/filter/sort combo seen
+    // in the last few seconds skips the network round-trip entirely.
     cachedList(LIST_CACHE_NS, params, () => adminService.listAdminProducts(params))
       .then((data) => {
         setProducts(data.content);
@@ -218,13 +259,13 @@ export default function AdminProducts() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(load, [page, pageSize, debouncedSearch, quickFilter]);
+  useEffect(load, [page, pageSize, debouncedSearch, quickFilter, sortValue]);
 
   // A tick only ever refers to a row the operator can currently see, so the
-  // selection is dropped whenever the visible set changes.
+  // selection is dropped whenever the visible set, filter or sort order changes.
   useEffect(() => {
     setSelectedIds(new Set());
-  }, [page, pageSize, debouncedSearch, quickFilter]);
+  }, [page, pageSize, debouncedSearch, quickFilter, sortValue]);
 
   const allOnPageSelected = products.length > 0 && products.every((p) => selectedIds.has(p.id));
   const someOnPageSelected = products.some((p) => selectedIds.has(p.id));
@@ -278,6 +319,16 @@ export default function AdminProducts() {
   const chooseQuickFilter = (key) => {
     setPage(0);
     setQuickFilter(key);
+  };
+
+  const changeSort = (value) => {
+    setPage(0);
+    setSortValue(value);
+    try {
+      window.localStorage.setItem(SORT_KEY, value);
+    } catch {
+      // Storage unavailable (private mode) — the choice simply is not remembered.
+    }
   };
 
   /** Switches surface and remembers it. Paging/selection are deliberately kept:
@@ -989,8 +1040,7 @@ export default function AdminProducts() {
         }
       />
 
-      {/* XXII — control strip: search stays permanently visible because it is
-          used constantly; everything else folds into the slide-in panel. */}
+      {/* XXII — control strip: search + surface switch, always on screen. */}
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <div className="min-w-[15rem] flex-1 sm:max-w-sm">
           <HoloInput
@@ -1005,21 +1055,11 @@ export default function AdminProducts() {
           />
         </div>
 
-        <NeonButton
-          variant={filtersOpen ? 'primary' : 'ghost'}
-          onClick={() => setFiltersOpen((open) => !open)}
-          icon={<GeoIcon name="layers" className="h-4 w-4" accent="currentColor" />}
-          aria-expanded={filtersOpen}
-          aria-controls="prod-filter-panel"
-        >
-          Filtre{quickFilter ? ' · 1' : ''}
-        </NeonButton>
-
         {/* Surface switch — table for bulk work, grid for the 3D catalogue. */}
         <div
           role="group"
           aria-label="Mod de afișare"
-          className="flex items-center gap-1 rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] p-1"
+          className="ml-auto flex items-center gap-1 rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] p-1"
         >
           {[
             { mode: 'table', icon: 'layers', label: 'Tabel' },
@@ -1044,54 +1084,71 @@ export default function AdminProducts() {
         </div>
       </div>
 
-      {/* Slide-in filter panel (TASK 6 — materialize) */}
-      {filtersOpen && (
-        <div
-          id="prod-filter-panel"
-          className="mb-4 animate-xx-materialize rounded-[1rem] border border-[rgba(122,60,255,0.32)] bg-[rgba(122,60,255,0.07)] p-4"
-        >
-          <div className="flex flex-wrap items-end gap-6">
-            <fieldset className="min-w-[16rem]">
-              <legend className="mb-2 text-[0.65rem] font-semibold uppercase tracking-[0.16em] xx-ink-dim">
-                Filtre rapide
-              </legend>
-              <div className="flex flex-wrap gap-2">
-                {QUICK_FILTERS.map((f) => (
-                  <button
-                    key={f.key ?? 'all'}
-                    type="button"
-                    onClick={() => chooseQuickFilter(f.key)}
-                    aria-pressed={quickFilter === f.key}
-                    className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-xx ease-xx ${
-                      quickFilter === f.key
-                        ? 'border-[rgba(34,232,245,0.55)] bg-[rgba(34,232,245,0.14)] text-[color:var(--xx-ink)] shadow-[0_0_26px_-10px_rgba(34,232,245,0.9)]'
-                        : 'border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] hover:border-[rgba(122,60,255,0.5)] hover:text-[color:var(--xx-ink)]'
-                    }`}
-                  >
-                    <GeoIcon name={f.icon} className="h-3.5 w-3.5" accent="currentColor" />
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-
-            <div className="w-32">
-              <HoloInput
-                as="select"
-                label="Pe pagină"
-                value={pageSize}
-                onChange={(e) => changePageSize(Number(e.target.value))}
-              >
-                {PAGE_SIZES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </HoloInput>
+      {/* Permanent filters/sort strip — always visible (no longer a collapsible
+          panel) so the operator filtering or re-sorting the catalogue all day
+          doesn't have to reopen it every time. Every field shares the same
+          label-above-control shape and `items-end` baseline, so the row reads
+          as one aligned strip regardless of how many chips wrap. */}
+      <div
+        id="prod-filter-panel"
+        className="mb-4 rounded-[1rem] border border-[rgba(122,60,255,0.32)] bg-[rgba(122,60,255,0.07)] p-4"
+      >
+        <div className="flex flex-wrap items-end gap-6">
+          <fieldset className="min-w-[16rem] flex-1">
+            <legend className="mb-2 text-[0.65rem] font-semibold uppercase tracking-[0.16em] xx-ink-dim">
+              Filtre rapide
+            </legend>
+            <div className="flex flex-wrap gap-2">
+              {QUICK_FILTERS.map((f) => (
+                <button
+                  key={f.key ?? 'all'}
+                  type="button"
+                  onClick={() => chooseQuickFilter(f.key)}
+                  aria-pressed={quickFilter === f.key}
+                  className={`flex h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-all duration-xx ease-xx ${
+                    quickFilter === f.key
+                      ? 'border-[rgba(34,232,245,0.55)] bg-[rgba(34,232,245,0.14)] text-[color:var(--xx-ink)] shadow-[0_0_26px_-10px_rgba(34,232,245,0.9)]'
+                      : 'border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] hover:border-[rgba(122,60,255,0.5)] hover:text-[color:var(--xx-ink)]'
+                  }`}
+                >
+                  <GeoIcon name={f.icon} className="h-3.5 w-3.5" accent="currentColor" />
+                  {f.label}
+                </button>
+              ))}
             </div>
+          </fieldset>
+
+          <div className="w-44 shrink-0">
+            <HoloInput
+              as="select"
+              label="Sortează"
+              value={sortValue}
+              onChange={(e) => changeSort(e.target.value)}
+            >
+              {SORT_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </HoloInput>
+          </div>
+
+          <div className="w-32 shrink-0">
+            <HoloInput
+              as="select"
+              label="Pe pagină"
+              value={pageSize}
+              onChange={(e) => changePageSize(Number(e.target.value))}
+            >
+              {PAGE_SIZES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </HoloInput>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Batch action bar — only present while something is ticked */}
       {selectedIds.size > 0 && (

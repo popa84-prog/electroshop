@@ -749,11 +749,30 @@ export default function AdminProducts() {
     setDeleteError(null);
     try {
       const ids = pending.map((p) => p.id);
-      const count = ids.length;
+      let toastMessage;
+
+      // A product cu comenzi sau achiziții înregistrate nu poate fi șters
+      // definitiv fără să strice istoricul facturilor — backend-ul îl
+      // dezactivează în schimb și ne spune exact ce s-a întâmplat, ca să nu
+      // afișăm un mesaj generic care ascunde diferența dintre „șters” și
+      // „dezactivat”.
       if (ids.length === 1) {
-        await productService.remove(ids[0]);
+        const result = await productService.remove(ids[0]);
+        toastMessage = result.message;
       } else {
-        await productService.bulkRemove(ids);
+        const result = await productService.bulkRemove(ids);
+        const parts = [];
+        if (result.deleted > 0) {
+          parts.push(result.deleted === 1 ? '1 produs șters' : `${result.deleted} produse șterse`);
+        }
+        if (result.deactivated?.length > 0) {
+          parts.push(
+            result.deactivated.length === 1
+              ? '1 produs dezactivat (are comenzi/achiziții înregistrate)'
+              : `${result.deactivated.length} produse dezactivate (au comenzi/achiziții înregistrate)`
+          );
+        }
+        toastMessage = parts.length > 0 ? `${parts.join(', ')}.` : 'Niciun produs nu a fost modificat.';
       }
       setSelectedIds((prev) => {
         const next = new Set(prev);
@@ -761,10 +780,12 @@ export default function AdminProducts() {
         return next;
       });
       closeDelete();
-      showToast(count === 1 ? 'Produs șters.' : `${count} produse șterse.`, 'success');
+      showToast(toastMessage, 'success');
       invalidateListCache(LIST_CACHE_NS);
       // Stepping back a page keeps the operator on a populated page when the
-      // last rows of the final page were just removed.
+      // last rows of the final page were just removed. A product that was
+      // deactivated instead of deleted still occupies its row, so this only
+      // steps back when the whole selection actually left the table.
       if (products.length === ids.length && page > 0) {
         setPage((p) => p - 1);
       } else {

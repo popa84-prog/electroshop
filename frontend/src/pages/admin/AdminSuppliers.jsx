@@ -8,7 +8,6 @@ import {
   HoloInput,
   HoloLoader,
   NeonButton,
-  Reveal,
   SectionHeader,
 } from '../../components/xxii';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -155,8 +154,7 @@ export default function AdminSuppliers() {
           </p>
         </div>
       ) : (
-        <Reveal>
-          <div className="card overflow-x-auto">
+        <div className="card overflow-x-auto">
             <table className="min-w-full divide-y divide-[rgba(255,255,255,0.08)] text-sm">
               <thead className="text-left">
                 <tr className="bg-[rgba(255,255,255,0.03)]">
@@ -206,8 +204,7 @@ export default function AdminSuppliers() {
                 ))}
               </tbody>
             </table>
-          </div>
-        </Reveal>
+        </div>
       )}
 
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />

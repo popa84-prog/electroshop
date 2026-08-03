@@ -7,7 +7,6 @@ import {
   GeoIcon,
   HoloLoader,
   NeonButton,
-  Reveal,
   SectionHeader,
 } from '../../components/xxii';
 import {
@@ -254,9 +253,8 @@ export default function AdminOrders() {
           <p className="text-sm xx-ink-muted">Nu există comenzi pentru filtrul selectat.</p>
         </div>
       ) : (
-        <Reveal>
-          <div className="card overflow-x-auto">
-            <table className="min-w-full divide-y divide-[rgba(255,255,255,0.08)] text-sm">
+        <div className="card overflow-x-auto">
+          <table className="min-w-full divide-y divide-[rgba(255,255,255,0.08)] text-sm">
               <thead className="text-left">
                 <tr className="bg-[rgba(255,255,255,0.03)]">
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">#</th>
@@ -342,9 +340,8 @@ export default function AdminOrders() {
                   </tr>
                 ))}
               </tbody>
-            </table>
-          </div>
-        </Reveal>
+          </table>
+        </div>
       )}
 
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />

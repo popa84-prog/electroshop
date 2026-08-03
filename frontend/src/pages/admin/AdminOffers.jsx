@@ -10,7 +10,6 @@ import {
   HoloLoader,
   NeonBadge,
   NeonButton,
-  Reveal,
   SectionHeader,
 } from '../../components/xxii';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -224,9 +223,8 @@ export default function AdminOffers() {
           </p>
         </div>
       ) : (
-        <Reveal>
-          <div className="card overflow-x-auto">
-            <table className="min-w-full divide-y divide-[rgba(255,255,255,0.08)] text-sm">
+        <div className="card overflow-x-auto">
+          <table className="min-w-full divide-y divide-[rgba(255,255,255,0.08)] text-sm">
               <thead className="text-left">
                 <tr className="bg-[rgba(255,255,255,0.03)]">
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Ofertă</th>
@@ -303,8 +301,7 @@ export default function AdminOffers() {
                 })}
               </tbody>
             </table>
-          </div>
-        </Reveal>
+        </div>
       )}
 
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />

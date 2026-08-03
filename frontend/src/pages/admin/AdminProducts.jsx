@@ -12,7 +12,6 @@ import {
   HoloLoader,
   NeonBadge,
   NeonButton,
-  Reveal,
   SectionHeader,
   TiltCard,
 } from '../../components/xxii';
@@ -1017,25 +1016,23 @@ export default function AdminProducts() {
         </div>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-          {products.map((p, i) => (
-            <Reveal key={p.id} delay={Math.min(i, 7) * 40}>
-              <ProductTile
-                p={p}
-                selected={selectedIds.has(p.id)}
-                inCart={saleCart.find((l) => l.productId === p.id)?.quantity || 0}
-                activeBusy={activeBusyId === p.id}
-                onToggle={() => toggleOne(p.id)}
-                onPreview={() => openPreview(p)}
-                onEdit={() => openEdit(p)}
-                onSell={() => addToSaleCart(p)}
-                onToggleActive={() => toggleActive(p)}
-                onDelete={() => askDelete([p])}
-              />
-            </Reveal>
+          {products.map((p) => (
+            <ProductTile
+              key={p.id}
+              p={p}
+              selected={selectedIds.has(p.id)}
+              inCart={saleCart.find((l) => l.productId === p.id)?.quantity || 0}
+              activeBusy={activeBusyId === p.id}
+              onToggle={() => toggleOne(p.id)}
+              onPreview={() => openPreview(p)}
+              onEdit={() => openEdit(p)}
+              onSell={() => addToSaleCart(p)}
+              onToggleActive={() => toggleActive(p)}
+              onDelete={() => askDelete([p])}
+            />
           ))}
         </div>
       ) : (
-        <Reveal>
         <div className="card overflow-x-auto">
           <table className="min-w-full divide-y divide-[rgba(255,255,255,0.08)] text-sm">
             <thead className="text-left">
@@ -1263,7 +1260,6 @@ export default function AdminProducts() {
             </tbody>
           </table>
         </div>
-        </Reveal>
       )}
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />
 

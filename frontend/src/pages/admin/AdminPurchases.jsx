@@ -8,7 +8,6 @@ import {
   HoloInput,
   HoloLoader,
   NeonButton,
-  Reveal,
   SectionHeader,
 } from '../../components/xxii';
 import { formatPrice } from '../../utils/format';
@@ -188,9 +187,8 @@ export default function AdminPurchases() {
           <p className="text-sm xx-ink-muted">Nicio intrare de marfă înregistrată.</p>
         </div>
       ) : (
-        <Reveal>
-          <div className="card overflow-x-auto">
-            <table className="min-w-full divide-y divide-[rgba(255,255,255,0.08)] text-sm">
+        <div className="card overflow-x-auto">
+          <table className="min-w-full divide-y divide-[rgba(255,255,255,0.08)] text-sm">
               <thead className="text-left">
                 <tr className="bg-[rgba(255,255,255,0.03)]">
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">#</th>
@@ -242,9 +240,8 @@ export default function AdminPurchases() {
                   </tr>
                 ))}
               </tbody>
-            </table>
-          </div>
-        </Reveal>
+          </table>
+        </div>
       )}
 
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />

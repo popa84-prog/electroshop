@@ -9,7 +9,6 @@ import {
   HoloLoader,
   NeonBadge,
   NeonButton,
-  Reveal,
   SectionHeader,
 } from '../../components/xxii';
 import { formatDate } from '../../utils/format';
@@ -203,8 +202,7 @@ export default function AdminUsers() {
       />
 
       {pending.length > 0 && (
-        <Reveal>
-          <div className="card card-static mb-5 border-[rgba(255,194,75,0.4)] p-4 shadow-[0_0_50px_-24px_rgba(255,194,75,0.8)]">
+        <div className="card card-static mb-5 border-[rgba(255,194,75,0.4)] p-4 shadow-[0_0_50px_-24px_rgba(255,194,75,0.8)]">
             <div className="mb-3 flex items-center gap-2">
               <NeonBadge
                 tone="warning"
@@ -249,8 +247,7 @@ export default function AdminUsers() {
                 </div>
               ))}
             </div>
-          </div>
-        </Reveal>
+        </div>
       )}
 
       <div className="mb-5 sm:max-w-md">
@@ -273,9 +270,8 @@ export default function AdminUsers() {
           <p className="text-sm xx-ink-muted">Niciun utilizator nu corespunde căutării.</p>
         </div>
       ) : (
-        <Reveal>
-          <div className="card overflow-x-auto">
-            <table className="min-w-full divide-y divide-[rgba(255,255,255,0.08)] text-sm">
+        <div className="card overflow-x-auto">
+          <table className="min-w-full divide-y divide-[rgba(255,255,255,0.08)] text-sm">
               <thead className="text-left">
                 <tr className="bg-[rgba(255,255,255,0.03)]">
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Nume</th>
@@ -402,9 +398,8 @@ export default function AdminUsers() {
                   </tr>
                 ))}
               </tbody>
-            </table>
-          </div>
-        </Reveal>
+          </table>
+        </div>
       )}
 
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />

@@ -68,8 +68,16 @@ public class AdminController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String category,
             @RequestParam(defaultValue = "false") boolean inStock,
-            // Quick-filter shortcut (feature #3): "low_stock" | "out_of_stock" | "no_image".
-            @RequestParam(required = false) String quickFilter,
+            // Quick-filter checkboxes (feature #3) — each is independently ANDed by
+            // ProductRepository#search, so any combination (e.g. outOfStock AND
+            // noImage together) narrows to products matching every ticked box, not
+            // just one at a time the way the old single `quickFilter` string did.
+            @RequestParam(defaultValue = "false") boolean lowStock,
+            @RequestParam(defaultValue = "false") boolean outOfStock,
+            @RequestParam(defaultValue = "false") boolean noImage,
+            // Status view: "active" | "inactive" | omitted (both). See
+            // resolveActiveStatus for why this can't be a raw boolean.
+            @RequestParam(required = false) String status,
             // "Sortează" dropdown (feature: sortare catalog) — see resolveProductSort
             // for the whitelist that keeps these two params safe to pass straight
             // through from the client.
@@ -82,9 +90,23 @@ public class AdminController {
         // whole catalogue into memory in one response.
         int safeSize = Math.max(1, Math.min(size, 200));
         int safePage = Math.max(0, page);
-        Page<AdminProductDto> result = productService.adminList(search, category, inStock, quickFilter,
+        Page<AdminProductDto> result = productService.adminList(search, category, inStock,
+                lowStock, outOfStock, noImage, resolveActiveStatus(status),
                 PageRequest.of(safePage, safeSize, resolveProductSort(sortBy, direction)));
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(result)));
+    }
+
+    /**
+     * Turns the "Status" chip's value into the tri-state {@link Boolean} the
+     * repository query understands: {@code null} means "don't filter — show
+     * both", so this can't just be a {@code boolean} the way the checkboxes
+     * above are. Any value other than the two recognized ones (including a
+     * hand-crafted request) falls back to "both", never to one specific state.
+     */
+    private Boolean resolveActiveStatus(String status) {
+        if ("active".equalsIgnoreCase(status)) return Boolean.TRUE;
+        if ("inactive".equalsIgnoreCase(status)) return Boolean.FALSE;
+        return null;
     }
 
     /**

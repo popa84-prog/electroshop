@@ -68,17 +68,41 @@ function iconFor(name) {
   return CATEGORY_ICONS[String(name).trim().toLowerCase()] || FALLBACK_ICON;
 }
 
-const BENEFITS = [
+// Rezervă locală, folosită doar cât timp API-ul de oferte nu a răspuns încă
+// sau a eșuat — nu mai este sursa de adevăr. Aceleași patru cartonașe pe care
+// `OfferService.seedDefaults()` le creează în baza de date, ca prima
+// randare (înainte ca cererea către server să se întoarcă) să arate identic
+// cu ce va veni oricum din API. Al treilea cartonaș a fost înlocuit conform
+// cerinței: „Retur 14 zile” nu mai există, magazinul evaluează și cumpără
+// electronice noi.
+const BENEFITS_FALLBACK = [
   { icon: 'truck', accent: 'var(--xx-cyan)', title: 'Livrare rapidă', text: 'Transport gratuit, oriunde în țară' },
   { icon: 'shield', accent: 'var(--xx-lime)', title: 'Garanție completă', text: 'Produse originale, garanție legală' },
-  { icon: 'refresh', accent: 'var(--xx-amber)', title: 'Retur 14 zile', text: 'Fără întrebări, fără costuri ascunse' },
-  { icon: 'coins', accent: 'var(--xx-purple)', title: 'Plata la livrare', text: 'Plătești doar când primești coletul' },
+  { icon: 'coins', accent: 'var(--xx-amber)', title: 'Cumpărăm electronice', text: 'Evaluare corectă, plată pe loc' },
+  { icon: 'tag', accent: 'var(--xx-purple)', title: 'Plata la livrare', text: 'Plătești doar când primești coletul' },
 ];
+
+// Rezerva locală pentru modulul mare de promoție — identică, ca idee, cu
+// oferta implicită din `OfferService.seedDefaults()`. `endsAt` rămâne `null`
+// aici: fereastra reală (recurentă zilnic sau cu dată fixă) vine din API.
+const HOME_PROMO_FALLBACK = {
+  title: 'Transport gratuit',
+  headline: 'la orice comandă',
+  description: 'Fără prag minim și fără costuri ascunse. Oferta se resetează la miezul nopții.',
+  badgeLabel: 'Ofertă activă',
+  ctaLabel: 'Profită acum',
+  ctaUrl: '/products',
+  endsAt: null,
+  showTimer: true,
+  recurringDaily: true,
+};
 
 export default function Home() {
   const [featured, setFeatured] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [benefits, setBenefits] = useState(BENEFITS_FALLBACK);
+  const [promo, setPromo] = useState(HOME_PROMO_FALLBACK);
 
   useSeo({
     description:
@@ -121,14 +145,61 @@ export default function Home() {
     };
   }, []);
 
-  // The promotion window ends at midnight tonight. Computed once per mount so
-  // the countdown target is stable — recomputing it on every render would reset
-  // the clock to a fresh full day on each tick.
-  const promoTarget = useMemo(() => {
-    const end = new Date();
-    end.setHours(23, 59, 59, 999);
-    return end.toISOString();
+  // Banda de beneficii — vine acum din panoul de administrare (cerința 1).
+  // Un răspuns gol înseamnă că operatorul a dezactivat explicit toate
+  // cartonașele din această zonă, deci secțiunea chiar trebuie să dispară —
+  // rezerva locală se folosește doar cât timp cererea e în curs sau a eșuat.
+  useEffect(() => {
+    let cancelled = false;
+    productService
+      .offers('BENEFIT_BAR')
+      .then((data) => {
+        if (cancelled) return;
+        setBenefits(
+          (data || []).map((o) => ({ icon: o.icon, accent: o.accent, title: o.title, text: o.headline }))
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setBenefits(BENEFITS_FALLBACK);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  // Modulul mare de promoție — la fel, din API. `null` înseamnă „nicio ofertă
+  // activă acum în această zonă”, ceea ce ascunde complet secțiunea: exact
+  // efectul pe care comutatorul „Activă” din panou trebuie să îl aibă.
+  useEffect(() => {
+    let cancelled = false;
+    productService
+      .offers('HOME_PROMO')
+      .then((data) => {
+        if (!cancelled) setPromo((data && data[0]) || null);
+      })
+      .catch(() => {
+        if (!cancelled) setPromo(HOME_PROMO_FALLBACK);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Ținta cronometrului. O ofertă recurentă zilnic se resetează la miezul
+  // nopții din fusul orar al vizitatorului — un calcul server-side în UTC ar
+  // fi greșit cu 3 ore pentru România, de aceea `recurringDaily` este doar un
+  // steag și miezul nopții se calculează aici, în browser. O ofertă cu
+  // `endsAt` explicit din backend își folosește direct data primită.
+  const promoTarget = useMemo(() => {
+    if (!promo) return null;
+    if (promo.endsAt) return promo.endsAt;
+    if (promo.recurringDaily) {
+      const end = new Date();
+      end.setHours(23, 59, 59, 999);
+      return end.toISOString();
+    }
+    return null;
+  }, [promo]);
 
   return (
     <div className="space-y-16 sm:space-y-24">
@@ -180,8 +251,9 @@ export default function Home() {
       </section>
 
       {/* ─────────────── 2. Benefits bar (scan-line) ─────────────── */}
+      {benefits.length > 0 && (
       <section aria-label="Beneficii" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {BENEFITS.map((benefit, index) => (
+        {benefits.map((benefit, index) => (
           <Reveal key={benefit.title} delay={index * 70} className="h-full">
             <div className="xx-scanning card card-static flex h-full items-start gap-3 p-4">
               <span
@@ -198,6 +270,7 @@ export default function Home() {
           </Reveal>
         ))}
       </section>
+      )}
 
       {/* ─────────────── 3. 3D category tiles ─────────────── */}
       {categories.length > 0 && (
@@ -245,6 +318,10 @@ export default function Home() {
       )}
 
       {/* ─────────────── 4. Promotion module + holographic timer ─────────────── */}
+      {/* Absent complet dacă niciun operator nu are o ofertă activă chiar acum
+          în zona HOME_PROMO — comutatorul din panoul „Oferte” controlează
+          direct dacă acest modul există pe pagină. */}
+      {promo && (
       <Reveal>
         <section className="relative overflow-hidden rounded-[1.5rem] border border-[rgba(255,61,203,0.3)] bg-[rgba(12,7,26,0.72)] p-6 backdrop-blur-glass sm:p-9">
           <span
@@ -260,22 +337,28 @@ export default function Home() {
 
           <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-xl">
-              <span className="badge badge-magenta">Ofertă activă</span>
+              {promo.badgeLabel && <span className="badge badge-magenta">{promo.badgeLabel}</span>}
               <h2 className="mt-3 font-display text-2xl font-bold text-white sm:text-4xl">
-                <span className="xx-text-gradient-hot">Transport gratuit</span> la orice comandă
+                <span className="xx-text-gradient-hot">{promo.title}</span>
+                {promo.headline ? ` ${promo.headline}` : ''}
               </h2>
-              <p className="mt-3 text-sm text-[#c6cdf0] sm:text-base">
-                Fără prag minim și fără costuri ascunse. Oferta se resetează la miezul nopții.
-              </p>
-              <NeonButton to="/products" variant="hot" size="lg" className="mt-6" pulse>
-                Profită acum
-              </NeonButton>
+              {promo.description && (
+                <p className="mt-3 text-sm text-[#c6cdf0] sm:text-base">{promo.description}</p>
+              )}
+              {promo.ctaLabel && (
+                <NeonButton to={promo.ctaUrl || '/products'} variant="hot" size="lg" className="mt-6" pulse>
+                  {promo.ctaLabel}
+                </NeonButton>
+              )}
             </div>
 
-            <HoloTimer target={promoTarget} label="Se încheie în" className="shrink-0" />
+            {promo.showTimer && promoTarget && (
+              <HoloTimer target={promoTarget} label="Se încheie în" className="shrink-0" />
+            )}
           </div>
         </section>
       </Reveal>
+      )}
 
       {/* ─────────────── 5. Featured grid ─────────────── */}
       <section>

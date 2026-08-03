@@ -56,7 +56,20 @@ export function useReveal({ threshold = 0.15, rootMargin = '0px 0px -8% 0px', on
     );
 
     observer.observe(node);
-    return () => observer.disconnect();
+
+    // Safety net: a page under heavy layout churn (large admin tables,
+    // ancestors that measure their own DOM on every mutation) can starve the
+    // browser's intersection callback long enough that it never fires for an
+    // element that is plainly on screen. When that happens the content stays
+    // at opacity 0 forever — a bug, not an animation — so anything still
+    // hidden after a generous fixed delay is force-revealed regardless of
+    // what the observer decides afterwards.
+    const fallback = window.setTimeout(() => setShown(true), 600);
+
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(fallback);
+    };
   }, [threshold, rootMargin, once]);
 
   return [ref, shown];

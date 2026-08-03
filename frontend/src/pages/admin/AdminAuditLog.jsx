@@ -2,11 +2,37 @@ import { useEffect, useState } from 'react';
 import adminService from '../../api/adminService';
 import AdminNav from '../../components/AdminNav';
 import Pagination from '../../components/Pagination';
-import Spinner from '../../components/Spinner';
 import { showToast } from '../../components/Toast';
 import { formatDate } from '../../utils/format';
-import { ACTION_STYLE, ACTION_LABELS, ACTION_OPTIONS } from '../../utils/auditLabels';
+import {
+  ACTION_ICON,
+  ACTION_ICON_FALLBACK,
+  ACTION_LABELS,
+  ACTION_OPTIONS,
+  ACTION_STYLE,
+  ACTION_STYLE_FALLBACK,
+} from '../../utils/auditLabels';
+import {
+  GeoIcon,
+  HoloInput,
+  HoloLoader,
+  NeonButton,
+  Reveal,
+  SectionHeader,
+} from '../../components/xxii';
 
+/**
+ * XXII — TASK 6 / TASK 8 (Quantum Control Center: jurnalul de activitate).
+ *
+ * Fiecare acțiune este identificată prin trei canale simultan: eticheta scrisă,
+ * pictograma geometrică și culoarea insignei. Culoarea este ultimul canal, nu
+ * primul — vezi comentariul din utils/auditLabels.js pentru motivul pentru care
+ * paleta a fost redusă la patru familii.
+ *
+ * Coloana „Data” folosește cifre monospațiate, astfel încât marcajele de timp
+ * să se alinieze pe verticală și o scanare de sus în jos să detecteze imediat
+ * o rafală de activitate.
+ */
 export default function AdminAuditLog() {
   const [logs, setLogs] = useState([]);
   const [page, setPage] = useState(0);
@@ -50,25 +76,30 @@ export default function AdminAuditLog() {
   return (
     <div>
       <AdminNav />
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Jurnal de activitate</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Cine a modificat produse, stocuri, imagini și comenzi — cu dată, autor și detalii.
-          </p>
-        </div>
-        <button className="btn-secondary" onClick={doExport} disabled={exporting}>
-          {exporting ? 'Se exportă...' : '⭳ Exportă jurnalul'}
-        </button>
-      </div>
 
-      <div className="mb-4 flex items-center gap-2">
-        <label className="text-sm font-medium text-slate-600" htmlFor="audit-action-filter">
-          Tip acțiune
-        </label>
-        <select
+      <SectionHeader
+        eyebrow="Securitate"
+        title="Jurnal de activitate"
+        as="h1"
+        subtitle="Cine a modificat produse, stocuri, imagini și comenzi — cu dată, autor și detalii."
+        action={
+          <NeonButton
+            variant="secondary"
+            onClick={doExport}
+            disabled={exporting}
+            charging={exporting}
+            icon={<GeoIcon name="document" className="h-4 w-4" />}
+          >
+            {exporting ? 'Se exportă...' : 'Exportă jurnalul'}
+          </NeonButton>
+        }
+      />
+
+      <div className="mb-4 w-72">
+        <HoloInput
+          as="select"
           id="audit-action-filter"
-          className="input w-auto"
+          label="Tip acțiune"
           value={action}
           onChange={(e) => {
             setAction(e.target.value);
@@ -81,51 +112,76 @@ export default function AdminAuditLog() {
               {ACTION_LABELS[a]}
             </option>
           ))}
-        </select>
+        </HoloInput>
       </div>
 
       {loading ? (
-        <Spinner />
-      ) : (
-        <div className="card overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50 text-left text-slate-500">
-              <tr>
-                <th className="px-4 py-3">Data</th>
-                <th className="px-4 py-3">Autor</th>
-                <th className="px-4 py-3">Acțiune</th>
-                <th className="px-4 py-3">Entitate</th>
-                <th className="px-4 py-3">Detalii</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {logs.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
-                    {action ? 'Nicio activitate pentru acest filtru.' : 'Nicio activitate înregistrată încă.'}
-                  </td>
-                </tr>
-              )}
-              {logs.map((l) => (
-                <tr key={l.id} className="hover:bg-slate-50">
-                  <td className="whitespace-nowrap px-4 py-3 text-slate-500">{formatDate(l.createdAt)}</td>
-                  <td className="px-4 py-3 text-slate-700">{l.actor}</td>
-                  <td className="px-4 py-3">
-                    <span className={`badge ${ACTION_STYLE[l.action] || 'bg-slate-100 text-slate-700'}`}>
-                      {ACTION_LABELS[l.action] || l.action}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">
-                    {l.entityType}
-                    {l.entityId ? ` #${l.entityId}` : ''}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">{l.details || '-'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <HoloLoader label="Se încarcă jurnalul" />
+      ) : logs.length === 0 ? (
+        <div className="card card-static p-10 text-center">
+          <p className="text-sm xx-ink-muted">
+            {action
+              ? 'Nicio activitate pentru acest filtru.'
+              : 'Nicio activitate înregistrată încă.'}
+          </p>
         </div>
+      ) : (
+        <Reveal>
+          <div className="card overflow-x-auto">
+            <table className="min-w-full divide-y divide-[rgba(255,255,255,0.08)] text-sm">
+              <thead className="text-left">
+                <tr className="bg-[rgba(255,255,255,0.03)]">
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] xx-ink-muted">
+                    Data
+                  </th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] xx-ink-muted">
+                    Autor
+                  </th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] xx-ink-muted">
+                    Acțiune
+                  </th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] xx-ink-muted">
+                    Entitate
+                  </th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] xx-ink-muted">
+                    Detalii
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[rgba(255,255,255,0.06)]">
+                {logs.map((l) => (
+                  <tr key={l.id} className="transition-colors duration-200">
+                    <td className="whitespace-nowrap px-4 py-3 font-mono text-xs xx-ink-muted">
+                      {formatDate(l.createdAt)}
+                    </td>
+                    <td className="px-4 py-3 font-medium text-[#e8ecff]">{l.actor}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                          ACTION_STYLE[l.action] || ACTION_STYLE_FALLBACK
+                        }`}
+                      >
+                        <GeoIcon
+                          name={ACTION_ICON[l.action] || ACTION_ICON_FALLBACK}
+                          className="h-3.5 w-3.5"
+                          accent="currentColor"
+                        />
+                        {ACTION_LABELS[l.action] || l.action}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 xx-ink-muted">
+                      {l.entityType}
+                      {l.entityId ? <span className="font-mono"> #{l.entityId}</span> : ''}
+                    </td>
+                    <td className="px-4 py-3 xx-ink-muted">{l.details || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Reveal>
       )}
+
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />
     </div>
   );

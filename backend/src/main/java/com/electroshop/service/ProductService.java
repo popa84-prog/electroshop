@@ -5,11 +5,17 @@ import com.electroshop.dto.CategoryStatDto;
 import com.electroshop.dto.ProductDto;
 import com.electroshop.dto.ProductRequest;
 import com.electroshop.exception.ResourceNotFoundException;
+import com.electroshop.model.Order;
+import com.electroshop.model.OrderItem;
 import com.electroshop.model.Product;
 import com.electroshop.model.ProductImage;
+import com.electroshop.model.Purchase;
+import com.electroshop.model.PurchaseItem;
 import com.electroshop.repository.OrderItemRepository;
+import com.electroshop.repository.OrderRepository;
 import com.electroshop.repository.ProductRepository;
 import com.electroshop.repository.PurchaseItemRepository;
+import com.electroshop.repository.PurchaseRepository;
 import com.electroshop.security.PermissionService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -50,6 +56,8 @@ public class ProductService {
     private final NotificationService notificationService;
     private final OrderItemRepository orderItemRepository;
     private final PurchaseItemRepository purchaseItemRepository;
+    private final OrderRepository orderRepository;
+    private final PurchaseRepository purchaseRepository;
 
     public ProductService(ProductRepository productRepository, AuditService auditService,
                           CloudinaryService cloudinaryService,
@@ -57,7 +65,9 @@ public class ProductService {
                           PermissionService permissionService,
                           NotificationService notificationService,
                           OrderItemRepository orderItemRepository,
-                          PurchaseItemRepository purchaseItemRepository) {
+                          PurchaseItemRepository purchaseItemRepository,
+                          OrderRepository orderRepository,
+                          PurchaseRepository purchaseRepository) {
         this.productRepository = productRepository;
         this.auditService = auditService;
         this.cloudinaryService = cloudinaryService;
@@ -66,6 +76,8 @@ public class ProductService {
         this.notificationService = notificationService;
         this.orderItemRepository = orderItemRepository;
         this.purchaseItemRepository = purchaseItemRepository;
+        this.orderRepository = orderRepository;
+        this.purchaseRepository = purchaseRepository;
     }
 
     /**
@@ -400,6 +412,135 @@ public class ProductService {
      *                    than gone
      */
     public record BulkDeleteResult(int deleted, List<Long> notFound, List<Long> deactivated) {
+    }
+
+    /**
+     * Permanently removes a product together with every order/purchase line
+     * item that ever referenced it — the explicit, irreversible override of
+     * the safety net in {@link #delete(Long)}. Requesting this means
+     * accepting that historical invoices and goods-in records will show
+     * fewer items than they did at the time of sale/intake; every affected
+     * order's and purchase's {@code totalAmount} is recalculated from its
+     * remaining lines so the stored total never silently drifts from what
+     * the line items actually sum to.
+     * <p>
+     * Each {@link OrderItem}/{@link PurchaseItem} is removed from its
+     * owning {@link Order}'s/{@link Purchase}'s item list rather than
+     * deleted directly through its own repository — both parent
+     * associations are mapped with {@code orphanRemoval = true}, so removing
+     * the child from the parent's collection and saving the parent is what
+     * makes Hibernate issue the row deletion, exactly like
+     * {@link #deleteImage(Long, Long)} already does for a product's own
+     * image gallery.
+     * <p>
+     * Gated behind {@code PRODUCTS_FORCE_DELETE} at the controller layer —
+     * a permission distinct from and stronger than {@code PRODUCTS_DELETE} —
+     * because unlike every other write in this service, this one cannot be
+     * undone by re-editing or re-importing data: the historical rows are
+     * physically gone.
+     *
+     * @return how many order lines and how many purchase lines were removed
+     *         along with the product, so the caller can report exactly what
+     *         was lost
+     */
+    public ForceDeleteOutcome forceDeleteWithHistory(Long id) {
+        Product p = findEntity(id);
+        String name = p.getName();
+
+        List<OrderItem> orderItems = orderItemRepository.findByProductId(id);
+        Set<Order> affectedOrders = new LinkedHashSet<>();
+        for (OrderItem item : orderItems) {
+            Order order = item.getOrder();
+            order.getItems().remove(item);
+            affectedOrders.add(order);
+        }
+        for (Order order : affectedOrders) {
+            order.recalculateTotal();
+            orderRepository.save(order);
+        }
+
+        List<PurchaseItem> purchaseItems = purchaseItemRepository.findByProductId(id);
+        Set<Purchase> affectedPurchases = new LinkedHashSet<>();
+        for (PurchaseItem item : purchaseItems) {
+            Purchase purchase = item.getPurchase();
+            purchase.getItems().remove(item);
+            affectedPurchases.add(purchase);
+        }
+        for (Purchase purchase : affectedPurchases) {
+            purchase.recalculateTotal();
+            purchaseRepository.save(purchase);
+        }
+
+        for (ProductImage img : p.getImages()) {
+            cloudinaryService.delete(img.getPublicId());
+        }
+        productRepository.delete(p);
+
+        auditService.log("PRODUCT_FORCE_DELETED_WITH_HISTORY", "Product", id,
+                name + " — șters definitiv împreună cu istoricul: " + orderItems.size()
+                        + " linie(i) de comandă (" + affectedOrders.size() + " comandă/comenzi recalculate) și "
+                        + purchaseItems.size() + " linie(i) de achiziție (" + affectedPurchases.size()
+                        + " achiziție/achiziții recalculate) eliminate ireversibil.");
+
+        return new ForceDeleteOutcome(orderItems.size(), purchaseItems.size());
+    }
+
+    /**
+     * Outcome of a single force-delete: how many historical line items were
+     * removed along with the product, so the confirmation message can state
+     * exactly what was lost.
+     *
+     * @param orderItemsRemoved    order lines removed
+     * @param purchaseItemsRemoved purchase lines removed
+     */
+    public record ForceDeleteOutcome(int orderItemsRemoved, int purchaseItemsRemoved) {
+    }
+
+    /**
+     * Force-deletes several products at once — offered only for the subset
+     * of a previous {@link #deleteBulk} response that came back deactivated
+     * because of sales history, when the operator explicitly chooses to
+     * remove them anyway. Mirrors {@link #forceDeleteWithHistory(Long)} per
+     * id; an id that no longer exists is skipped rather than failing the
+     * whole batch, exactly like {@link #deleteBulk}.
+     *
+     * @param ids the products to force-delete
+     * @return how many were removed, which ids were skipped, and the total
+     *         historical line items removed across the whole batch
+     */
+    public BulkForceDeleteResult forceDeleteBulk(List<Long> ids) {
+        List<Long> unique = new ArrayList<>(new LinkedHashSet<>(ids));
+        List<Long> notFound = new ArrayList<>();
+        int deleted = 0;
+        int totalOrderItemsRemoved = 0;
+        int totalPurchaseItemsRemoved = 0;
+        for (Long id : unique) {
+            if (!productRepository.existsById(id)) {
+                notFound.add(id);
+                continue;
+            }
+            ForceDeleteOutcome outcome = forceDeleteWithHistory(id);
+            totalOrderItemsRemoved += outcome.orderItemsRemoved();
+            totalPurchaseItemsRemoved += outcome.purchaseItemsRemoved();
+            deleted++;
+        }
+        auditService.log("PRODUCTS_BULK_FORCE_DELETED_WITH_HISTORY", "Product", null,
+                deleted + " produse șterse definitiv în masă, împreună cu " + totalOrderItemsRemoved
+                        + " linii de comandă și " + totalPurchaseItemsRemoved
+                        + " linii de achiziție eliminate ireversibil.");
+        return new BulkForceDeleteResult(deleted, notFound, totalOrderItemsRemoved, totalPurchaseItemsRemoved);
+    }
+
+    /**
+     * Outcome of a batch force-delete.
+     *
+     * @param deleted              number of products actually removed
+     * @param notFound             identifiers that no longer existed when the batch ran
+     * @param orderItemsRemoved    total order lines removed across every product in the batch
+     * @param purchaseItemsRemoved total purchase lines removed across every product in the batch
+     */
+    public record BulkForceDeleteResult(int deleted, List<Long> notFound, int orderItemsRemoved,
+                                         int purchaseItemsRemoved) {
     }
 
     /**

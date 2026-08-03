@@ -26,7 +26,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
               AND (:outOfStock = FALSE OR p.stockQuantity = 0)
               AND (:lowStockAtMost IS NULL OR (p.stockQuantity <= :lowStockAtMost AND p.stockQuantity > 0))
               AND (:noImage = FALSE OR p.imageUrl IS NULL OR p.imageUrl = '')
-              AND (:activeOnly = FALSE OR p.active = TRUE)
+              AND (:activeStatus IS NULL OR p.active = :activeStatus)
             """)
     Page<Product> search(@Param("search") String search,
                          @Param("category") String category,
@@ -38,7 +38,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                          @Param("outOfStock") boolean outOfStock,
                          @Param("lowStockAtMost") Integer lowStockAtMost,
                          @Param("noImage") boolean noImage,
-                         @Param("activeOnly") boolean activeOnly,
+                         // Tri-state: null = both active & inactive, TRUE = active
+                         // only, FALSE = inactive only (feature: filtru status
+                         // Active/Dezactivate). A plain boolean couldn't express
+                         // "inactive only" alongside "don't filter at all".
+                         @Param("activeStatus") Boolean activeStatus,
                          Pageable pageable);
 
     @Query("SELECT DISTINCT p.category FROM Product p WHERE p.category IS NOT NULL ORDER BY p.category")

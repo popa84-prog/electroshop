@@ -29,7 +29,8 @@ public final class RolePermissions {
                 Permission.PRODUCTS_PRICE, Permission.PRODUCTS_DELETE, Permission.PRODUCTS_IMPORT,
                 Permission.ORDERS_VIEW, Permission.ORDERS_MANAGE,
                 Permission.AUDIT_VIEW, Permission.AUDIT_EXPORT,
-                Permission.SUPPLIERS_MANAGE, Permission.PURCHASES_MANAGE
+                Permission.SUPPLIERS_MANAGE, Permission.PURCHASES_MANAGE,
+                Permission.OFFERS_MANAGE
         ));
 
         MATRIX.put(RoleName.ROLE_EDITOR, EnumSet.of(

@@ -10,11 +10,15 @@ import java.util.Set;
 
 /**
  * Single source of truth for "which role can do what". Admin has every
- * permission; Manager runs day-to-day operations (products, stock, orders,
- * pricing, suppliers/purchases, audit) but not user accounts or company
- * settings; Editor can edit product content but not delete, price, import,
- * or manage orders/users/settings. Plain ROLE_USER (storefront customers)
- * has no admin-panel permissions.
+ * permission — including {@link Permission#PRODUCTS_FORCE_DELETE}, granted
+ * here only via {@code EnumSet.allOf} and deliberately absent from every
+ * other role's explicit list below, so a newly added permission is
+ * Admin-only by default unless a role is expanded to include it by name;
+ * Manager runs day-to-day operations (products, stock, orders, pricing,
+ * suppliers/purchases, audit) but not user accounts, company settings, or
+ * permanently erasing accounting history; Editor can edit product content
+ * but not delete, price, import, or manage orders/users/settings. Plain
+ * ROLE_USER (storefront customers) has no admin-panel permissions.
  */
 public final class RolePermissions {
 

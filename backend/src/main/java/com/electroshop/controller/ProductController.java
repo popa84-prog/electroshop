@@ -153,16 +153,63 @@ public class ProductController {
      * corrupting past invoices and goods-in entries, so {@link ProductService#delete}
      * deactivates it instead in that case — the response message reflects
      * whichever actually happened rather than always claiming a deletion.
+     * The {@code deleted} flag in the response body carries the same fact in
+     * machine-readable form, so the admin UI can offer the explicit
+     * force-delete override (see {@link #forceDelete(Long)}) exactly when a
+     * deactivation just happened, without parsing the localized message text.
      */
     @DeleteMapping("/{id}")
     @PreAuthorize("@permissionService.has('PRODUCTS_DELETE')")
-    public ResponseEntity<ApiResponse<Object>> delete(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> delete(@PathVariable Long id) {
         boolean deleted = productService.delete(id);
         String message = deleted
                 ? "Produs șters"
                 : "Produsul are comenzi sau achiziții înregistrate — a fost dezactivat în loc să fie șters, "
                         + "pentru a păstra istoricul comenzilor și al contabilității intact.";
+        return ResponseEntity.ok(ApiResponse.ok(message, Map.of("deleted", deleted)));
+    }
+
+    /**
+     * Permanently removes a product together with every order/purchase line
+     * item that ever referenced it. Unlike {@link #delete(Long)}, this never
+     * falls back to deactivation — it is the explicit "yes, I understand this
+     * breaks historical invoices" override, so it is gated behind
+     * {@code PRODUCTS_FORCE_DELETE} rather than {@code PRODUCTS_DELETE}: by
+     * default only the Admin role holds it (see
+     * {@link com.electroshop.security.RolePermissions}), because a Manager
+     * who can normally delete products should not, by default, also be able
+     * to erase accounting history.
+     */
+    @DeleteMapping("/{id}/force")
+    @PreAuthorize("@permissionService.has('PRODUCTS_FORCE_DELETE')")
+    public ResponseEntity<ApiResponse<Object>> forceDelete(@PathVariable Long id) {
+        ProductService.ForceDeleteOutcome outcome = productService.forceDeleteWithHistory(id);
+        String message = "Produs șters definitiv"
+                + (outcome.orderItemsRemoved() + outcome.purchaseItemsRemoved() > 0
+                        ? ", împreună cu " + outcome.orderItemsRemoved() + " linie(i) de comandă și "
+                                + outcome.purchaseItemsRemoved() + " linie(i) de achiziție eliminate ireversibil."
+                        : ".");
         return ResponseEntity.ok(ApiResponse.ok(message, null));
+    }
+
+    /**
+     * Batch counterpart of {@link #forceDelete(Long)} — used after a
+     * {@link #bulkDelete} response reports products that were deactivated
+     * because of sales history, when the operator explicitly chooses to
+     * remove them anyway, permanently, including their historical lines.
+     */
+    @PostMapping("/bulk-force-delete")
+    @PreAuthorize("@permissionService.has('PRODUCTS_FORCE_DELETE')")
+    public ResponseEntity<ApiResponse<ProductService.BulkForceDeleteResult>> bulkForceDelete(
+            @Valid @RequestBody BulkIdsRequest request) {
+        ProductService.BulkForceDeleteResult result = productService.forceDeleteBulk(request.getIds());
+        String message = result.deleted()
+                + (result.deleted() == 1 ? " produs șters definitiv" : " produse șterse definitiv")
+                + (result.orderItemsRemoved() + result.purchaseItemsRemoved() > 0
+                        ? ", împreună cu " + result.orderItemsRemoved() + " linii de comandă și "
+                                + result.purchaseItemsRemoved() + " linii de achiziție eliminate ireversibil."
+                        : ".");
+        return ResponseEntity.ok(ApiResponse.ok(message, result));
     }
 
     /** Hides the product from the public storefront without deleting it (feature #5). */

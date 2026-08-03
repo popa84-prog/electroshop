@@ -5,8 +5,17 @@ import orderService from '../../api/orderService';
 import AdminNav from '../../components/AdminNav';
 import Modal from '../../components/Modal';
 import Pagination from '../../components/Pagination';
-import Spinner from '../../components/Spinner';
 import { showToast, ToastHost } from '../../components/Toast';
+import {
+  GeoIcon,
+  HoloInput,
+  HoloLoader,
+  NeonBadge,
+  NeonButton,
+  Reveal,
+  SectionHeader,
+  TiltCard,
+} from '../../components/xxii';
 import { formatPrice, resolveImage, formatDate } from '../../utils/format';
 import { ACTION_LABELS } from '../../utils/auditLabels';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -19,15 +28,27 @@ const LIST_CACHE_NS = 'admin-products';
 const PAGE_SIZES = [10, 20, 50, 100, 200];
 const PAGE_SIZE_KEY = 'admin.products.pageSize';
 
+/**
+ * XXII — TASK 6 asks for "product management with 3D cards and hover tilt". A
+ * 200-row spreadsheet is the wrong place for that, so the page carries both
+ * surfaces and lets the operator pick: `table` for bulk work (inline edit,
+ * multi-select, dense scanning) and `grid` for visual work (checking that the
+ * catalogue photographs well, spotting the products with no image at all).
+ * The choice is remembered, because an operator who prefers one view prefers
+ * it every day.
+ */
+const VIEW_MODE_KEY = 'admin.products.view';
+const VIEW_MODES = ['table', 'grid'];
+
 /** Word the operator must type to confirm a deletion. */
 const DELETE_KEYWORD = 'STERG';
 
 /** Quick-filter shortcuts (feature: filtre rapide) — mirrors the backend's `quickFilter` param. */
 const QUICK_FILTERS = [
-  { key: null, label: 'Toate' },
-  { key: 'low_stock', label: 'Stoc redus' },
-  { key: 'out_of_stock', label: 'Fără stoc' },
-  { key: 'no_image', label: 'Fără imagine' },
+  { key: null, label: 'Toate', icon: 'grid' },
+  { key: 'low_stock', label: 'Stoc redus', icon: 'alert' },
+  { key: 'out_of_stock', label: 'Fără stoc', icon: 'box' },
+  { key: 'no_image', label: 'Fără imagine', icon: 'zoom' },
 ];
 
 /** Remembers the chosen page size between visits; falls back to 10. */
@@ -37,6 +58,16 @@ function readStoredPageSize() {
     return PAGE_SIZES.includes(stored) ? stored : 10;
   } catch {
     return 10;
+  }
+}
+
+/** Remembers the chosen surface between visits; falls back to the table. */
+function readStoredViewMode() {
+  try {
+    const stored = window.localStorage.getItem(VIEW_MODE_KEY);
+    return VIEW_MODES.includes(stored) ? stored : 'table';
+  } catch {
+    return 'table';
   }
 }
 
@@ -62,6 +93,12 @@ export default function AdminProducts() {
   const [search, setSearch] = useState('');
   const [quickFilter, setQuickFilter] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // XXII — the slide-in filter panel (TASK 6). Collapsed by default so the
+  // table starts higher up the screen; the active-filter count stays visible on
+  // the trigger, so nothing is ever filtered invisibly.
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [viewMode, setViewMode] = useState(readStoredViewMode);
 
   // Multi-select: ids of the rows ticked on the current page.
   const [selectedIds, setSelectedIds] = useState(() => new Set());
@@ -220,6 +257,17 @@ export default function AdminProducts() {
   const chooseQuickFilter = (key) => {
     setPage(0);
     setQuickFilter(key);
+  };
+
+  /** Switches surface and remembers it. Paging/selection are deliberately kept:
+   *  the same products stay on screen, only their presentation changes. */
+  const changeViewMode = (mode) => {
+    setViewMode(mode);
+    try {
+      window.localStorage.setItem(VIEW_MODE_KEY, mode);
+    } catch {
+      // Storage unavailable (private mode) — the choice simply is not remembered.
+    }
   };
 
   // ---- Inline edit (feature: editare rapidă) ----
@@ -771,151 +819,264 @@ export default function AdminProducts() {
   return (
     <div>
       <AdminNav />
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-slate-800">Management produse</h1>
-        <div className="flex gap-2">
-          <button className="btn-secondary" onClick={doExport} disabled={exporting}>
-            {exporting ? 'Se exportă...' : '⬇ Export Excel'}
-          </button>
-          <button className="btn-secondary" onClick={openImport}>
-            ⬆ Import Excel
-          </button>
-          <button className="btn-primary" onClick={openCreate}>
-            + Produs nou
-          </button>
+
+      <SectionHeader
+        eyebrow="Catalog"
+        title="Management produse"
+        subtitle={
+          totalElements > 0
+            ? `${totalElements} ${totalElements === 1 ? 'produs' : 'produse'} în inventar.`
+            : 'Inventarul, prețurile și galeriile de imagini.'
+        }
+        as="h1"
+        action={
+          <div className="flex flex-wrap gap-2">
+            <NeonButton
+              variant="ghost"
+              onClick={doExport}
+              disabled={exporting}
+              charging={exporting}
+              icon={<GeoIcon name="document" className="h-4 w-4" accent="currentColor" />}
+            >
+              {exporting ? 'Se exportă…' : 'Export Excel'}
+            </NeonButton>
+            <NeonButton
+              variant="ghost"
+              onClick={openImport}
+              icon={<GeoIcon name="layers" className="h-4 w-4" accent="currentColor" />}
+            >
+              Import Excel
+            </NeonButton>
+            <NeonButton
+              onClick={openCreate}
+              icon={<GeoIcon name="sparkle" className="h-4 w-4" accent="currentColor" />}
+            >
+              Produs nou
+            </NeonButton>
+          </div>
+        }
+      />
+
+      {/* XXII — control strip: search stays permanently visible because it is
+          used constantly; everything else folds into the slide-in panel. */}
+      <div className="mb-4 flex flex-wrap items-end gap-3">
+        <div className="min-w-[15rem] flex-1 sm:max-w-sm">
+          <HoloInput
+            label="Caută produse"
+            placeholder="Nume, brand sau SKU…"
+            icon={<GeoIcon name="search" className="h-4 w-4" accent="currentColor" />}
+            value={search}
+            onChange={(e) => {
+              setPage(0);
+              setSearch(e.target.value);
+            }}
+          />
+        </div>
+
+        <NeonButton
+          variant={filtersOpen ? 'primary' : 'ghost'}
+          onClick={() => setFiltersOpen((open) => !open)}
+          icon={<GeoIcon name="layers" className="h-4 w-4" accent="currentColor" />}
+          aria-expanded={filtersOpen}
+          aria-controls="prod-filter-panel"
+        >
+          Filtre{quickFilter ? ' · 1' : ''}
+        </NeonButton>
+
+        {/* Surface switch — table for bulk work, grid for the 3D catalogue. */}
+        <div
+          role="group"
+          aria-label="Mod de afișare"
+          className="flex items-center gap-1 rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] p-1"
+        >
+          {[
+            { mode: 'table', icon: 'layers', label: 'Tabel' },
+            { mode: 'grid', icon: 'grid', label: 'Carduri' },
+          ].map((v) => (
+            <button
+              key={v.mode}
+              type="button"
+              onClick={() => changeViewMode(v.mode)}
+              aria-pressed={viewMode === v.mode}
+              title={`Afișare ${v.label.toLowerCase()}`}
+              className={`flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-all duration-xx ease-xx ${
+                viewMode === v.mode
+                  ? 'border border-[rgba(34,232,245,0.5)] bg-[rgba(34,232,245,0.14)] text-[color:var(--xx-ink)] shadow-[0_0_24px_-10px_rgba(34,232,245,0.9)]'
+                  : 'border border-transparent text-[color:var(--xx-ink-muted)] hover:text-[color:var(--xx-ink)]'
+              }`}
+            >
+              <GeoIcon name={v.icon} className="h-4 w-4" accent="currentColor" />
+              <span className="hidden sm:inline">{v.label}</span>
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <input
-          className="input sm:w-72"
-          placeholder="Caută produse..."
-          value={search}
-          onChange={(e) => {
-            setPage(0);
-            setSearch(e.target.value);
-          }}
-        />
+      {/* Slide-in filter panel (TASK 6 — materialize) */}
+      {filtersOpen && (
+        <div
+          id="prod-filter-panel"
+          className="mb-4 animate-xx-materialize rounded-[1rem] border border-[rgba(122,60,255,0.32)] bg-[rgba(122,60,255,0.07)] p-4"
+        >
+          <div className="flex flex-wrap items-end gap-6">
+            <fieldset className="min-w-[16rem]">
+              <legend className="mb-2 text-[0.65rem] font-semibold uppercase tracking-[0.16em] xx-ink-dim">
+                Filtre rapide
+              </legend>
+              <div className="flex flex-wrap gap-2">
+                {QUICK_FILTERS.map((f) => (
+                  <button
+                    key={f.key ?? 'all'}
+                    type="button"
+                    onClick={() => chooseQuickFilter(f.key)}
+                    aria-pressed={quickFilter === f.key}
+                    className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-xx ease-xx ${
+                      quickFilter === f.key
+                        ? 'border-[rgba(34,232,245,0.55)] bg-[rgba(34,232,245,0.14)] text-[color:var(--xx-ink)] shadow-[0_0_26px_-10px_rgba(34,232,245,0.9)]'
+                        : 'border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] hover:border-[rgba(122,60,255,0.5)] hover:text-[color:var(--xx-ink)]'
+                    }`}
+                  >
+                    <GeoIcon name={f.icon} className="h-3.5 w-3.5" accent="currentColor" />
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
 
-        <label className="flex items-center gap-2 text-sm text-slate-600">
-          Produse pe pagină
-          <select
-            className="input w-24 py-2"
-            value={pageSize}
-            onChange={(e) => changePageSize(Number(e.target.value))}
-          >
-            {PAGE_SIZES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        {totalElements > 0 && (
-          <span className="text-sm text-slate-500">
-            {totalElements} produse în total
-          </span>
-        )}
-      </div>
-
-      {/* Quick filters (feature: filtre rapide) */}
-      <div className="mb-4 flex flex-wrap gap-2">
-        {QUICK_FILTERS.map((f) => (
-          <button
-            key={f.key ?? 'all'}
-            type="button"
-            onClick={() => chooseQuickFilter(f.key)}
-            className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
-              quickFilter === f.key
-                ? 'bg-brand-600 text-white'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+            <div className="w-32">
+              <HoloInput
+                as="select"
+                label="Pe pagină"
+                value={pageSize}
+                onChange={(e) => changePageSize(Number(e.target.value))}
+              >
+                {PAGE_SIZES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </HoloInput>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Batch action bar — only present while something is ticked */}
       {selectedIds.size > 0 && (
-        <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-brand-200 bg-brand-50 px-4 py-2.5 text-sm">
-          <span className="font-medium text-brand-800">
+        <div className="mb-3 flex flex-wrap items-center gap-3 rounded-[1rem] border border-[rgba(34,232,245,0.35)] bg-[rgba(34,232,245,0.08)] px-4 py-2.5 text-sm">
+          <NeonBadge tone="aqua" pulse>
             {selectedIds.size} {selectedIds.size === 1 ? 'produs selectat' : 'produse selectate'}
-          </span>
+          </NeonBadge>
           <button
             type="button"
-            className="text-slate-600 hover:underline"
+            className="text-xs font-semibold xx-ink-muted transition-colors duration-xx hover:text-[color:var(--xx-ink)]"
             onClick={() => setSelectedIds(new Set())}
           >
             Deselectează tot
           </button>
-          <button
-            type="button"
-            className="ml-auto rounded-lg bg-brand-600 px-3 py-1.5 font-medium text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={bulkActiveBusy}
-            onClick={() => bulkSetActive(true)}
-          >
-            {bulkActiveBusy ? 'Se activează...' : '✓ Activează selectate'}
-          </button>
-          <button
-            type="button"
-            className="rounded-lg bg-slate-600 px-3 py-1.5 font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={bulkActiveBusy}
-            onClick={() => bulkSetActive(false)}
-          >
-            {bulkActiveBusy ? 'Se dezactivează...' : '⏸ Dezactivează selectate'}
-          </button>
-          <button
-            type="button"
-            className="rounded-lg bg-red-600 px-3 py-1.5 font-medium text-white hover:bg-red-700"
-            onClick={() => askDelete(selectedProducts)}
-          >
-            🗑 Șterge selectate
-          </button>
+          <div className="ml-auto flex flex-wrap gap-2">
+            <NeonButton
+              size="sm"
+              disabled={bulkActiveBusy}
+              charging={bulkActiveBusy}
+              onClick={() => bulkSetActive(true)}
+              icon={<GeoIcon name="check" className="h-4 w-4" accent="currentColor" />}
+            >
+              {bulkActiveBusy ? 'Se activează…' : 'Activează selectate'}
+            </NeonButton>
+            <NeonButton
+              size="sm"
+              variant="secondary"
+              disabled={bulkActiveBusy}
+              onClick={() => bulkSetActive(false)}
+              icon={<GeoIcon name="clock" className="h-4 w-4" accent="currentColor" />}
+            >
+              {bulkActiveBusy ? 'Se dezactivează…' : 'Dezactivează selectate'}
+            </NeonButton>
+            <NeonButton
+              size="sm"
+              variant="danger"
+              onClick={() => askDelete(selectedProducts)}
+              icon={<GeoIcon name="trash" className="h-4 w-4" accent="currentColor" />}
+            >
+              Șterge selectate
+            </NeonButton>
+          </div>
         </div>
       )}
 
       {loading ? (
-        <Spinner />
+        <HoloLoader label="Se încarcă produsele" />
       ) : products.length === 0 ? (
-        <div className="card px-4 py-10 text-center text-sm text-slate-500">
-          Niciun produs nu corespunde filtrelor curente.
+        <div className="card card-static p-10 text-center">
+          <p className="text-sm xx-ink-muted">
+            {search || quickFilter
+              ? 'Niciun produs nu corespunde filtrelor curente.'
+              : 'Catalogul este gol. Adaugă primul produs.'}
+          </p>
+        </div>
+      ) : viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+          {products.map((p, i) => (
+            <Reveal key={p.id} delay={Math.min(i, 7) * 40}>
+              <ProductTile
+                p={p}
+                selected={selectedIds.has(p.id)}
+                inCart={saleCart.find((l) => l.productId === p.id)?.quantity || 0}
+                activeBusy={activeBusyId === p.id}
+                onToggle={() => toggleOne(p.id)}
+                onPreview={() => openPreview(p)}
+                onEdit={() => openEdit(p)}
+                onSell={() => addToSaleCart(p)}
+                onToggleActive={() => toggleActive(p)}
+                onDelete={() => askDelete([p])}
+              />
+            </Reveal>
+          ))}
         </div>
       ) : (
+        <Reveal>
         <div className="card overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50 text-left text-slate-500">
-              <tr>
+          <table className="min-w-full divide-y divide-[rgba(255,255,255,0.08)] text-sm">
+            <thead className="text-left">
+              <tr className="bg-[rgba(255,255,255,0.03)]">
                 <th className="w-10 px-4 py-3">
                   <input
                     ref={selectAllRef}
                     type="checkbox"
-                    className="h-4 w-4 cursor-pointer accent-brand-600"
+                    className="h-4 w-4 cursor-pointer rounded accent-[#22e8f5]"
                     checked={allOnPageSelected}
                     onChange={toggleAllOnPage}
                     aria-label="Selectează toate produsele de pe această pagină"
                   />
                 </th>
-                <th className="px-4 py-3">Produs</th>
-                <th className="px-4 py-3">Categorie</th>
-                <th className="px-4 py-3">Preț vânzare</th>
-                <th className="px-4 py-3">Achiziție</th>
-                <th className="px-4 py-3">Profit</th>
-                <th className="px-4 py-3">Stoc</th>
-                <th className="px-4 py-3 text-right">Acțiuni</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Produs</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Categorie</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">
+                  Preț vânzare
+                </th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Achiziție</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Profit</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Stoc</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.14em]">
+                  Acțiuni
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-[rgba(255,255,255,0.07)]">
               {products.map((p) => (
                 <tr
                   key={p.id}
-                  className={selectedIds.has(p.id) ? 'bg-brand-50' : 'hover:bg-slate-50'}
+                  className={
+                    selectedIds.has(p.id)
+                      ? 'bg-[rgba(34,232,245,0.08)] shadow-[inset_2px_0_0_0_rgba(34,232,245,0.8)]'
+                      : ''
+                  }
                 >
                   <td className="px-4 py-3">
                     <input
                       type="checkbox"
-                      className="h-4 w-4 cursor-pointer accent-brand-600"
+                      className="h-4 w-4 cursor-pointer rounded accent-[#22e8f5]"
                       checked={selectedIds.has(p.id)}
                       onChange={() => toggleOne(p.id)}
                       aria-label={`Selectează ${p.name}`}
@@ -925,29 +1086,31 @@ export default function AdminProducts() {
                     <button
                       type="button"
                       onClick={() => openPreview(p)}
-                      className="flex items-center gap-3 text-left"
+                      className="group flex items-center gap-3 text-left"
                       title="Previzualizează"
                     >
                       <img
                         src={resolveImage(p.imageUrl)}
                         alt={p.name}
                         loading="lazy"
-                        className="h-10 w-10 rounded object-cover"
+                        className="h-10 w-10 rounded-lg border border-[rgba(255,255,255,0.12)] object-cover transition-all duration-xx ease-xx group-hover:border-[rgba(34,232,245,0.5)] group-hover:shadow-[0_0_22px_-6px_rgba(34,232,245,0.8)]"
                       />
                       <div>
-                        <p className="flex items-center gap-1.5 font-medium text-slate-800 hover:text-brand-600 hover:underline">
+                        <p className="flex items-center gap-1.5 font-medium text-[color:var(--xx-ink)] transition-colors duration-xx group-hover:text-[color:var(--xx-cyan)]">
                           {p.name}
                           {!p.active && (
-                            <span className="badge bg-slate-200 text-slate-600">Inactiv</span>
+                            <span className="rounded-full border border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.06)] px-2 py-0.5 text-[0.65rem] font-semibold text-[#a8b0d4]">
+                              Inactiv
+                            </span>
                           )}
                         </p>
-                        <p className="text-xs text-slate-500">{p.brand}</p>
+                        <p className="text-xs xx-ink-dim">{p.brand}</p>
                       </div>
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-slate-600">
+                  <td className="px-4 py-3 text-xs xx-ink-muted">
                     {p.category}
-                    {p.subcategory ? <span className="text-slate-400"> · {p.subcategory}</span> : null}
+                    {p.subcategory ? <span className="xx-ink-dim"> · {p.subcategory}</span> : null}
                   </td>
                   <td className="px-4 py-3 font-medium">
                     {editingCell?.id === p.id && editingCell.field === 'price' ? (
@@ -956,6 +1119,7 @@ export default function AdminProducts() {
                         step="0.01"
                         className="input w-28 py-1"
                         autoFocus
+                        aria-label={`Preț de vânzare — ${p.name}`}
                         value={editValue}
                         disabled={editBusy}
                         onChange={(e) => setEditValue(e.target.value)}
@@ -969,26 +1133,28 @@ export default function AdminProducts() {
                       <button
                         type="button"
                         onClick={() => startEdit(p, 'price')}
-                        className="rounded px-1.5 py-0.5 hover:bg-slate-100"
+                        className="rounded-lg border border-transparent px-2 py-1 text-[color:var(--xx-ink)] transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.45)] hover:bg-[rgba(34,232,245,0.1)]"
                         title="Editează prețul"
                       >
                         {formatPrice(p.price)}
                       </button>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-graphite-600">
+                  <td className="px-4 py-3 text-xs xx-ink-muted">
                     {p.purchasePrice != null ? formatPrice(p.purchasePrice) : '—'}
                   </td>
                   <td className="px-4 py-3">
                     {p.profit != null ? (
-                      <span className="font-medium text-brand-700">
+                      <span className="font-semibold text-[#7ee9bd]">
                         {formatPrice(p.profit)}
                         {p.marginPercent != null && (
-                          <span className="ml-1 text-xs text-graphite-400">· {p.marginPercent}%</span>
+                          <span className="ml-1 text-xs font-normal xx-ink-dim">
+                            · {p.marginPercent}%
+                          </span>
                         )}
                       </span>
                     ) : (
-                      <span className="text-graphite-400">—</span>
+                      <span className="xx-ink-dim">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -997,6 +1163,7 @@ export default function AdminProducts() {
                         type="number"
                         className="input w-20 py-1"
                         autoFocus
+                        aria-label={`Stoc — ${p.name}`}
                         value={editValue}
                         disabled={editBusy}
                         onChange={(e) => setEditValue(e.target.value)}
@@ -1007,57 +1174,96 @@ export default function AdminProducts() {
                         }}
                       />
                     ) : (
-                      <button type="button" onClick={() => startEdit(p, 'stockQuantity')} title="Editează stocul">
+                      <button
+                        type="button"
+                        onClick={() => startEdit(p, 'stockQuantity')}
+                        title="Editează stocul"
+                        aria-label={`Stoc ${p.stockQuantity} — editează`}
+                      >
                         <span
-                          className={`badge ${
-                            p.stockQuantity > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                            p.stockQuantity > 0
+                              ? 'border border-[rgba(31,172,121,0.42)] bg-[rgba(31,172,121,0.16)] text-[#93e9c4]'
+                              : 'border border-[rgba(184,47,60,0.42)] bg-[rgba(184,47,60,0.16)] text-[#ffb3bd]'
                           }`}
                         >
+                          <span aria-hidden="true">{p.stockQuantity > 0 ? '✓' : '✕'}</span>
                           {p.stockQuantity}
                         </span>
                       </button>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => addToSaleCart(p)}
-                      disabled={p.stockQuantity <= 0}
-                      title={
-                        p.stockQuantity <= 0
-                          ? 'Stoc epuizat'
-                          : 'Adaugă în vânzare — poți adăuga mai multe produse înainte de a finaliza'
-                      }
-                      className="mr-2 inline-flex items-center gap-1 rounded-md bg-green-600 px-2.5 py-1 font-medium text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-                    >
-                      💵 Vândut
-                      {saleCart.some((l) => l.productId === p.id) && (
-                        <span className="ml-0.5 rounded-full bg-white/25 px-1.5 text-xs font-bold">
-                          {saleCart.find((l) => l.productId === p.id).quantity}
-                        </span>
-                      )}
-                    </button>
-                    <button onClick={() => openPreview(p)} className="mr-2 text-slate-600 hover:underline">
-                      Previzualizează
-                    </button>
-                    <button onClick={() => openEdit(p)} className="mr-2 text-brand-600 hover:underline">
-                      Editează
-                    </button>
-                    <button
-                      onClick={() => toggleActive(p)}
-                      disabled={activeBusyId === p.id}
-                      className="mr-2 text-graphite-600 hover:underline disabled:opacity-50"
-                    >
-                      {p.active ? 'Dezactivează' : 'Activează'}
-                    </button>
-                    <button onClick={() => askDelete([p])} className="text-red-600 hover:underline">
-                      Șterge
-                    </button>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => addToSaleCart(p)}
+                        disabled={p.stockQuantity <= 0}
+                        title={
+                          p.stockQuantity <= 0
+                            ? 'Stoc epuizat'
+                            : 'Adaugă în vânzare — poți adăuga mai multe produse înainte de a finaliza'
+                        }
+                        aria-label={`Adaugă ${p.name} în vânzare`}
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.14)] px-2.5 text-xs font-semibold text-[#93e9c4] transition-all duration-xx ease-xx hover:border-[rgba(31,172,121,0.75)] hover:shadow-[0_0_24px_-8px_rgba(31,172,121,0.95)] disabled:cursor-not-allowed disabled:border-[rgba(255,255,255,0.1)] disabled:bg-transparent disabled:text-[color:var(--xx-ink-dim)] disabled:shadow-none"
+                      >
+                        <GeoIcon name="coins" className="h-4 w-4" accent="currentColor" />
+                        <span className="hidden xl:inline">Vândut</span>
+                        {saleCart.some((l) => l.productId === p.id) && (
+                          <span className="rounded-full bg-[rgba(255,255,255,0.18)] px-1.5 text-[0.65rem] font-bold">
+                            {saleCart.find((l) => l.productId === p.id).quantity}
+                          </span>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openPreview(p)}
+                        title="Previzualizează produsul"
+                        aria-label={`Previzualizează ${p.name}`}
+                        className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.5)] hover:text-[color:var(--xx-cyan)]"
+                      >
+                        <GeoIcon name="zoom" className="h-4 w-4" accent="currentColor" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openEdit(p)}
+                        title="Editează produsul"
+                        aria-label={`Editează ${p.name}`}
+                        className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(46,123,255,0.5)] hover:text-[#7fb0ff]"
+                      >
+                        <GeoIcon name="gear" className="h-4 w-4" accent="currentColor" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleActive(p)}
+                        disabled={activeBusyId === p.id}
+                        title={p.active ? 'Dezactivează produsul' : 'Activează produsul'}
+                        aria-label={`${p.active ? 'Dezactivează' : 'Activează'} ${p.name}`}
+                        className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(122,60,255,0.55)] hover:text-[#c4a8ff] disabled:opacity-40"
+                      >
+                        <GeoIcon
+                          name={p.active ? 'clock' : 'bolt'}
+                          className="h-4 w-4"
+                          accent="currentColor"
+                        />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => askDelete([p])}
+                        title="Șterge produsul"
+                        aria-label={`Șterge ${p.name}`}
+                        className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.55)] hover:text-[color:var(--xx-red)]"
+                      >
+                        <GeoIcon name="trash" className="h-4 w-4" accent="currentColor" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        </Reveal>
       )}
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />
 
@@ -1065,23 +1271,33 @@ export default function AdminProducts() {
           bottom of the viewport) while the operator searches/paginates to add more
           products, so building "3 of this, 1 of that" doesn't lose progress. */}
       {saleCart.length > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-green-200 bg-white px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.08)]">
+        <div className="fixed inset-x-0 bottom-0 z-40 animate-xx-materialize border-t border-[rgba(31,172,121,0.4)] bg-[rgba(9,11,28,0.86)] px-4 py-3 backdrop-blur-xl shadow-[0_-18px_50px_-20px_rgba(31,172,121,0.55)]">
           <div className="mx-auto flex max-w-[1680px] flex-wrap items-center gap-3">
-            <span className="font-medium text-slate-700">
-              🛒 {saleCartCount} {saleCartCount === 1 ? 'produs' : 'produse'} · {saleCart.length}{' '}
+            <span className="flex items-center gap-2 text-sm font-medium text-[color:var(--xx-ink)]">
+              <GeoIcon name="cart" className="h-5 w-5" accent="#3ddc9a" />
+              {saleCartCount} {saleCartCount === 1 ? 'produs' : 'produse'} · {saleCart.length}{' '}
               {saleCart.length === 1 ? 'articol' : 'articole'} distincte
             </span>
-            <span className="text-lg font-bold text-slate-900">{formatPrice(saleCartTotal)}</span>
-            <button type="button" className="text-sm text-slate-500 hover:underline" onClick={clearSaleCart}>
-              Golește coșul
-            </button>
+            <span
+              className="text-lg font-bold text-[color:var(--xx-ink)]"
+              style={{ textShadow: '0 0 26px rgba(31,172,121,0.5)' }}
+            >
+              {formatPrice(saleCartTotal)}
+            </span>
             <button
               type="button"
-              className="ml-auto rounded-lg bg-green-600 px-4 py-2 font-medium text-white transition hover:bg-green-700"
-              onClick={() => setSaleCartOpen(true)}
+              className="text-xs font-semibold xx-ink-muted transition-colors duration-xx hover:text-[color:var(--xx-red)]"
+              onClick={clearSaleCart}
             >
-              Finalizează vânzarea →
+              Golește coșul
             </button>
+            <NeonButton
+              className="ml-auto"
+              onClick={() => setSaleCartOpen(true)}
+              iconRight={<GeoIcon name="arrow" className="h-4 w-4" accent="currentColor" />}
+            >
+              Finalizează vânzarea
+            </NeonButton>
           </div>
         </div>
       )}
@@ -1096,8 +1312,8 @@ export default function AdminProducts() {
       >
         <div className="space-y-4">
           {saleCart.length === 0 ? (
-            <p className="py-6 text-center text-sm text-slate-500">
-              Coșul e gol. Închide fereastra și adaugă produse cu butonul 💵 Vândut din tabel.
+            <p className="py-6 text-center text-sm xx-ink-muted">
+              Coșul e gol. Închide fereastra și adaugă produse cu butonul „Vândut” din tabel.
             </p>
           ) : (
             <div className="max-h-[50vh] space-y-3 overflow-y-auto pr-1">
@@ -1105,22 +1321,30 @@ export default function AdminProducts() {
                 const lineQty = Number(line.quantity);
                 const lineOverStock = Number.isFinite(lineQty) && lineQty > line.stockQuantity;
                 return (
-                  <div key={line.productId} className="flex items-center gap-3 rounded-lg border border-slate-200 p-2.5">
+                  <div
+                    key={line.productId}
+                    className="flex items-center gap-3 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] p-2.5"
+                  >
                     <img
                       src={resolveImage(line.imageUrl)}
                       alt={line.name}
-                      className="h-12 w-12 shrink-0 rounded object-cover"
+                      className="h-12 w-12 shrink-0 rounded-lg border border-[rgba(255,255,255,0.12)] object-cover"
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-slate-800">{line.name}</p>
-                      <p className="text-xs text-slate-500">Stoc: {line.stockQuantity} buc.</p>
+                      <p className="truncate text-sm font-medium text-[color:var(--xx-ink)]">{line.name}</p>
+                      <p className="text-xs xx-ink-dim">Stoc: {line.stockQuantity} buc.</p>
                     </div>
                     <input
                       type="number"
                       min="1"
                       step="1"
                       aria-label={`Cantitate — ${line.name}`}
-                      className={`input w-16 py-1 text-center ${lineOverStock ? 'border-red-400 focus:border-red-500 focus:ring-red-200' : ''}`}
+                      aria-invalid={lineOverStock || undefined}
+                      className={`input w-16 py-1 text-center ${
+                        lineOverStock
+                          ? 'border-[rgba(255,84,112,0.65)] focus:border-[rgba(255,84,112,0.9)]'
+                          : ''
+                      }`}
                       value={line.quantity}
                       disabled={saleCartBusy}
                       onChange={(e) => updateSaleCartLine(line.productId, 'quantity', e.target.value)}
@@ -1135,18 +1359,18 @@ export default function AdminProducts() {
                       disabled={saleCartBusy}
                       onChange={(e) => updateSaleCartLine(line.productId, 'unitPrice', e.target.value)}
                     />
-                    <span className="w-20 shrink-0 text-right text-sm font-semibold text-slate-800">
+                    <span className="w-20 shrink-0 text-right text-sm font-semibold text-[color:var(--xx-ink)]">
                       {formatPrice((Number(line.quantity) || 0) * (Number(line.unitPrice) || 0))}
                     </span>
                     <button
                       type="button"
                       onClick={() => removeFromSaleCart(line.productId)}
                       disabled={saleCartBusy}
-                      className="shrink-0 text-slate-400 hover:text-red-600 disabled:opacity-50"
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.55)] hover:text-[color:var(--xx-red)] disabled:opacity-40"
                       title="Elimină din vânzare"
                       aria-label={`Elimină ${line.name} din vânzare`}
                     >
-                      ✕
+                      <GeoIcon name="close" className="h-4 w-4" accent="currentColor" />
                     </button>
                   </div>
                 );
@@ -1155,31 +1379,36 @@ export default function AdminProducts() {
           )}
 
           {saleCartError && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">{saleCartError}</p>
+            <p
+              role="alert"
+              className="rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-3 py-2 text-sm font-medium text-[#ffc2cc]"
+            >
+              {saleCartError}
+            </p>
           )}
 
-          <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2.5">
-            <span className="text-sm font-medium text-slate-600">Total ({saleCartCount} buc.)</span>
-            <span className="text-lg font-bold text-slate-900">{formatPrice(saleCartTotal)}</span>
+          <div className="flex items-center justify-between rounded-xl border border-[rgba(34,232,245,0.3)] bg-[rgba(34,232,245,0.08)] px-4 py-3">
+            <span className="text-sm font-medium xx-ink-muted">Total ({saleCartCount} buc.)</span>
+            <span
+              className="text-lg font-bold text-[color:var(--xx-ink)]"
+              style={{ textShadow: '0 0 26px rgba(34,232,245,0.45)' }}
+            >
+              {formatPrice(saleCartTotal)}
+            </span>
           </div>
 
           <div className="flex justify-end gap-2 pt-1">
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => setSaleCartOpen(false)}
-              disabled={saleCartBusy}
-            >
+            <NeonButton variant="ghost" onClick={() => setSaleCartOpen(false)} disabled={saleCartBusy}>
               Continuă cumpărăturile
-            </button>
-            <button
-              type="button"
-              className="rounded-lg bg-green-600 px-4 py-2 font-medium text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+            </NeonButton>
+            <NeonButton
               onClick={confirmSaleCart}
               disabled={saleCartBusy || saleCart.length === 0}
+              charging={saleCartBusy}
+              icon={<GeoIcon name="check" className="h-4 w-4" accent="currentColor" />}
             >
-              {saleCartBusy ? 'Se înregistrează...' : 'Confirmă vânzarea'}
-            </button>
+              {saleCartBusy ? 'Se înregistrează…' : 'Confirmă vânzarea'}
+            </NeonButton>
           </div>
         </div>
       </Modal>
@@ -1191,28 +1420,31 @@ export default function AdminProducts() {
         onClose={closeDelete}
         maxWidth="max-w-lg"
       >
-        <p className="text-sm text-slate-600">
+        <p className="text-sm xx-ink-muted">
           Următoarele produse vor fi șterse definitiv, împreună cu imaginile lor. Operațiunea nu poate
           fi anulată.
         </p>
-        <ul className="mt-3 max-h-60 space-y-1 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+        <ul className="mt-3 max-h-60 space-y-1 overflow-y-auto rounded-xl border border-[rgba(255,84,112,0.3)] bg-[rgba(255,84,112,0.07)] p-3 text-sm text-[color:var(--xx-ink)]">
           {pending.map((p) => (
-            <li key={p.id} className="truncate">
-              • {p.name}
+            <li key={p.id} className="flex items-center gap-2 truncate">
+              <span aria-hidden="true" className="text-[color:var(--xx-red)]">
+                ▪
+              </span>
+              {p.name}
             </li>
           ))}
         </ul>
         <div className="mt-5 flex justify-end gap-2">
-          <button type="button" className="btn-secondary" onClick={closeDelete}>
+          <NeonButton variant="ghost" onClick={closeDelete}>
             Anulează
-          </button>
-          <button
-            type="button"
-            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+          </NeonButton>
+          <NeonButton
+            variant="danger"
             onClick={() => setDeleteStep(2)}
+            iconRight={<GeoIcon name="arrow" className="h-4 w-4" accent="currentColor" />}
           >
             Continuă
-          </button>
+          </NeonButton>
         </div>
       </Modal>
 
@@ -1223,36 +1455,55 @@ export default function AdminProducts() {
         onClose={closeDelete}
         maxWidth="max-w-lg"
       >
-        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
-          Ești pe cale să ștergi definitiv{' '}
-          <strong>
-            {pending.length} {pending.length === 1 ? 'produs' : 'produse'}
-          </strong>
-          . Pentru a confirma, scrie <strong>{DELETE_KEYWORD}</strong> în câmpul de mai jos.
+        <div className="flex items-start gap-3 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.1)] px-4 py-3 text-sm text-[#ffc2cc]">
+          <GeoIcon name="alert" className="mt-0.5 h-5 w-5 shrink-0" accent="currentColor" />
+          <span>
+            Ești pe cale să ștergi definitiv{' '}
+            <strong className="text-[color:var(--xx-ink)]">
+              {pending.length} {pending.length === 1 ? 'produs' : 'produse'}
+            </strong>
+            . Pentru a confirma, scrie{' '}
+            <strong className="font-mono text-[color:var(--xx-ink)]">{DELETE_KEYWORD}</strong> în câmpul
+            de mai jos.
+          </span>
         </div>
         {deleteError && (
-          <div className="mt-3 rounded-lg bg-red-100 px-4 py-2 text-sm text-red-800">{deleteError}</div>
-        )}
-        <input
-          className="input mt-3"
-          value={deleteWord}
-          onChange={(e) => setDeleteWord(e.target.value)}
-          placeholder={DELETE_KEYWORD}
-          autoComplete="off"
-          aria-label={`Scrie ${DELETE_KEYWORD} pentru a confirma`}
-        />
-        <div className="mt-5 flex justify-end gap-2">
-          <button type="button" className="btn-secondary" onClick={closeDelete}>
-            Anulează
-          </button>
-          <button
-            type="button"
-            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
-            disabled={deleteBusy || deleteWord.trim().toUpperCase() !== DELETE_KEYWORD}
-            onClick={confirmDelete}
+          <div
+            role="alert"
+            className="mt-3 rounded-xl border border-[rgba(255,84,112,0.5)] bg-[rgba(255,84,112,0.16)] px-4 py-2 text-sm text-[#ffc2cc]"
           >
-            {deleteBusy ? 'Se șterge...' : 'Șterge definitiv'}
-          </button>
+            {deleteError}
+          </div>
+        )}
+        <div className="mt-3">
+          <HoloInput
+            label={`Scrie ${DELETE_KEYWORD} pentru a confirma`}
+            value={deleteWord}
+            onChange={(e) => setDeleteWord(e.target.value)}
+            placeholder={DELETE_KEYWORD}
+            autoComplete="off"
+            status={
+              deleteWord.trim() === ''
+                ? null
+                : deleteWord.trim().toUpperCase() === DELETE_KEYWORD
+                ? 'valid'
+                : 'invalid'
+            }
+          />
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <NeonButton variant="ghost" onClick={closeDelete}>
+            Anulează
+          </NeonButton>
+          <NeonButton
+            variant="danger"
+            disabled={deleteBusy || deleteWord.trim().toUpperCase() !== DELETE_KEYWORD}
+            charging={deleteBusy}
+            onClick={confirmDelete}
+            icon={<GeoIcon name="trash" className="h-4 w-4" accent="currentColor" />}
+          >
+            {deleteBusy ? 'Se șterge…' : 'Șterge definitiv'}
+          </NeonButton>
         </div>
       </Modal>
 
@@ -1264,97 +1515,89 @@ export default function AdminProducts() {
         maxWidth="max-w-2xl"
       >
         {error && (
-          <div className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>
+          <div
+            role="alert"
+            className="mb-4 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-4 py-2 text-sm text-[#ffc2cc]"
+          >
+            {error}
+          </div>
         )}
         <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-600">Nume</label>
-            <input name="name" className="input" value={form.name} onChange={handleChange} required />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-600">Descriere</label>
-            <textarea
-              name="description"
-              className="input min-h-[80px]"
-              value={form.description}
+          <HoloInput label="Nume" name="name" value={form.name} onChange={handleChange} required />
+
+          <HoloInput
+            as="textarea"
+            label="Descriere"
+            name="description"
+            className="min-h-[80px]"
+            value={form.description}
+            onChange={handleChange}
+          />
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <HoloInput
+              type="number"
+              step="0.01"
+              label="Preț vânzare (RON)"
+              name="price"
+              value={form.price}
+              onChange={handleChange}
+              required
+            />
+            <HoloInput
+              type="number"
+              step="0.01"
+              label="Preț achiziție (RON)"
+              hint="Vizibil doar administratorilor."
+              name="purchasePrice"
+              value={form.purchasePrice}
               onChange={handleChange}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-600">Preț vânzare (RON)</label>
-              <input
-                type="number"
-                step="0.01"
-                name="price"
-                className="input"
-                value={form.price}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-600">
-                Preț achiziție (RON) · doar admin
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                name="purchasePrice"
-                className="input"
-                value={form.purchasePrice}
-                onChange={handleChange}
-              />
-            </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <HoloInput
+              type="number"
+              label="Stoc"
+              name="stockQuantity"
+              value={form.stockQuantity}
+              onChange={handleChange}
+              required
+            />
+            <HoloInput label="Cod / SKU" name="sku" value={form.sku} onChange={handleChange} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-600">Stoc</label>
-              <input
-                type="number"
-                name="stockQuantity"
-                className="input"
-                value={form.stockQuantity}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-600">Cod / SKU</label>
-              <input name="sku" className="input" value={form.sku} onChange={handleChange} />
-            </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <HoloInput label="Categorie" name="category" value={form.category} onChange={handleChange} />
+            <HoloInput
+              label="Subcategorie"
+              name="subcategory"
+              value={form.subcategory}
+              onChange={handleChange}
+            />
+            <HoloInput label="Brand" name="brand" value={form.brand} onChange={handleChange} />
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-600">Categorie</label>
-              <input name="category" className="input" value={form.category} onChange={handleChange} />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-600">Subcategorie</label>
-              <input
-                name="subcategory"
-                className="input"
-                value={form.subcategory}
-                onChange={handleChange}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-600">Brand</label>
-              <input name="brand" className="input" value={form.brand} onChange={handleChange} />
-            </div>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-600">
-              URL imagine (opțional)
-            </label>
-            <input name="imageUrl" className="input" value={form.imageUrl} onChange={handleChange} />
-          </div>
+
+          <HoloInput
+            label="URL imagine"
+            hint="Opțional — o galerie încărcată local are prioritate."
+            name="imageUrl"
+            value={form.imageUrl}
+            onChange={handleChange}
+          />
 
           {editing ? (
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-600">Imagini produs</label>
+              <p className="mb-1 text-xs font-semibold uppercase tracking-[0.16em] xx-ink-dim">
+                Imagini produs
+              </p>
               {imgError && (
-                <div className="mb-2 rounded bg-red-50 px-3 py-1.5 text-xs text-red-700">{imgError}</div>
+                <div
+                  role="alert"
+                  className="mb-2 rounded-lg border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-3 py-1.5 text-xs text-[#ffc2cc]"
+                >
+                  {imgError}
+                </div>
               )}
               <div
                 onDragOver={(e) => {
@@ -1367,12 +1610,15 @@ export default function AdminProducts() {
                   setDragOver(false);
                   handleImageFiles(e.dataTransfer.files);
                 }}
-                className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-6 text-center text-sm transition ${
-                  dragOver ? 'border-brand-500 bg-brand-50' : 'border-slate-300'
+                className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-4 py-6 text-center text-sm transition-all duration-xx ease-xx ${
+                  dragOver
+                    ? 'border-[rgba(34,232,245,0.7)] bg-[rgba(34,232,245,0.1)] shadow-[0_0_44px_-14px_rgba(34,232,245,0.95)]'
+                    : 'border-[rgba(255,255,255,0.16)]'
                 }`}
               >
-                <p className="text-slate-600">Trage imaginile aici sau</p>
-                <label className="mt-1 cursor-pointer font-medium text-brand-600 hover:underline">
+                <GeoIcon name="layers" className="mb-1 h-6 w-6" accent="var(--xx-cyan)" />
+                <p className="xx-ink-muted">Trage imaginile aici sau</p>
+                <label className="mt-1 cursor-pointer font-semibold text-[color:var(--xx-cyan)] underline-offset-4 hover:underline">
                   alege fișiere
                   <input
                     type="file"
@@ -1385,13 +1631,13 @@ export default function AdminProducts() {
                     }}
                   />
                 </label>
-                <p className="mt-1 text-xs text-slate-400">JPG, PNG sau WebP · max 5 MB</p>
-                {imgBusy && <p className="mt-2 text-xs text-brand-600">Se procesează...</p>}
+                <p className="mt-1 text-xs xx-ink-dim">JPG, PNG sau WebP · max 5 MB</p>
+                {imgBusy && <HoloLoader inline size="sm" label="Se procesează" className="mt-2" />}
               </div>
 
               {images.length > 0 && (
                 <>
-                  <p className="mt-3 text-xs text-slate-400">
+                  <p className="mt-3 text-xs xx-ink-dim">
                     Trage o imagine pentru a schimba ordinea din galerie.
                   </p>
                   <div className="mt-1 grid grid-cols-3 gap-3 sm:grid-cols-4">
@@ -1406,10 +1652,10 @@ export default function AdminProducts() {
                         }
                         onDrop={(e) => handleImageDrop(e, img.id)}
                         onDragEnd={handleImageDragEnd}
-                        className={`group relative cursor-grab overflow-hidden rounded-lg border transition active:cursor-grabbing ${
+                        className={`group relative cursor-grab overflow-hidden rounded-xl border transition-all duration-xx ease-xx active:cursor-grabbing ${
                           dragOverImageId === img.id
-                            ? 'border-brand-500 ring-2 ring-brand-300'
-                            : 'border-slate-200'
+                            ? 'border-[rgba(34,232,245,0.75)] shadow-[0_0_40px_-12px_rgba(34,232,245,0.95)]'
+                            : 'border-[rgba(255,255,255,0.12)]'
                         } ${dragImageId === img.id ? 'opacity-40' : ''}`}
                       >
                         <img
@@ -1420,23 +1666,24 @@ export default function AdminProducts() {
                           draggable={false}
                         />
                         {img.primary && (
-                          <span className="absolute left-1 top-1 rounded bg-brand-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                          <span className="absolute left-1 top-1 rounded-md border border-[rgba(34,232,245,0.5)] bg-[rgba(9,11,28,0.8)] px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--xx-cyan)] backdrop-blur-sm">
                             Principală
                           </span>
                         )}
                         {img.width && img.height && (
-                          <span className="absolute bottom-0 right-0 rounded-tl bg-black/60 px-1 py-0.5 text-[9px] text-white">
+                          <span className="absolute bottom-0 right-0 rounded-tl-md bg-[rgba(3,4,12,0.8)] px-1 py-0.5 text-[9px] text-[#a8b0d4]">
                             {img.width}×{img.height}
                             {img.format ? ` · ${img.format.toUpperCase()}` : ''}
                           </span>
                         )}
-                        <div className="absolute inset-x-0 top-0 flex items-center gap-1 bg-black/50 p-1 opacity-0 transition group-hover:opacity-100">
+                        <div className="absolute inset-x-0 top-0 flex items-center gap-1 bg-[rgba(3,4,12,0.72)] p-1 opacity-0 backdrop-blur-sm transition-opacity duration-xx ease-xx group-hover:opacity-100 focus-within:opacity-100">
                           {!img.primary && (
                             <button
                               type="button"
                               onClick={() => handleSetPrimary(img.id)}
                               disabled={imgBusy}
-                              className="rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-medium text-slate-700 hover:bg-white"
+                              aria-label="Setează ca imagine principală"
+                              className="rounded-md border border-[rgba(34,232,245,0.45)] bg-[rgba(34,232,245,0.14)] px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--xx-cyan)] transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.8)] disabled:opacity-40"
                             >
                               ★ Principală
                             </button>
@@ -1447,7 +1694,7 @@ export default function AdminProducts() {
                                 type="button"
                                 onClick={() => handleDeleteImage(img.id)}
                                 disabled={imgBusy}
-                                className="rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-semibold text-white hover:bg-red-700"
+                                className="rounded-md border border-[rgba(255,84,112,0.6)] bg-[rgba(255,84,112,0.22)] px-1.5 py-0.5 text-[10px] font-semibold text-[#ffc2cc] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.9)] disabled:opacity-40"
                               >
                                 Sigur?
                               </button>
@@ -1455,7 +1702,7 @@ export default function AdminProducts() {
                                 type="button"
                                 onClick={cancelDeleteImage}
                                 disabled={imgBusy}
-                                className="rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-medium text-slate-700 hover:bg-white"
+                                className="rounded-md border border-[rgba(255,255,255,0.2)] px-1.5 py-0.5 text-[10px] font-medium text-[#a8b0d4] transition-all duration-xx ease-xx hover:text-[color:var(--xx-ink)] disabled:opacity-40"
                               >
                                 Anulează
                               </button>
@@ -1465,9 +1712,10 @@ export default function AdminProducts() {
                               type="button"
                               onClick={() => askDeleteImage(img.id)}
                               disabled={imgBusy}
-                              className="ml-auto rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-medium text-white hover:bg-red-700"
+                              aria-label="Șterge imaginea"
+                              className="ml-auto grid h-5 w-5 place-items-center rounded-md border border-[rgba(255,84,112,0.5)] bg-[rgba(255,84,112,0.18)] text-[color:var(--xx-red)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.9)] disabled:opacity-40"
                             >
-                              ✕
+                              <GeoIcon name="close" className="h-3 w-3" accent="currentColor" />
                             </button>
                           )}
                         </div>
@@ -1478,28 +1726,21 @@ export default function AdminProducts() {
               )}
             </div>
           ) : (
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-600">
-                Imagine principală (opțional)
-              </label>
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="input"
-                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-              />
-              <p className="mt-1 text-xs text-slate-400">
-                Poți adăuga mai multe imagini după ce salvezi produsul.
-              </p>
-            </div>
+            <HoloInput
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              label="Imagine principală (opțional)"
+              hint="Poți adăuga mai multe imagini după ce salvezi produsul."
+              onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+            />
           )}
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" className="btn-secondary" onClick={() => setModalOpen(false)}>
+            <NeonButton type="button" variant="ghost" onClick={() => setModalOpen(false)}>
               Anulează
-            </button>
-            <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? 'Se salvează...' : 'Salvează'}
-            </button>
+            </NeonButton>
+            <NeonButton type="submit" disabled={saving} charging={saving}>
+              {saving ? 'Se salvează…' : 'Salvează'}
+            </NeonButton>
           </div>
         </form>
       </Modal>
@@ -1512,10 +1753,15 @@ export default function AdminProducts() {
         maxWidth="max-w-2xl"
       >
         {importError && (
-          <div className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">{importError}</div>
+          <div
+            role="alert"
+            className="mb-4 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-4 py-2 text-sm text-[#ffc2cc]"
+          >
+            {importError}
+          </div>
         )}
 
-        <p className="mb-3 text-sm text-slate-600">
+        <p className="mb-3 text-sm xx-ink-muted">
           {syncMode
             ? 'Mod "doar prețuri achiziție": actualizez DOAR prețul de achiziție al produselor existente, potrivind după nume. Nu creez, nu șterg și nu modific stoc, preț de vânzare sau categorii.'
             : restockMode
@@ -1523,10 +1769,10 @@ export default function AdminProducts() {
             : 'Încarcă fișierul .xlsx completat după șablon. Îl verific întâi (fără a scrie nimic) și îți arăt exact ce e valid și ce trebuie corectat. Abia după confirmare import produsele.'}
         </p>
 
-        <label className="mb-2 flex cursor-pointer items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+        <label className="mb-2 flex cursor-pointer items-start gap-2.5 rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] px-3 py-2.5 text-sm xx-ink-muted transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.4)]">
           <input
             type="checkbox"
-            className="mt-0.5"
+            className="mt-0.5 h-4 w-4 cursor-pointer rounded accent-[#22e8f5]"
             checked={syncMode}
             onChange={(e) => {
               setSyncMode(e.target.checked);
@@ -1537,15 +1783,15 @@ export default function AdminProducts() {
             }}
           />
           <span>
-            <span className="font-medium">Doar prețuri de achiziție</span> — completează prețul de
+            <span className="font-semibold text-[color:var(--xx-ink)]">Doar prețuri de achiziție</span> — completează prețul de
             achiziție lipsă din baza de date, fără a atinge stocul, prețul de vânzare sau categoriile.
           </span>
         </label>
 
-        <label className="mb-3 flex cursor-pointer items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+        <label className="mb-3 flex cursor-pointer items-start gap-2.5 rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] px-3 py-2.5 text-sm xx-ink-muted transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.4)]">
           <input
             type="checkbox"
-            className="mt-0.5"
+            className="mt-0.5 h-4 w-4 cursor-pointer rounded accent-[#22e8f5]"
             checked={restockMode}
             onChange={(e) => {
               setRestockMode(e.target.checked);
@@ -1556,16 +1802,17 @@ export default function AdminProducts() {
             }}
           />
           <span>
-            <span className="font-medium">Mod intrare marfă</span> — la produsele existente adaugă
+            <span className="font-semibold text-[color:var(--xx-ink)]">Mod intrare marfă</span> — la produsele existente adaugă
             cantitatea la stoc și recalculează prețul de achiziție ca medie ponderată (CMP); produsele
             noi sunt adăugate normal.
           </span>
         </label>
 
-        <input
+        <HoloInput
           type="file"
           accept=".xlsx,.xls"
-          className="input"
+          label="Fișier Excel"
+          hint="Format .xlsx sau .xls, completat după șablon."
           onChange={(e) => {
             setImportFile(e.target.files?.[0] || null);
             setImportReport(null);
@@ -1596,7 +1843,11 @@ export default function AdminProducts() {
             </div>
 
             {importDone && (
-              <div className="rounded-lg bg-green-50 px-4 py-2 text-sm text-green-700">
+              <div
+                role="status"
+                className="flex items-start gap-2 rounded-xl border border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.12)] px-4 py-2.5 text-sm text-[#93e9c4]"
+              >
+                <GeoIcon name="check" className="mt-0.5 h-4 w-4 shrink-0" accent="currentColor" />
                 {syncMode
                   ? `Sincronizare finalizată: ${importDone.updatedCount} produse au primit prețul de achiziție.`
                   : restockMode
@@ -1606,9 +1857,12 @@ export default function AdminProducts() {
             )}
 
             {importReport.errors?.length > 0 && (
-              <div className="max-h-48 overflow-y-auto rounded-lg border border-red-100 bg-red-50 p-3 text-sm">
-                <p className="mb-1 font-semibold text-red-700">Rânduri cu probleme (vor fi sărite):</p>
-                <ul className="list-disc space-y-1 pl-5 text-red-700">
+              <div className="max-h-48 overflow-y-auto rounded-xl border border-[rgba(255,84,112,0.4)] bg-[rgba(255,84,112,0.08)] p-3 text-sm">
+                <p className="mb-1 flex items-center gap-2 font-semibold text-[#ffc2cc]">
+                  <GeoIcon name="alert" className="h-4 w-4" accent="currentColor" />
+                  Rânduri cu probleme (vor fi sărite):
+                </p>
+                <ul className="list-disc space-y-1 pl-5 text-[#ffc2cc]">
                   {importReport.errors.map((e) => (
                     <li key={e.row}>
                       Rând {e.row}: {e.message}
@@ -1619,9 +1873,12 @@ export default function AdminProducts() {
             )}
 
             {importReport.warnings?.length > 0 && (
-              <div className="max-h-40 overflow-y-auto rounded-lg border border-amber-100 bg-amber-50 p-3 text-sm">
-                <p className="mb-1 font-semibold text-amber-700">Avertismente:</p>
-                <ul className="list-disc space-y-1 pl-5 text-amber-700">
+              <div className="max-h-40 overflow-y-auto rounded-xl border border-[rgba(176,140,9,0.42)] bg-[rgba(176,140,9,0.1)] p-3 text-sm">
+                <p className="mb-1 flex items-center gap-2 font-semibold text-[#f0d089]">
+                  <GeoIcon name="clock" className="h-4 w-4" accent="currentColor" />
+                  Avertismente:
+                </p>
+                <ul className="list-disc space-y-1 pl-5 text-[#f0d089]">
                   {importReport.warnings.map((w, i) => (
                     <li key={i}>{w}</li>
                   ))}
@@ -1631,23 +1888,23 @@ export default function AdminProducts() {
           </div>
         )}
 
-        <div className="mt-5 flex justify-end gap-2">
-          <button type="button" className="btn-secondary" onClick={() => setImportOpen(false)}>
+        <div className="mt-5 flex flex-wrap justify-end gap-2">
+          <NeonButton variant="ghost" onClick={() => setImportOpen(false)}>
             Închide
-          </button>
-          <button
-            type="button"
-            className="btn-secondary"
+          </NeonButton>
+          <NeonButton
+            variant="secondary"
             disabled={importBusy || !importFile}
+            charging={importBusy}
             onClick={() => runImport(true)}
+            icon={<GeoIcon name="shield" className="h-4 w-4" accent="currentColor" />}
           >
-            {importBusy ? 'Se verifică...' : 'Verifică fișierul'}
-          </button>
-          <button
-            type="button"
-            className="btn-primary"
+            {importBusy ? 'Se verifică…' : 'Verifică fișierul'}
+          </NeonButton>
+          <NeonButton
             disabled={importBusy || !importReport || importReport.validCount === 0 || !!importDone}
             onClick={() => runImport(false)}
+            icon={<GeoIcon name="layers" className="h-4 w-4" accent="currentColor" />}
           >
             {importDone
               ? syncMode
@@ -1660,7 +1917,7 @@ export default function AdminProducts() {
               : restockMode
               ? `Înregistrează intrarea (${importReport ? importReport.validCount : ''})`
               : `Importă ${importReport ? importReport.validCount : ''} produse`}
-          </button>
+          </NeonButton>
         </div>
       </Modal>
 
@@ -1678,52 +1935,49 @@ export default function AdminProducts() {
                 src={resolveImage(previewProduct.imageUrl)}
                 alt={previewProduct.name}
                 loading="lazy"
-                className="h-28 w-28 flex-shrink-0 rounded-lg border border-slate-200 object-cover"
+                className="h-28 w-28 flex-shrink-0 rounded-xl border border-[rgba(255,255,255,0.14)] object-cover shadow-[0_0_44px_-16px_rgba(34,232,245,0.8)]"
               />
               <div className="min-w-0 flex-1">
-                <p className="text-lg font-semibold text-slate-800">{previewProduct.name}</p>
-                <p className="text-sm text-slate-500">
+                <p className="text-lg font-semibold text-[color:var(--xx-ink)]">{previewProduct.name}</p>
+                <p className="text-sm xx-ink-muted">
                   {previewProduct.category}
                   {previewProduct.subcategory ? ` · ${previewProduct.subcategory}` : ''}
                   {previewProduct.brand ? ` · ${previewProduct.brand}` : ''}
                 </p>
                 {previewProduct.sku && (
-                  <p className="mt-1 text-xs text-slate-400">SKU: {previewProduct.sku}</p>
+                  <p className="mt-1 font-mono text-xs xx-ink-dim">SKU: {previewProduct.sku}</p>
                 )}
                 <div className="mt-2 flex flex-wrap items-center gap-3">
-                  <span className="text-xl font-bold text-slate-800">
+                  <span
+                    className="text-xl font-bold text-[color:var(--xx-ink)]"
+                    style={{ textShadow: '0 0 26px rgba(34,232,245,0.4)' }}
+                  >
                     {formatPrice(previewProduct.price)}
                   </span>
                   {previewProduct.purchasePrice != null && (
-                    <span className="text-sm text-graphite-500">
+                    <span className="text-sm xx-ink-muted">
                       Achiziție: {formatPrice(previewProduct.purchasePrice)}
                     </span>
                   )}
                   {previewProduct.profit != null && (
-                    <span className="text-sm font-medium text-brand-700">
+                    <span className="text-sm font-semibold text-[#7ee9bd]">
                       Profit: {formatPrice(previewProduct.profit)}
                       {previewProduct.marginPercent != null && ` · ${previewProduct.marginPercent}%`}
                     </span>
                   )}
-                  <span
-                    className={`badge ${
-                      previewProduct.stockQuantity > 0
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}
-                  >
+                  <NeonBadge tone={previewProduct.stockQuantity > 0 ? 'good' : 'critical'}>
                     Stoc: {previewProduct.stockQuantity}
-                  </span>
+                  </NeonBadge>
                 </div>
               </div>
             </div>
 
             {previewProduct.description && (
-              <p className="whitespace-pre-line text-sm text-slate-600">{previewProduct.description}</p>
+              <p className="whitespace-pre-line text-sm xx-ink-muted">{previewProduct.description}</p>
             )}
 
             {previewLoading ? (
-              <Spinner />
+              <HoloLoader label="Se încarcă galeria" />
             ) : (
               previewProduct.images?.length > 0 && (
                 <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
@@ -1733,7 +1987,7 @@ export default function AdminProducts() {
                       src={img.thumbnailUrl || img.url}
                       alt=""
                       loading="lazy"
-                      className="h-16 w-full rounded object-cover"
+                      className="h-16 w-full rounded-lg border border-[rgba(255,255,255,0.1)] object-cover"
                     />
                   ))}
                 </div>
@@ -1742,22 +1996,28 @@ export default function AdminProducts() {
 
             {/* Istoric (feature #5) — preț, stoc, imagini, activare/dezactivare */}
             <div>
-              <p className="mb-1 text-sm font-medium text-slate-600">Istoric recent</p>
+              <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] xx-ink-muted">
+                <GeoIcon name="clock" className="h-4 w-4" />
+                Istoric recent
+              </p>
               {previewHistoryLoading ? (
-                <Spinner />
+                <HoloLoader inline size="sm" label="Se încarcă istoricul" />
               ) : previewHistory.length === 0 ? (
-                <p className="text-xs text-slate-400">Nicio activitate înregistrată pentru acest produs.</p>
+                <p className="text-xs xx-ink-muted">Nicio activitate înregistrată pentru acest produs.</p>
               ) : (
-                <ul className="max-h-40 space-y-1.5 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
+                <ul className="max-h-40 space-y-1.5 overflow-y-auto rounded-[0.9rem] border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] p-3 text-xs">
                   {previewHistory.map((h) => (
-                    <li key={h.id} className="flex items-start justify-between gap-3">
-                      <span className="text-slate-600">
-                        <span className="font-medium text-slate-700">
+                    <li
+                      key={h.id}
+                      className="flex items-start justify-between gap-3 border-b border-[rgba(255,255,255,0.06)] pb-1.5 last:border-0 last:pb-0"
+                    >
+                      <span className="xx-ink-muted">
+                        <span className="font-semibold text-[#c9d4ff]">
                           {ACTION_LABELS[h.action] || h.action}
                         </span>
                         {h.details ? ` — ${h.details}` : ''}
                       </span>
-                      <span className="shrink-0 text-slate-400">{formatDate(h.createdAt)}</span>
+                      <span className="shrink-0 font-mono xx-ink-muted">{formatDate(h.createdAt)}</span>
                     </li>
                   ))}
                 </ul>
@@ -1765,12 +2025,12 @@ export default function AdminProducts() {
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
-              <button type="button" className="btn-secondary" onClick={closePreview}>
+              <NeonButton variant="ghost" size="sm" onClick={closePreview}>
                 Închide
-              </button>
-              <button
-                type="button"
-                className="btn-primary"
+              </NeonButton>
+              <NeonButton
+                size="sm"
+                icon={<GeoIcon name="gear" className="h-4 w-4" />}
                 onClick={() => {
                   const p = previewProduct;
                   closePreview();
@@ -1778,7 +2038,7 @@ export default function AdminProducts() {
                 }}
               >
                 Editează
-              </button>
+              </NeonButton>
             </div>
           </div>
         )}
@@ -1789,17 +2049,199 @@ export default function AdminProducts() {
   );
 }
 
+/**
+ * XXII — raportul de import, redus la patru cifre.
+ *
+ * Tonul nu este singurul purtător al sensului: fiecare cifră stă sub eticheta ei
+ * scrisă, deci raportul rămâne lizibil și pentru un utilizator care nu distinge
+ * verdele de roșu. Culoarea doar accelerează scanarea, nu o condiționează.
+ */
 function Stat({ label, value, tone = 'slate' }) {
   const tones = {
-    slate: 'text-slate-900',
-    green: 'text-green-700',
-    red: 'text-red-700',
-    amber: 'text-amber-700',
+    slate: { ink: '#e8ecff', edge: 'rgba(255,255,255,0.12)', glow: 'rgba(255,255,255,0.18)' },
+    green: { ink: '#7ee9bd', edge: 'rgba(31,172,121,0.38)', glow: 'rgba(31,172,121,0.5)' },
+    red: { ink: '#ff8fa8', edge: 'rgba(255,90,122,0.38)', glow: 'rgba(255,90,122,0.5)' },
+    amber: { ink: '#ffd27a', edge: 'rgba(255,186,80,0.38)', glow: 'rgba(255,186,80,0.5)' },
   };
+  const t = tones[tone] || tones.slate;
+
   return (
-    <div className="rounded-lg border border-slate-200 p-3 text-center">
-      <p className={`text-2xl font-bold ${tones[tone]}`}>{value}</p>
-      <p className="text-xs text-slate-500">{label}</p>
+    <div
+      className="rounded-[0.9rem] border bg-[rgba(255,255,255,0.04)] p-3 text-center"
+      style={{ borderColor: t.edge }}
+    >
+      <p
+        className="text-2xl font-bold"
+        style={{ color: t.ink, textShadow: `0 0 22px ${t.glow}` }}
+      >
+        {value}
+      </p>
+      <p className="mt-0.5 text-[0.68rem] font-semibold uppercase tracking-[0.14em] xx-ink-muted">
+        {label}
+      </p>
     </div>
+  );
+}
+
+/**
+ * XXII — TASK 6 (product management cu carduri 3D și hover tilt).
+ *
+ * Varianta „grid” a listei de produse. Tabelul rămâne suprafața pentru munca în
+ * masă — editare inline, selecție multiplă, scanare densă — iar acest card este
+ * suprafața pentru munca vizuală: verifici cum arată catalogul fotografic,
+ * observi imediat produsele fără imagine și produsele epuizate.
+ *
+ * Cardul respectă aceleași reguli ca rândul de tabel:
+ *   - starea de selecție este redată de bordura cyan ȘI de checkbox, niciodată
+ *     doar de culoare;
+ *   - stocul poartă simbolul ✓ / ✕ lângă cifră, deci starea se citește fără
+ *     percepția culorii;
+ *   - fiecare buton fără text are `title` și `aria-label`.
+ *
+ * Înclinarea 3D este delegată lui `TiltCard`, care ține perspectiva pe elementul
+ * exterior — zona de click nu se rotește, deci cursorul nu „cade” de pe card în
+ * timpul hover-ului.
+ */
+function ProductTile({
+  p,
+  selected,
+  inCart,
+  activeBusy,
+  onToggle,
+  onPreview,
+  onEdit,
+  onSell,
+  onToggleActive,
+  onDelete,
+}) {
+  const outOfStock = p.stockQuantity <= 0;
+
+  return (
+    <TiltCard
+      max={4}
+      scale={1.015}
+      className="h-full"
+      innerClassName={`group flex h-full flex-col overflow-hidden rounded-[1.15rem] border bg-[rgba(255,255,255,0.04)] backdrop-blur-xl transition-colors duration-200 ${
+        selected
+          ? 'border-[rgba(34,232,245,0.65)] bg-[rgba(34,232,245,0.07)]'
+          : 'border-[rgba(255,255,255,0.1)] hover:border-[rgba(122,60,255,0.45)]'
+      }`}
+    >
+      {/* Imaginea — suprafața pe care operatorul o evaluează în acest mod. */}
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-[rgba(255,255,255,0.03)]">
+        <img
+          src={resolveImage(p.imageUrl)}
+          alt={p.name}
+          loading="lazy"
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
+        />
+
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[rgba(9,11,28,0.92)] via-[rgba(9,11,28,0.35)] to-transparent"
+        />
+
+        <label className="absolute left-3 top-3 flex cursor-pointer items-center rounded-lg bg-[rgba(9,11,28,0.72)] p-1.5 backdrop-blur-md">
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={onToggle}
+            className="h-4 w-4 cursor-pointer accent-[#22e8f5]"
+            aria-label={`Selectează ${p.name}`}
+          />
+        </label>
+
+        <div className="absolute right-3 top-3 flex flex-col items-end gap-1.5">
+          {!p.active && <NeonBadge tone="warning">Inactiv</NeonBadge>}
+          {inCart > 0 && <NeonBadge tone="good" pulse>{`În vânzare: ${inCart}`}</NeonBadge>}
+        </div>
+
+        <div className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-2">
+          <span
+            className="text-lg font-bold text-[#e8ecff]"
+            style={{ textShadow: '0 0 24px rgba(34,232,245,0.45)' }}
+          >
+            {formatPrice(p.price)}
+          </span>
+          <span
+            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.68rem] font-semibold backdrop-blur-md ${
+              outOfStock
+                ? 'border-[rgba(255,90,122,0.45)] bg-[rgba(255,90,122,0.16)] text-[#ff8fa8]'
+                : 'border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.16)] text-[#7ee9bd]'
+            }`}
+          >
+            <span aria-hidden="true">{outOfStock ? '✕' : '✓'}</span>
+            {p.stockQuantity}
+          </span>
+        </div>
+      </div>
+
+      {/* Identitatea produsului. */}
+      <div className="flex flex-1 flex-col gap-1 px-4 pt-3">
+        <p className="line-clamp-2 text-sm font-semibold text-[#e8ecff]">{p.name}</p>
+        {p.brand ? <p className="text-xs xx-ink-dim">{p.brand}</p> : null}
+        {p.sku ? <p className="font-mono text-[0.68rem] xx-ink-muted">{p.sku}</p> : null}
+      </div>
+
+      {/* Acțiunile — aceleași cinci ca în tabel, în aceeași ordine. */}
+      <div className="mt-3 flex items-center gap-1.5 border-t border-[rgba(255,255,255,0.08)] px-3 py-2.5">
+        <button
+          type="button"
+          onClick={onSell}
+          disabled={outOfStock}
+          title={outOfStock ? 'Produs fără stoc' : 'Adaugă în vânzare'}
+          aria-label={`Adaugă ${p.name} în vânzare`}
+          className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-xs font-semibold transition-colors duration-200 ${
+            outOfStock
+              ? 'cursor-not-allowed border-[rgba(255,255,255,0.08)] text-[rgba(232,236,255,0.35)]'
+              : 'border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.12)] text-[#7ee9bd] hover:bg-[rgba(31,172,121,0.22)]'
+          }`}
+        >
+          <GeoIcon name="coins" className="h-4 w-4" />
+          Vinde
+        </button>
+
+        <button
+          type="button"
+          onClick={onPreview}
+          title="Previzualizează"
+          aria-label={`Previzualizează ${p.name}`}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[#c9d4ff] transition-colors duration-200 hover:border-[rgba(34,232,245,0.5)] hover:text-[#22e8f5]"
+        >
+          <GeoIcon name="zoom" className="h-4 w-4" />
+        </button>
+
+        <button
+          type="button"
+          onClick={onEdit}
+          title="Editează"
+          aria-label={`Editează ${p.name}`}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[#c9d4ff] transition-colors duration-200 hover:border-[rgba(122,60,255,0.55)] hover:text-[#b795ff]"
+        >
+          <GeoIcon name="gear" className="h-4 w-4" />
+        </button>
+
+        <button
+          type="button"
+          onClick={onToggleActive}
+          disabled={activeBusy}
+          title={p.active ? 'Dezactivează produsul' : 'Activează produsul'}
+          aria-label={`${p.active ? 'Dezactivează' : 'Activează'} ${p.name}`}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[#c9d4ff] transition-colors duration-200 hover:border-[rgba(255,186,80,0.5)] hover:text-[#ffd27a] disabled:opacity-45"
+        >
+          <GeoIcon name={p.active ? 'clock' : 'bolt'} className="h-4 w-4" />
+        </button>
+
+        <button
+          type="button"
+          onClick={onDelete}
+          title="Șterge produsul"
+          aria-label={`Șterge ${p.name}`}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[#c9d4ff] transition-colors duration-200 hover:border-[rgba(255,90,122,0.5)] hover:text-[#ff8fa8]"
+        >
+          <GeoIcon name="trash" className="h-4 w-4" />
+        </button>
+      </div>
+    </TiltCard>
   );
 }

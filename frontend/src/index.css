@@ -2,38 +2,1059 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================================
+   XXII DESIGN SYSTEM
+   A futuristic interface layer inspired by VisionOS, Tesla UI and holographic
+   sci-fi cockpits.
+
+   Structure of this file:
+     1. Design tokens (CSS custom properties)
+     2. Base layer — the deep-space canvas
+     3. Component layer — glass surfaces, neon controls, holographic inputs
+     4. Utility layer — glow, scan, tilt, modular grid, motion helpers
+     5. Compatibility layer — re-maps the previous light palette onto the dark
+        XXII surface so the ~40 screens that were not individually rewritten
+        still render coherently
+     6. Platform layer — mobile, desktop, TV and VR/AR adaptations
+     7. Accessibility — reduced motion, forced colors, focus visibility
+   ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+   1. DESIGN TOKENS
+   Every magic number in the brief lives here exactly once. Components read the
+   variables; they never restate the values.
+   ------------------------------------------------------------------------ */
 :root {
-  color-scheme: light;
+  color-scheme: dark;
+
+  /* Surfaces — deep space */
+  --xx-void: #04050c;
+  --xx-void-800: #070818;
+  --xx-void-700: #0b0d22;
+  --xx-void-600: #10122e;
+  --xx-violet: #1a0b3d;
+
+  /* Neon accents */
+  --xx-blue: #2e7bff;
+  --xx-purple: #7a3cff;
+  --xx-aqua: #22e8f5;
+  --xx-cyan: #00f0ff;
+  --xx-magenta: #ff3dcb;
+  --xx-lime: #6ef7a8;
+  --xx-amber: #ffc24b;
+  --xx-red: #ff5470;
+
+  /* Glassmorphism — brief: blur 18–24px, transparency 12–18% */
+  --xx-glass-blur: 22px;
+  --xx-glass-blur-soft: 18px;
+  --xx-glass-fill: rgba(255, 255, 255, 0.055);
+  --xx-glass-fill-strong: rgba(255, 255, 255, 0.09);
+  --xx-glass-tint: rgba(122, 60, 255, 0.06);
+  --xx-glass-border: rgba(255, 255, 255, 0.13);
+  --xx-glass-border-strong: rgba(255, 255, 255, 0.22);
+
+  /* Edge glow — brief: shadow spread 40–60px */
+  --xx-glow-blue: 0 0 44px -10px rgba(46, 123, 255, 0.6);
+  --xx-glow-purple: 0 0 48px -10px rgba(122, 60, 255, 0.6);
+  --xx-glow-aqua: 0 0 48px -10px rgba(34, 232, 245, 0.55);
+  --xx-glow-magenta: 0 0 48px -10px rgba(255, 61, 203, 0.55);
+  --xx-glow-strong: 0 0 60px -6px rgba(46, 123, 255, 0.8);
+
+  /* Ink */
+  --xx-ink: #f2f5ff;
+  --xx-ink-muted: #a8b0d4;
+  --xx-ink-dim: #767ea6;
+
+  /* Motion — brief: global timing 0.15s–0.25s */
+  --xx-t-fast: 150ms;
+  --xx-t: 200ms;
+  --xx-t-slow: 250ms;
+  --xx-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Modular grid — brief: spacing 24–32px */
+  --xx-gap: 1.5rem;
+  --xx-gap-lg: 2rem;
+  --xx-radius: 1.25rem;
+  --xx-radius-sm: 0.75rem;
+  --xx-radius-lg: 1.75rem;
 }
 
-body {
-  @apply bg-champagne-50 text-graphite-800 antialiased;
+/* ---------------------------------------------------------------------------
+   2. BASE — the deep-space canvas
+   Three fixed radial pools of light behind a faint technical grid. Fixed
+   attachment keeps the "reactor" stationary while content scrolls over it,
+   which is what makes floating panels read as floating.
+   ------------------------------------------------------------------------ */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply text-[15px] antialiased;
+    margin: 0;
+    min-height: 100vh;
+    color: var(--xx-ink);
+    background-color: var(--xx-void);
+    background-image:
+      radial-gradient(1200px 620px at 12% -12%, rgba(122, 60, 255, 0.3), transparent 62%),
+      radial-gradient(1080px 540px at 88% -4%, rgba(46, 123, 255, 0.24), transparent 62%),
+      radial-gradient(1000px 760px at 50% 112%, rgba(34, 232, 245, 0.14), transparent 60%),
+      linear-gradient(180deg, #06071a 0%, #04050c 45%, #05061a 100%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'ss01';
+  }
+
+  /* The technical grid overlay. Pointer-events none so it never eats a click. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+    background-size: 34px 34px;
+    mask-image: radial-gradient(circle at 50% 32%, #000 0%, transparent 78%);
+    -webkit-mask-image: radial-gradient(circle at 50% 32%, #000 0%, transparent 78%);
+  }
+
+  #root {
+    position: relative;
+    z-index: 1;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display tracking-tight;
+  }
+
+  ::selection {
+    background: rgba(122, 60, 255, 0.45);
+    color: #fff;
+  }
+
+  /* Native controls have to be told about the dark canvas explicitly or the
+     dropdown list renders white-on-white in Chrome. */
+  option,
+  optgroup {
+    background-color: #0b0d22;
+    color: var(--xx-ink);
+  }
+
+  /* Chrome renders the date/number spinners black-on-black by default. */
+  input[type='date']::-webkit-calendar-picker-indicator,
+  input[type='datetime-local']::-webkit-calendar-picker-indicator,
+  input[type='month']::-webkit-calendar-picker-indicator,
+  input[type='time']::-webkit-calendar-picker-indicator {
+    filter: invert(1) opacity(0.65);
+    cursor: pointer;
+  }
+
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    filter: invert(1) opacity(0.55);
+  }
+
+  /* Autofill paints an opaque yellow box over glass inputs otherwise. */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  select:-webkit-autofill {
+    -webkit-text-fill-color: var(--xx-ink);
+    -webkit-box-shadow: 0 0 0 1000px #10122e inset;
+    caret-color: var(--xx-ink);
+    transition: background-color 100000s ease-in-out 0s;
+  }
+
+  /* Thin neon scrollbars keep the cockpit feel in overflow regions. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(122, 60, 255, 0.55) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+    background-color: rgba(122, 60, 255, 0.5);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(46, 123, 255, 0.75);
+  }
 }
 
-/* Reusable component classes — 2026 palette (Emerald Ink / Champagne / Graphite) */
+/* ---------------------------------------------------------------------------
+   3. COMPONENTS
+   The shared class names (.card, .input, .btn-*, .badge) keep their original
+   names on purpose: every existing page already uses them, so redefining them
+   here re-skins the whole application in one place.
+   ------------------------------------------------------------------------ */
 @layer components {
+  /* ---- Glass surfaces ---- */
+  .glass {
+    position: relative;
+    background: linear-gradient(150deg, var(--xx-glass-fill-strong), var(--xx-glass-fill) 46%, var(--xx-glass-tint));
+    backdrop-filter: blur(var(--xx-glass-blur)) saturate(150%);
+    -webkit-backdrop-filter: blur(var(--xx-glass-blur)) saturate(150%);
+    border: 1px solid var(--xx-glass-border);
+    border-radius: var(--xx-radius);
+    box-shadow:
+      0 18px 48px -22px rgba(0, 0, 0, 0.9),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.09);
+  }
+
+  .glass-soft {
+    background: linear-gradient(150deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.025));
+    backdrop-filter: blur(var(--xx-glass-blur-soft)) saturate(140%);
+    -webkit-backdrop-filter: blur(var(--xx-glass-blur-soft)) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: var(--xx-radius-sm);
+  }
+
+  /* The signature panel. `.card` is the legacy name used across every page;
+     `.xx-panel` is the explicit XXII name for new code. They are identical. */
+  .card,
+  .xx-panel {
+    position: relative;
+    isolation: isolate;
+    background: linear-gradient(150deg, var(--xx-glass-fill-strong), var(--xx-glass-fill) 48%, var(--xx-glass-tint));
+    backdrop-filter: blur(var(--xx-glass-blur)) saturate(150%);
+    -webkit-backdrop-filter: blur(var(--xx-glass-blur)) saturate(150%);
+    border: 1px solid var(--xx-glass-border);
+    border-radius: var(--xx-radius);
+    box-shadow:
+      0 18px 48px -22px rgba(0, 0, 0, 0.9),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.09);
+    color: var(--xx-ink);
+    transition:
+      transform var(--xx-t) var(--xx-ease),
+      box-shadow var(--xx-t) var(--xx-ease),
+      border-color var(--xx-t) var(--xx-ease);
+  }
+
+  /* A hairline of neon along the top edge — the "powered panel" cue. */
+  .card::after,
+  .xx-panel::after {
+    content: '';
+    position: absolute;
+    inset: -1px -1px auto -1px;
+    height: 1px;
+    border-radius: inherit;
+    background: linear-gradient(90deg, transparent, rgba(46, 123, 255, 0.85), rgba(122, 60, 255, 0.85), transparent);
+    opacity: 0.65;
+    pointer-events: none;
+  }
+
+  .card:hover,
+  .xx-panel:hover {
+    border-color: var(--xx-glass-border-strong);
+    box-shadow:
+      0 24px 60px -24px rgba(0, 0, 0, 0.95),
+      var(--xx-glow-blue),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.13);
+  }
+
+  /* Opt-out for panels that should not lift (dense tables, nested panels). */
+  .card-static:hover,
+  .xx-panel-static:hover {
+    transform: none;
+    box-shadow:
+      0 18px 48px -22px rgba(0, 0, 0, 0.9),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.09);
+    border-color: var(--xx-glass-border);
+  }
+
+  /* A module that visibly floats — used for hero cards and AI panels. */
+  .xx-float {
+    animation: xx-float 6.5s ease-in-out infinite;
+  }
+
+  /* ---- Buttons ---- */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed;
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold;
+    letter-spacing: 0.01em;
+    border: 1px solid transparent;
+    transition:
+      transform var(--xx-t) var(--xx-ease),
+      box-shadow var(--xx-t) var(--xx-ease),
+      background-color var(--xx-t) var(--xx-ease),
+      border-color var(--xx-t) var(--xx-ease),
+      color var(--xx-t) var(--xx-ease);
+    cursor: pointer;
   }
+
+  .btn:disabled,
+  .btn[disabled] {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  .btn:not(:disabled):hover {
+    transform: translateY(-1px);
+  }
+
+  .btn:not(:disabled):active {
+    transform: translateY(0) scale(0.985);
+  }
+
+  /* Futuristic sheen that sweeps across the face on hover. */
+  .btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, 0.28) 50%, transparent 80%);
+    transform: translateX(-120%);
+    transition: transform 420ms var(--xx-ease);
+    pointer-events: none;
+  }
+
+  .btn:not(:disabled):hover::before {
+    transform: translateX(120%);
+  }
+
   .btn-primary {
-    @apply btn bg-brand-600 text-white hover:bg-brand-700 focus:ring-brand-500;
+    @apply btn text-white;
+    background-image: linear-gradient(120deg, #2e7bff 0%, #7a3cff 100%);
+    background-size: 160% 160%;
+    box-shadow:
+      0 0 0 1px rgba(122, 60, 255, 0.35),
+      0 10px 30px -12px rgba(46, 123, 255, 0.85);
   }
+
+  .btn-primary:not(:disabled):hover {
+    background-position: 100% 50%;
+    box-shadow:
+      0 0 0 1px rgba(122, 60, 255, 0.55),
+      var(--xx-glow-strong);
+  }
+
   .btn-secondary {
-    @apply btn bg-white text-graphite-700 border border-graphite-200 hover:bg-champagne-100 focus:ring-champagne-400;
+    @apply btn;
+    color: var(--xx-ink);
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(var(--xx-glass-blur-soft));
+    -webkit-backdrop-filter: blur(var(--xx-glass-blur-soft));
+    border-color: rgba(255, 255, 255, 0.16);
   }
+
+  .btn-secondary:not(:disabled):hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(34, 232, 245, 0.55);
+    box-shadow: var(--xx-glow-aqua);
+  }
+
+  .btn-ghost {
+    @apply btn;
+    color: var(--xx-ink-muted);
+    background: transparent;
+    border-color: transparent;
+  }
+
+  .btn-ghost:not(:disabled):hover {
+    color: var(--xx-ink);
+    background: rgba(255, 255, 255, 0.06);
+  }
+
   .btn-gold {
-    @apply btn bg-champagne-500 text-graphite-900 hover:bg-champagne-600 focus:ring-champagne-400;
+    @apply btn;
+    color: #10061f;
+    background-image: linear-gradient(120deg, #22e8f5 0%, #ff3dcb 100%);
+    background-size: 160% 160%;
+    box-shadow: 0 10px 30px -12px rgba(255, 61, 203, 0.8);
   }
+
+  .btn-gold:not(:disabled):hover {
+    background-position: 100% 50%;
+    box-shadow: var(--xx-glow-magenta);
+  }
+
   .btn-danger {
-    @apply btn bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
+    @apply btn text-white;
+    background-image: linear-gradient(120deg, #ff5470 0%, #c40f92 100%);
+    background-size: 160% 160%;
+    box-shadow: 0 10px 30px -12px rgba(255, 84, 112, 0.8);
   }
-  .input {
-    @apply w-full rounded-lg border border-graphite-200 bg-white px-3 py-2 text-sm text-graphite-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500;
+
+  .btn-danger:not(:disabled):hover {
+    background-position: 100% 50%;
+    box-shadow: 0 0 48px -10px rgba(255, 84, 112, 0.75);
   }
-  .card {
-    @apply rounded-xl border border-graphite-100 bg-white shadow-sm;
+
+  /* Continuous neon breathing — reserved for the single primary CTA on a
+     screen (hero, "place order"), never for ordinary buttons. */
+  .btn-pulse {
+    animation: xx-pulse-glow 2.6s ease-in-out infinite;
   }
+
+  /* "Charging" progress sweep for a submitting button. */
+  .btn-charging {
+    background-image:
+      linear-gradient(100deg, transparent 10%, rgba(255, 255, 255, 0.35) 40%, transparent 70%),
+      linear-gradient(120deg, #2e7bff 0%, #7a3cff 100%);
+    background-size: 220% 100%, 160% 160%;
+    background-repeat: no-repeat;
+    animation: xx-charge 1.2s linear infinite;
+  }
+
+  /* ---- Holographic inputs ---- */
+  .input,
+  .xx-input {
+    position: relative;
+    width: 100%;
+    border-radius: 0.85rem;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(9, 11, 28, 0.55);
+    backdrop-filter: blur(var(--xx-glass-blur-soft));
+    -webkit-backdrop-filter: blur(var(--xx-glass-blur-soft));
+    color: var(--xx-ink);
+    padding: 0.6rem 0.9rem;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    outline: none;
+    transition:
+      border-color var(--xx-t) var(--xx-ease),
+      box-shadow var(--xx-t) var(--xx-ease),
+      background-color var(--xx-t) var(--xx-ease);
+  }
+
+  .input::placeholder,
+  .xx-input::placeholder {
+    color: var(--xx-ink-dim);
+  }
+
+  .input:hover:not(:disabled),
+  .xx-input:hover:not(:disabled) {
+    border-color: rgba(255, 255, 255, 0.24);
+  }
+
+  .input:focus,
+  .xx-input:focus {
+    border-color: rgba(34, 232, 245, 0.75);
+    background: rgba(9, 11, 28, 0.75);
+    box-shadow:
+      0 0 0 1px rgba(34, 232, 245, 0.35),
+      0 0 34px -10px rgba(34, 232, 245, 0.85);
+  }
+
+  .input:disabled,
+  .xx-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Validation states — TASK 5 (instant validation, red/blue glow). */
+  .input-valid {
+    border-color: rgba(110, 247, 168, 0.7) !important;
+    box-shadow: 0 0 30px -12px rgba(110, 247, 168, 0.9) !important;
+  }
+
+  .input-invalid {
+    border-color: rgba(255, 84, 112, 0.8) !important;
+    box-shadow: 0 0 30px -10px rgba(255, 84, 112, 0.9) !important;
+  }
+
+  /* ---- Badges ---- */
   .badge {
-    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: var(--xx-ink);
+  }
+
+  .badge-neon {
+    border-color: rgba(122, 60, 255, 0.6);
+    background: rgba(122, 60, 255, 0.16);
+    color: #d7c8ff;
+    box-shadow: 0 0 26px -12px rgba(122, 60, 255, 0.95);
+  }
+
+  .badge-aqua {
+    border-color: rgba(34, 232, 245, 0.55);
+    background: rgba(34, 232, 245, 0.14);
+    color: #b3f6ff;
+    box-shadow: 0 0 26px -12px rgba(34, 232, 245, 0.95);
+  }
+
+  .badge-magenta {
+    border-color: rgba(255, 61, 203, 0.55);
+    background: rgba(255, 61, 203, 0.14);
+    color: #ffc4ee;
+    box-shadow: 0 0 26px -12px rgba(255, 61, 203, 0.95);
+  }
+
+  /* ---- Section chrome ---- */
+  .xx-eyebrow {
+    @apply inline-flex items-center gap-2 text-[11px] font-semibold uppercase;
+    letter-spacing: 0.18em;
+    color: var(--xx-ink-dim);
+  }
+
+  .xx-title {
+    @apply font-display font-bold tracking-tight;
+    color: var(--xx-ink);
+  }
+
+  .xx-divider {
+    height: 1px;
+    border: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   4. UTILITIES
+   ------------------------------------------------------------------------ */
+@layer utilities {
+  /* Gradient text for headlines. */
+  .xx-text-gradient {
+    background-image: linear-gradient(120deg, #6ea4ff 0%, #ab7fff 45%, #22e8f5 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .xx-text-gradient-hot {
+    background-image: linear-gradient(120deg, #22e8f5 0%, #ff3dcb 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Edge glows as utilities so components can pick an accent per context. */
+  .xx-glow-blue {
+    box-shadow: var(--xx-glow-blue);
+  }
+  .xx-glow-purple {
+    box-shadow: var(--xx-glow-purple);
+  }
+  .xx-glow-aqua {
+    box-shadow: var(--xx-glow-aqua);
+  }
+  .xx-glow-magenta {
+    box-shadow: var(--xx-glow-magenta);
+  }
+
+  /* Animated neon border, drawn with two stacked gradients so the fill stays
+     transparent (a plain border cannot hold a gradient). */
+  .xx-border-neon {
+    border: 1px solid transparent;
+    background-image:
+      linear-gradient(rgba(9, 11, 28, 0.62), rgba(9, 11, 28, 0.62)),
+      linear-gradient(120deg, #2e7bff, #7a3cff 45%, #22e8f5);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+  }
+
+  .xx-border-neon-hot {
+    border: 1px solid transparent;
+    background-image:
+      linear-gradient(rgba(9, 11, 28, 0.62), rgba(9, 11, 28, 0.62)),
+      linear-gradient(120deg, #22e8f5, #ff3dcb);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+  }
+
+  /* Scan-line overlay. Applied to a positioned parent; the ::after sweep is the
+     hologram cue used on AI cards, focused inputs and loading panels. */
+  .xx-scanning {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .xx-scanning::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 38%;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(34, 232, 245, 0.13) 45%,
+      rgba(34, 232, 245, 0.3) 50%,
+      rgba(34, 232, 245, 0.13) 55%,
+      transparent 100%
+    );
+    animation: xx-scan 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  /* 3D hover surface. The transform values are supplied inline by useTilt(). */
+  .xx-tilt {
+    transform-style: preserve-3d;
+    will-change: transform;
+    transition: transform var(--xx-t) var(--xx-ease);
+  }
+
+  .xx-tilt-deep {
+    perspective: 900px;
+  }
+
+  /* A child that should sit visually above a tilting parent. */
+  .xx-lift-1 {
+    transform: translateZ(28px);
+  }
+  .xx-lift-2 {
+    transform: translateZ(52px);
+  }
+
+  /* Modular grid — TASK 9. Mobile 1 column, desktop 12, TV 6. */
+  .xx-grid {
+    display: grid;
+    gap: var(--xx-gap);
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+
+  @media (min-width: 640px) {
+    .xx-grid {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .xx-grid {
+      gap: var(--xx-gap-lg);
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1920px) {
+    .xx-grid {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+  }
+
+  /* Hides the horizontal scrollbar on carousels without disabling scrolling. */
+  .xx-no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .xx-no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .xx-snap-x {
+    scroll-snap-type: x mandatory;
+  }
+
+  .xx-snap-item {
+    scroll-snap-align: start;
+  }
+
+  /* Ink helpers so new components never reach for a legacy slate token. */
+  .xx-ink {
+    color: var(--xx-ink);
+  }
+  .xx-ink-muted {
+    color: var(--xx-ink-muted);
+  }
+  .xx-ink-dim {
+    color: var(--xx-ink-dim);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   5. COMPATIBILITY LAYER
+   The previous design used the light 2026 palette directly in JSX across every
+   screen. Rewriting all of them in one pass would be a needless risk, so the
+   legacy utilities are re-pointed at the dark XXII surface here.
+
+   Each rule is prefixed with `body` purely to raise specificity above the
+   single-class Tailwind utility it overrides — no `!important` is needed, and a
+   component that wants a different colour can still win with an inline style or
+   a more specific selector.
+   ------------------------------------------------------------------------ */
+
+/* ---- Text ---- */
+body .text-slate-900,
+body .text-graphite-900,
+body .text-slate-800,
+body .text-graphite-800 {
+  color: var(--xx-ink);
+}
+
+body .text-slate-700,
+body .text-graphite-700,
+body .text-slate-600,
+body .text-graphite-600 {
+  color: #cdd4f2;
+}
+
+body .text-slate-500,
+body .text-graphite-500 {
+  color: var(--xx-ink-muted);
+}
+
+body .text-slate-400,
+body .text-graphite-400,
+body .text-slate-300,
+body .text-graphite-300 {
+  color: var(--xx-ink-dim);
+}
+
+body .hover\:text-slate-900:hover,
+body .hover\:text-slate-800:hover,
+body .hover\:text-slate-700:hover,
+body .hover\:text-slate-600:hover {
+  color: var(--xx-ink);
+}
+
+body .placeholder-slate-500::placeholder,
+body .placeholder-slate-400::placeholder {
+  color: var(--xx-ink-dim);
+}
+
+/* The brand (emerald) family is re-pointed at the XXII accents so links,
+   active nav items and price highlights read as neon rather than green. */
+body .text-brand-700,
+body .text-brand-600 {
+  color: #7fb0ff;
+}
+
+body .text-brand-500,
+body .text-brand-400 {
+  color: #9ec4ff;
+}
+
+body .hover\:text-brand-600:hover,
+body .hover\:text-brand-700:hover {
+  color: var(--xx-cyan);
+}
+
+/* Semantic status colours, brightened for the dark canvas. */
+body .text-green-700,
+body .text-green-600,
+body .text-green-800 {
+  color: var(--xx-lime);
+}
+
+body .text-red-700,
+body .text-red-600,
+body .text-red-800,
+body .text-red-500 {
+  color: var(--xx-red);
+}
+
+body .text-amber-700,
+body .text-amber-600,
+body .text-yellow-700,
+body .text-yellow-600 {
+  color: var(--xx-amber);
+}
+
+body .text-blue-700,
+body .text-blue-600 {
+  color: #7fb0ff;
+}
+
+/* ---- Backgrounds ---- */
+body .bg-white,
+body .bg-slate-50,
+body .bg-graphite-50,
+body .bg-champagne-50 {
+  background-color: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(var(--xx-glass-blur-soft));
+  -webkit-backdrop-filter: blur(var(--xx-glass-blur-soft));
+}
+
+body .bg-slate-100,
+body .bg-graphite-100,
+body .bg-champagne-100 {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+body .bg-slate-200,
+body .bg-graphite-200,
+body .bg-champagne-200 {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+body .bg-slate-300 {
+  background-color: rgba(255, 255, 255, 0.16);
+}
+
+body .bg-slate-600,
+body .bg-slate-700,
+body .bg-slate-800,
+body .bg-slate-900 {
+  background-color: rgba(9, 11, 28, 0.8);
+}
+
+body .hover\:bg-slate-50:hover,
+body .hover\:bg-champagne-100:hover,
+body .hover\:bg-white:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+body .hover\:bg-slate-100:hover {
+  background-color: rgba(255, 255, 255, 0.11);
+}
+
+body .hover\:bg-slate-200:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+body .hover\:bg-slate-700:hover {
+  background-color: rgba(9, 11, 28, 0.9);
+}
+
+/* Tinted status backgrounds (badges, alert strips) become neon washes. */
+body .bg-green-50,
+body .bg-green-100 {
+  background-color: rgba(110, 247, 168, 0.14);
+}
+
+body .bg-red-50,
+body .bg-red-100 {
+  background-color: rgba(255, 84, 112, 0.14);
+}
+
+body .bg-amber-50,
+body .bg-amber-100,
+body .bg-yellow-50,
+body .bg-yellow-100 {
+  background-color: rgba(255, 194, 75, 0.14);
+}
+
+body .bg-blue-50,
+body .bg-blue-100,
+body .bg-brand-50,
+body .bg-brand-100 {
+  background-color: rgba(46, 123, 255, 0.16);
+}
+
+body .bg-purple-50,
+body .bg-purple-100,
+body .bg-violet-50,
+body .bg-violet-100 {
+  background-color: rgba(122, 60, 255, 0.16);
+}
+
+/* Solid brand fills (active tabs, cart badge) become the primary gradient. */
+body .bg-brand-600,
+body .bg-brand-700,
+body .bg-champagne-500 {
+  background-image: linear-gradient(120deg, #2e7bff 0%, #7a3cff 100%);
+  background-color: transparent;
+  color: #fff;
+}
+
+body .hover\:bg-brand-700:hover,
+body .hover\:bg-brand-600:hover,
+body .hover\:bg-champagne-600:hover {
+  box-shadow: var(--xx-glow-blue);
+}
+
+/* ---- Borders & dividers ---- */
+body .border-slate-100,
+body .border-slate-200,
+body .border-slate-300,
+body .border-graphite-100,
+body .border-graphite-200 {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+body .hover\:border-slate-200:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+body .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+body .divide-slate-200 > :not([hidden]) ~ :not([hidden]),
+body .divide-graphite-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+body .border-brand-600,
+body .border-brand-500 {
+  border-color: rgba(122, 60, 255, 0.75);
+}
+
+/* ---- Rings ---- */
+body .focus\:ring-brand-500:focus,
+body .focus\:ring-champagne-400:focus {
+  --tw-ring-color: rgba(34, 232, 245, 0.6);
+}
+
+/* ---- Tables ---- */
+body table thead th {
+  color: var(--xx-ink-dim);
+  letter-spacing: 0.06em;
+}
+
+body table tbody tr {
+  transition: background-color var(--xx-t) var(--xx-ease);
+}
+
+body table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.045);
+}
+
+/* ---------------------------------------------------------------------------
+   6. PLATFORM LAYER
+   ------------------------------------------------------------------------ */
+
+/* Mobile — larger, airier cards; the brief asks for generous touch surfaces. */
+@media (max-width: 639px) {
+  :root {
+    --xx-gap: 1rem;
+    --xx-radius: 1.1rem;
+  }
+
+  .card,
+  .xx-panel {
+    border-radius: var(--xx-radius);
+  }
+
+  /* Backdrop blur is the single most expensive effect on low-end phones, so
+     the radius is reduced rather than the effect dropped entirely. */
+  :root {
+    --xx-glass-blur: 16px;
+    --xx-glass-blur-soft: 12px;
+  }
+
+  .btn {
+    min-height: 44px; /* comfortable touch target */
+  }
+}
+
+/* TV / large display — bigger type, stronger contrast, calmer motion. */
+@media (min-width: 1920px) {
+  body {
+    font-size: 17px;
+  }
+
+  :root {
+    --xx-gap: 2rem;
+    --xx-gap-lg: 2.5rem;
+    --xx-ink-muted: #c2c9e8;
+    --xx-ink-dim: #98a0c8;
+    --xx-glass-border: rgba(255, 255, 255, 0.2);
+  }
+
+  .xx-title {
+    letter-spacing: -0.02em;
+  }
+
+  .btn {
+    @apply px-7 py-3 text-base;
+  }
+}
+
+/* VR / AR — headset browsers report a very wide viewport with a coarse
+   pointer. Panels get more depth separation and larger hit areas so they are
+   comfortable to target with a controller ray. */
+@media (pointer: coarse) and (min-width: 1280px) {
+  .card,
+  .xx-panel {
+    box-shadow:
+      0 40px 90px -30px rgba(0, 0, 0, 0.95),
+      var(--xx-glow-purple),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+  }
+
+  .btn {
+    min-height: 52px;
+    @apply px-7 text-base;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   7. ACCESSIBILITY
+   ------------------------------------------------------------------------ */
+
+/* Keyboard focus must stay obvious against the glow-heavy surface. */
+:focus-visible {
+  outline: 2px solid var(--xx-cyan);
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+
+/* Every decorative motion in the system is opt-out. Functional transitions are
+   shortened rather than removed so state changes remain legible. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .xx-scanning::after,
+  .xx-float {
+    display: none;
+    animation: none !important;
+  }
+}
+
+/* Windows High Contrast / forced-colors: drop the glass entirely and fall back
+   to system colours, otherwise translucent panels become unreadable. */
+@media (forced-colors: active) {
+  .card,
+  .xx-panel,
+  .glass,
+  .glass-soft,
+  .input,
+  .xx-input,
+  .btn {
+    background: Canvas;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid CanvasText;
+    box-shadow: none;
+    color: CanvasText;
+  }
+
+  .card::after,
+  .xx-panel::after,
+  .btn::before {
+    display: none;
+  }
+}
+
+/* Browsers without backdrop-filter (older Firefox with the flag off) would show
+   near-invisible panels, so they get an opaque fallback fill. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .card,
+  .xx-panel,
+  .glass,
+  .glass-soft {
+    background: rgba(16, 18, 46, 0.92);
+  }
+
+  .input,
+  .xx-input {
+    background: rgba(11, 13, 34, 0.95);
   }
 }

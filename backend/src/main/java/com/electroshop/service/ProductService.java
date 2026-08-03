@@ -7,7 +7,9 @@ import com.electroshop.dto.ProductRequest;
 import com.electroshop.exception.ResourceNotFoundException;
 import com.electroshop.model.Product;
 import com.electroshop.model.ProductImage;
+import com.electroshop.repository.OrderItemRepository;
 import com.electroshop.repository.ProductRepository;
+import com.electroshop.repository.PurchaseItemRepository;
 import com.electroshop.security.PermissionService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -46,18 +48,37 @@ public class ProductService {
     private final ProductExportService productExportService;
     private final PermissionService permissionService;
     private final NotificationService notificationService;
+    private final OrderItemRepository orderItemRepository;
+    private final PurchaseItemRepository purchaseItemRepository;
 
     public ProductService(ProductRepository productRepository, AuditService auditService,
                           CloudinaryService cloudinaryService,
                           ProductExportService productExportService,
                           PermissionService permissionService,
-                          NotificationService notificationService) {
+                          NotificationService notificationService,
+                          OrderItemRepository orderItemRepository,
+                          PurchaseItemRepository purchaseItemRepository) {
         this.productRepository = productRepository;
         this.auditService = auditService;
         this.cloudinaryService = cloudinaryService;
         this.productExportService = productExportService;
         this.permissionService = permissionService;
         this.notificationService = notificationService;
+        this.orderItemRepository = orderItemRepository;
+        this.purchaseItemRepository = purchaseItemRepository;
+    }
+
+    /**
+     * Whether this product has ever been sold or received into stock. A row
+     * with sales or goods-in history can never be hard-deleted — the database
+     * enforces this already via {@code order_items}/{@code purchase_items}'
+     * foreign keys — so this check runs *before* attempting a delete, turning
+     * what would otherwise be a raw {@code DataIntegrityViolationException}
+     * into a deliberate "deactivate instead" decision.
+     */
+    private boolean hasSalesHistory(Long productId) {
+        return orderItemRepository.existsByProductId(productId)
+                || purchaseItemRepository.existsByProductId(productId);
     }
 
     @Transactional(readOnly = true)
@@ -282,15 +303,34 @@ public class ProductService {
         return ProductDto.from(saved);
     }
 
-    public void delete(Long id) {
+    /**
+     * Removes a product outright — unless it has order or purchase history, in
+     * which case a hard delete would corrupt every past invoice and
+     * goods-in entry that references it (and the database would refuse it
+     * anyway). In that case the product is deactivated instead
+     * ({@link #setActive}'s existing "hide without deleting"), which is what
+     * the operator actually wants: the item gone from the active catalogue,
+     * with its accounting trail intact.
+     *
+     * @return {@code true} if the row was actually deleted, {@code false} if
+     *         it was deactivated instead because of existing sales history
+     */
+    public boolean delete(Long id) {
         Product p = findEntity(id);
         String name = p.getName();
+        if (hasSalesHistory(id)) {
+            setActive(id, false);
+            auditService.log("PRODUCT_DEACTIVATED_INSTEAD_OF_DELETE", "Product", id,
+                    name + " — are comenzi sau achiziții înregistrate; dezactivat în loc de șters");
+            return false;
+        }
         // Remove hosted assets first, then the row (cascade drops the image rows).
         for (ProductImage img : p.getImages()) {
             cloudinaryService.delete(img.getPublicId());
         }
         productRepository.delete(p);
         auditService.log("PRODUCT_DELETED", "Product", id, name);
+        return true;
     }
 
     /**
@@ -301,13 +341,26 @@ public class ProductService {
      * can refresh a stale table without the whole operation failing. Every
      * successful removal is written to the audit log individually, exactly as a
      * single delete would be, and a summary entry records the batch itself.
+     * <p>
+     * Same rule as {@link #delete(Long)}: a product with order or purchase
+     * history is deactivated instead of hard-deleted, one row at a time — that
+     * check runs *before* the delete for each id specifically so that one
+     * referenced product does not throw a
+     * {@code DataIntegrityViolationException} mid-loop and roll the whole
+     * (class-level {@code @Transactional}) batch back, silently undoing every
+     * deletion that already succeeded. Deactivated ids are reported separately
+     * so the operator sees exactly what happened to each product, instead of
+     * either a raw SQL error or a count that quietly includes rows that were
+     * never actually removed.
      *
      * @param ids the products to remove
-     * @return how many rows were deleted and which ids were not found
+     * @return how many rows were deleted, which were deactivated instead
+     *         because of sales history, and which ids were not found
      */
     public BulkDeleteResult deleteBulk(List<Long> ids) {
         List<Long> unique = new ArrayList<>(new LinkedHashSet<>(ids));
         List<Long> notFound = new ArrayList<>();
+        List<Long> deactivated = new ArrayList<>();
         int deleted = 0;
         for (Long id : unique) {
             Product p = productRepository.findById(id).orElse(null);
@@ -316,6 +369,13 @@ public class ProductService {
                 continue;
             }
             String name = p.getName();
+            if (hasSalesHistory(id)) {
+                setActive(id, false);
+                deactivated.add(id);
+                auditService.log("PRODUCT_DEACTIVATED_INSTEAD_OF_DELETE", "Product", id,
+                        name + " — are comenzi sau achiziții înregistrate; dezactivat în loc de șters");
+                continue;
+            }
             for (ProductImage img : p.getImages()) {
                 cloudinaryService.delete(img.getPublicId());
             }
@@ -324,17 +384,22 @@ public class ProductService {
             deleted++;
         }
         auditService.log("PRODUCTS_BULK_DELETED", "Product", null,
-                deleted + " produse șterse în masă");
-        return new BulkDeleteResult(deleted, notFound);
+                deleted + " produse șterse, " + deactivated.size()
+                        + " dezactivate (aveau comenzi/achiziții) în masă");
+        return new BulkDeleteResult(deleted, notFound, deactivated);
     }
 
     /**
      * Outcome of a batch delete.
      *
-     * @param deleted  number of rows actually removed
-     * @param notFound identifiers that no longer existed when the batch ran
+     * @param deleted     number of rows actually removed
+     * @param notFound    identifiers that no longer existed when the batch ran
+     * @param deactivated identifiers that had order or purchase history and were
+     *                    deactivated instead of removed, so the operator knows
+     *                    which ones are still in the database (inactive) rather
+     *                    than gone
      */
-    public record BulkDeleteResult(int deleted, List<Long> notFound) {
+    public record BulkDeleteResult(int deleted, List<Long> notFound, List<Long> deactivated) {
     }
 
     /**

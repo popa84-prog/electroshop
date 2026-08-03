@@ -1,15 +1,41 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import productService from '../api/productService';
 import ProductCard from '../components/ProductCard';
-import Spinner from '../components/Spinner';
+import AIPicks from '../components/xxii/AIPicks';
+import GeoIcon from '../components/xxii/GeoIcon';
+import HoloTimer from '../components/xxii/HoloTimer';
+import NeonButton from '../components/xxii/NeonButton';
+import Reveal from '../components/xxii/Reveal';
+import SectionHeader from '../components/xxii/SectionHeader';
+import TiltCard from '../components/xxii/TiltCard';
+import { HoloGridSkeleton } from '../components/xxii/HoloLoader';
 import { useSeo } from '../utils/seo';
 
 /**
- * Icons for the category tiles. Keys are compared case-insensitively against
- * the real category names stored on the products, so a category that has no
- * entry here still renders — just with the neutral fallback icon.
+ * XXII — TASK 2 (Homepage Futurist / Reactor Layout).
+ *
+ * The page is laid out as a spaceship control panel, top to bottom:
+ *
+ *   1. the cinematic hero — an animated gradient reactor core with ambient edge
+ *      light and a pulsing neon CTA;
+ *   2. the benefits bar — neon icons swept by a scan line;
+ *   3. the 3D category tiles — VisionOS-style, rotating 3–5° toward the cursor;
+ *   4. the promotion module with the holographic countdown;
+ *   5. the featured grid;
+ *   6. the AI Picks module (TASK 7).
+ *
+ * Every module below the fold is wrapped in `Reveal`, so sections materialise
+ * as the user scrolls instead of all existing at once. The stagger is the array
+ * index times a small step, which is what makes a grid land as a wave rather
+ * than as a block.
+ *
+ * The category icons stay as emoji glyphs: they are recognisable, they are
+ * already mapped to the real catalogue names, and replacing 22 of them with
+ * bespoke geometry would trade recognisability for consistency. They now sit
+ * inside a geometric neon frame, which supplies the consistency instead.
  */
+
 const CATEGORY_ICONS = {
   audio: '🎧',
   'foto & video': '📷',
@@ -42,6 +68,13 @@ function iconFor(name) {
   return CATEGORY_ICONS[String(name).trim().toLowerCase()] || FALLBACK_ICON;
 }
 
+const BENEFITS = [
+  { icon: 'truck', accent: 'var(--xx-cyan)', title: 'Livrare rapidă', text: 'Transport gratuit, oriunde în țară' },
+  { icon: 'shield', accent: 'var(--xx-lime)', title: 'Garanție completă', text: 'Produse originale, garanție legală' },
+  { icon: 'refresh', accent: 'var(--xx-amber)', title: 'Retur 14 zile', text: 'Fără întrebări, fără costuri ascunse' },
+  { icon: 'coins', accent: 'var(--xx-purple)', title: 'Plata la livrare', text: 'Plătești doar când primești coletul' },
+];
+
 export default function Home() {
   const [featured, setFeatured] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -54,84 +87,227 @@ export default function Home() {
   });
 
   useEffect(() => {
+    let cancelled = false;
     productService
       .list({ page: 0, size: 4, sortBy: 'price', direction: 'desc' })
-      .then((data) => setFeatured(data.content))
-      .catch(() => setFeatured([]))
-      .finally(() => setLoading(false));
+      .then((data) => {
+        if (!cancelled) setFeatured(data?.content || []);
+      })
+      .catch(() => {
+        if (!cancelled) setFeatured([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // The tiles mirror the four best-stocked categories in the real catalogue,
   // so they never advertise a section that does not exist.
   useEffect(() => {
+    let cancelled = false;
     productService
       .topCategories(4)
-      .then((data) => setCategories(Array.isArray(data) ? data : []))
-      .catch(() => setCategories([]));
+      .then((data) => {
+        if (!cancelled) setCategories(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (!cancelled) setCategories([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // The promotion window ends at midnight tonight. Computed once per mount so
+  // the countdown target is stable — recomputing it on every render would reset
+  // the clock to a fresh full day on each tick.
+  const promoTarget = useMemo(() => {
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    return end.toISOString();
   }, []);
 
   return (
-    <div className="space-y-12">
-      {/* Hero */}
-      <section className="overflow-hidden rounded-2xl bg-gradient-to-r from-brand-700 to-brand-500 px-6 py-14 text-white sm:px-12">
-        <div className="max-w-2xl">
-          <h1 className="text-3xl font-bold sm:text-5xl">
-            Tehnologie de top, la prețuri corecte
+    <div className="space-y-16 sm:space-y-24">
+      {/* ─────────────── 1. Cinematic hero (reactor core) ─────────────── */}
+      <section className="relative overflow-hidden rounded-[1.75rem] border border-[rgba(255,255,255,0.14)] px-6 py-16 sm:px-12 sm:py-24 tv:py-32">
+        {/* Layer 1 — the animated gradient field. */}
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 -z-20 animate-xx-gradient bg-xx-deep"
+          style={{ backgroundSize: '220% 220%' }}
+        />
+        {/* Layer 2 — the reactor light pools. */}
+        <span aria-hidden="true" className="absolute inset-0 -z-10 bg-xx-reactor opacity-90" />
+        {/* Layer 3 — the ambient edge light: a bright inner rim that fades inward. */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 rounded-[1.75rem]"
+          style={{ boxShadow: 'inset 0 0 120px -40px rgba(34,232,245,0.85), inset 0 1px 0 0 rgba(255,255,255,0.16)' }}
+        />
+        {/* Layer 4 — a slow vertical scan, the single ambient motion of the hero. */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-40 animate-xx-scan bg-gradient-to-b from-[rgba(34,232,245,0.16)] to-transparent"
+        />
+
+        <div className="relative max-w-3xl">
+          <p className="xx-eyebrow">ElectroShop · XXII</p>
+
+          <h1 className="font-display text-4xl font-bold leading-[1.05] tracking-tight text-white sm:text-6xl tv:text-7xl">
+            Tehnologie de top,
+            <br />
+            <span className="xx-text-gradient">la prețuri corecte</span>
           </h1>
-          <p className="mt-4 text-brand-50">
-            Descoperă cele mai noi telefoane, laptopuri, produse audio și accesorii.
+
+          <p className="mt-5 max-w-xl text-base text-[#c6cdf0] sm:text-lg tv:text-xl">
+            Descoperă cele mai noi telefoane, laptopuri, produse audio și accesorii — cu livrare gratuită și plata
+            la primire.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link to="/products" className="btn bg-white text-brand-700 hover:bg-brand-50">
+
+          <div className="mt-9 flex flex-wrap gap-3">
+            <NeonButton to="/products" size="lg" pulse icon={<GeoIcon name="grid" className="h-5 w-5" accent="currentColor" />}>
               Vezi produsele
-            </Link>
-            <Link to="/register" className="btn border border-white/60 text-white hover:bg-white/10">
+            </NeonButton>
+            <NeonButton to="/register" variant="secondary" size="lg">
               Creează cont
-            </Link>
+            </NeonButton>
           </div>
         </div>
       </section>
 
-      {/* Categories — the four most populated ones, straight from the catalogue */}
+      {/* ─────────────── 2. Benefits bar (scan-line) ─────────────── */}
+      <section aria-label="Beneficii" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {BENEFITS.map((benefit, index) => (
+          <Reveal key={benefit.title} delay={index * 70} className="h-full">
+            <div className="xx-scanning card card-static flex h-full items-start gap-3 p-4">
+              <span
+                aria-hidden="true"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[rgba(255,255,255,0.13)] bg-[rgba(255,255,255,0.05)]"
+              >
+                <GeoIcon name={benefit.icon} className="h-5 w-5" accent={benefit.accent} />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-[color:var(--xx-ink)]">{benefit.title}</span>
+                <span className="mt-0.5 block text-xs xx-ink-muted">{benefit.text}</span>
+              </span>
+            </div>
+          </Reveal>
+        ))}
+      </section>
+
+      {/* ─────────────── 3. 3D category tiles ─────────────── */}
       {categories.length > 0 && (
         <section>
-          <h2 className="mb-4 text-2xl font-bold text-slate-800">Categorii populare</h2>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {categories.map((c) => (
-              <Link
-                key={c.name}
-                to={`/products?category=${encodeURIComponent(c.name)}`}
-                className="card flex flex-col items-center gap-2 p-6 text-center transition hover:shadow-md"
-              >
-                <span className="text-4xl">{iconFor(c.name)}</span>
-                <span className="font-medium text-slate-700">{c.name}</span>
-                <span className="text-xs text-slate-500">
-                  {c.productCount} {c.productCount === 1 ? 'produs' : 'produse'}
-                </span>
-              </Link>
+          <SectionHeader
+            eyebrow="Navigare rapidă"
+            title="Categorii populare"
+            subtitle="Cele mai bine reprezentate categorii din catalog, direct din stocul real."
+            actionTo="/products"
+            actionLabel="Toate categoriile"
+          />
+
+          <div className="grid grid-cols-2 gap-5 sm:grid-cols-4">
+            {categories.map((category, index) => (
+              <Reveal key={category.name} delay={index * 80} direction="scale" className="h-full">
+                <TiltCard max={6} className="h-full">
+                  <Link
+                    to={`/products?category=${encodeURIComponent(category.name)}`}
+                    className="card group flex h-full flex-col items-center gap-3 p-6 text-center"
+                  >
+                    {/* The icon sits inside a rotating neon frame — the VisionOS
+                        depth cue: the frame turns, the glyph stays upright. */}
+                    <span className="relative grid h-16 w-16 place-items-center">
+                      <span
+                        aria-hidden="true"
+                        className="absolute inset-0 rotate-45 rounded-xl border border-[rgba(34,232,245,0.35)] bg-[rgba(34,232,245,0.07)] transition-all duration-500 ease-xx group-hover:rotate-[60deg] group-hover:border-[rgba(34,232,245,0.75)] group-hover:shadow-glow-aqua"
+                      />
+                      <span className="relative text-3xl" aria-hidden="true">
+                        {iconFor(category.name)}
+                      </span>
+                    </span>
+
+                    <span className="font-semibold text-[color:var(--xx-ink)] transition-colors duration-xx group-hover:text-[color:var(--xx-cyan)]">
+                      {category.name}
+                    </span>
+                    <span className="text-xs xx-ink-dim">
+                      {category.productCount} {category.productCount === 1 ? 'produs' : 'produse'}
+                    </span>
+                  </Link>
+                </TiltCard>
+              </Reveal>
             ))}
           </div>
         </section>
       )}
 
-      {/* Featured */}
+      {/* ─────────────── 4. Promotion module + holographic timer ─────────────── */}
+      <Reveal>
+        <section className="relative overflow-hidden rounded-[1.5rem] border border-[rgba(255,61,203,0.3)] bg-[rgba(12,7,26,0.72)] p-6 backdrop-blur-glass sm:p-9">
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full opacity-60"
+            style={{ background: 'radial-gradient(circle, rgba(255,61,203,0.45), transparent 68%)' }}
+          />
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -bottom-28 -left-16 h-72 w-72 rounded-full opacity-50"
+            style={{ background: 'radial-gradient(circle, rgba(34,232,245,0.4), transparent 68%)' }}
+          />
+
+          <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-xl">
+              <span className="badge badge-magenta">Ofertă activă</span>
+              <h2 className="mt-3 font-display text-2xl font-bold text-white sm:text-4xl">
+                <span className="xx-text-gradient-hot">Transport gratuit</span> la orice comandă
+              </h2>
+              <p className="mt-3 text-sm text-[#c6cdf0] sm:text-base">
+                Fără prag minim și fără costuri ascunse. Oferta se resetează la miezul nopții.
+              </p>
+              <NeonButton to="/products" variant="hot" size="lg" className="mt-6" pulse>
+                Profită acum
+              </NeonButton>
+            </div>
+
+            <HoloTimer target={promoTarget} label="Se încheie în" className="shrink-0" />
+          </div>
+        </section>
+      </Reveal>
+
+      {/* ─────────────── 5. Featured grid ─────────────── */}
       <section>
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-slate-800">Produse recomandate</h2>
-          <Link to="/products" className="text-sm font-medium text-brand-600 hover:underline">
-            Vezi toate →
-          </Link>
-        </div>
+        <SectionHeader
+          eyebrow="Selecția redacției"
+          title="Produse recomandate"
+          subtitle="Cele mai valoroase produse din catalog, actualizate automat."
+          actionTo="/products"
+          actionLabel="Vezi toate"
+        />
+
         {loading ? (
-          <Spinner />
+          <HoloGridSkeleton count={4} />
+        ) : featured.length === 0 ? (
+          <p className="card card-static p-8 text-center text-sm xx-ink-muted">
+            Catalogul nu conține încă produse publicate.
+          </p>
         ) : (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {featured.map((p) => (
-              <ProductCard key={p.id} product={p} />
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {featured.map((product, index) => (
+              <Reveal key={product.id} delay={index * 80} className="h-full">
+                <ProductCard product={product} />
+              </Reveal>
             ))}
           </div>
         )}
       </section>
+
+      {/* ─────────────── 6. AI Picks (TASK 7) ─────────────── */}
+      <Reveal>
+        <AIPicks variant="carousel" limit={8} />
+      </Reveal>
     </div>
   );
 }

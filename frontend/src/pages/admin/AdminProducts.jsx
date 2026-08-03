@@ -425,6 +425,13 @@ export default function AdminProducts() {
           stockQuantity: p.stockQuantity,
           quantity: 1,
           unitPrice: p.price != null ? String(p.price) : '0',
+          // Metadata kept purely for display in the sale-cart modal (feature #10)
+          // so the operator can tell apart near-identical products (same name,
+          // different variant) without leaving the modal to check the table.
+          brand: p.brand || '',
+          category: p.category || '',
+          subcategory: p.subcategory || '',
+          sku: p.sku || '',
         },
       ];
     });
@@ -1430,7 +1437,7 @@ export default function AdminProducts() {
         open={saleCartOpen}
         title={`VÂNDUT — ${saleCart.length} ${saleCart.length === 1 ? 'produs' : 'produse'}`}
         onClose={() => !saleCartBusy && setSaleCartOpen(false)}
-        maxWidth="max-w-lg"
+        maxWidth="max-w-3xl"
       >
         <div className="space-y-4">
           {saleCart.length === 0 ? (
@@ -1438,62 +1445,99 @@ export default function AdminProducts() {
               Coșul e gol. Închide fereastra și adaugă produse cu butonul „Vândut” din tabel.
             </p>
           ) : (
-            <div className="max-h-[50vh] space-y-3 overflow-y-auto pr-1">
+            <div className="max-h-[65vh] space-y-3 overflow-y-auto pr-1">
               {saleCart.map((line) => {
                 const lineQty = Number(line.quantity);
                 const lineOverStock = Number.isFinite(lineQty) && lineQty > line.stockQuantity;
                 return (
                   <div
                     key={line.productId}
-                    className="flex items-center gap-3 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] p-2.5"
+                    className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] p-3"
                   >
-                    <img
-                      src={resolveImage(line.imageUrl)}
-                      alt={line.name}
-                      className="h-12 w-12 shrink-0 rounded-lg border border-[rgba(255,255,255,0.12)] object-cover"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-[color:var(--xx-ink)]">{line.name}</p>
-                      <p className="text-xs xx-ink-dim">Stoc: {line.stockQuantity} buc.</p>
+                    {/* Top row — full product identity, never truncated, so two
+                        variants of the same phone (different color/storage) can
+                        always be told apart before the sale is confirmed. */}
+                    <div className="flex items-start gap-3">
+                      <img
+                        src={resolveImage(line.imageUrl)}
+                        alt={line.name}
+                        className="h-20 w-20 shrink-0 rounded-lg border border-[rgba(255,255,255,0.12)] object-cover"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="break-words text-sm font-medium leading-snug text-[color:var(--xx-ink)]">
+                          {line.name}
+                        </p>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs xx-ink-dim">
+                          {line.brand && <span>{line.brand}</span>}
+                          {(line.category || line.subcategory) && (
+                            <span>
+                              {line.brand && <span className="xx-ink-muted">·</span>} {line.category}
+                              {line.subcategory ? ` · ${line.subcategory}` : ''}
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                          {line.sku && (
+                            <span className="font-mono text-[0.68rem] xx-ink-muted">SKU: {line.sku}</span>
+                          )}
+                          <span
+                            className={`text-xs font-medium ${
+                              lineOverStock ? 'text-[color:var(--xx-red)]' : 'xx-ink-dim'
+                            }`}
+                          >
+                            Stoc disponibil: {line.stockQuantity} buc.
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeFromSaleCart(line.productId)}
+                        disabled={saleCartBusy}
+                        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.55)] hover:text-[color:var(--xx-red)] disabled:opacity-40"
+                        title="Elimină din vânzare"
+                        aria-label={`Elimină ${line.name} din vânzare`}
+                      >
+                        <GeoIcon name="close" className="h-4 w-4" accent="currentColor" />
+                      </button>
                     </div>
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      aria-label={`Cantitate — ${line.name}`}
-                      aria-invalid={lineOverStock || undefined}
-                      className={`input w-16 py-1 text-center ${
-                        lineOverStock
-                          ? 'border-[rgba(255,84,112,0.65)] focus:border-[rgba(255,84,112,0.9)]'
-                          : ''
-                      }`}
-                      value={line.quantity}
-                      disabled={saleCartBusy}
-                      onChange={(e) => updateSaleCartLine(line.productId, 'quantity', e.target.value)}
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      aria-label={`Preț per bucată — ${line.name}`}
-                      className="input w-24 py-1"
-                      value={line.unitPrice}
-                      disabled={saleCartBusy}
-                      onChange={(e) => updateSaleCartLine(line.productId, 'unitPrice', e.target.value)}
-                    />
-                    <span className="w-20 shrink-0 text-right text-sm font-semibold text-[color:var(--xx-ink)]">
-                      {formatPrice((Number(line.quantity) || 0) * (Number(line.unitPrice) || 0))}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => removeFromSaleCart(line.productId)}
-                      disabled={saleCartBusy}
-                      className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.55)] hover:text-[color:var(--xx-red)] disabled:opacity-40"
-                      title="Elimină din vânzare"
-                      aria-label={`Elimină ${line.name} din vânzare`}
-                    >
-                      <GeoIcon name="close" className="h-4 w-4" accent="currentColor" />
-                    </button>
+                    {/* Bottom row — the editable quantity/price and the computed
+                        line total, right-aligned under the product identity. */}
+                    <div className="mt-3 flex items-center justify-end gap-3 border-t border-[rgba(255,255,255,0.08)] pt-3">
+                      <label className="flex items-center gap-2 text-xs xx-ink-dim">
+                        Cantitate
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          aria-label={`Cantitate — ${line.name}`}
+                          aria-invalid={lineOverStock || undefined}
+                          className={`input w-16 py-1 text-center ${
+                            lineOverStock
+                              ? 'border-[rgba(255,84,112,0.65)] focus:border-[rgba(255,84,112,0.9)]'
+                              : ''
+                          }`}
+                          value={line.quantity}
+                          disabled={saleCartBusy}
+                          onChange={(e) => updateSaleCartLine(line.productId, 'quantity', e.target.value)}
+                        />
+                      </label>
+                      <label className="flex items-center gap-2 text-xs xx-ink-dim">
+                        Preț/buc.
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          aria-label={`Preț per bucată — ${line.name}`}
+                          className="input w-24 py-1"
+                          value={line.unitPrice}
+                          disabled={saleCartBusy}
+                          onChange={(e) => updateSaleCartLine(line.productId, 'unitPrice', e.target.value)}
+                        />
+                      </label>
+                      <span className="w-24 shrink-0 text-right text-sm font-semibold text-[color:var(--xx-ink)]">
+                        {formatPrice((Number(line.quantity) || 0) * (Number(line.unitPrice) || 0))}
+                      </span>
+                    </div>
                   </div>
                 );
               })}

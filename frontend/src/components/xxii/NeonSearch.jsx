@@ -7,7 +7,7 @@ import { trackSearch } from '../../utils/recommendations';
 import GeoIcon from './GeoIcon';
 
 /**
- * XXII — TASK 4 (neon search bar: visual autocomplete, scan effect on focus).
+ * XXII — TASK 4 (neon search bar: visual autocomplete).
  *
  * "Visual" autocomplete means the suggestions are products with thumbnails and
  * prices, not a list of strings. The user recognises the item they wanted
@@ -26,7 +26,11 @@ import GeoIcon from './GeoIcon';
  *   - The combobox ARIA pattern is wired properly, so the listbox is announced
  *     and the active option is reported via `aria-activedescendant`.
  *
- * The scan bar sweeps once per focus — the holographic cue from TASK 1.
+ * A cyan "scan" bar used to sweep across the field on focus. It was built on
+ * an animation utility that loops forever for as long as the field holds
+ * focus, so it never actually swept "once" — it played continuously while the
+ * operator typed. Removed outright; the border and icon already switch to
+ * their focused colour, which is signal enough without a looping animation.
  */
 
 const MAX_SUGGESTIONS = 6;
@@ -195,14 +199,6 @@ export default function NeonSearch({ className = '', compact = false, onNavigate
           >
             <GeoIcon name="close" className="h-3.5 w-3.5" accent="currentColor" />
           </button>
-        ) : null}
-
-        {/* Focus scan — one cyan sweep across the field. */}
-        {focused ? (
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-y-0 left-0 w-1/3 animate-xx-scan-x bg-gradient-to-r from-transparent via-[rgba(34,232,245,0.22)] to-transparent"
-          />
         ) : null}
       </div>
 

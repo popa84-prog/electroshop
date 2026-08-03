@@ -1,13 +1,12 @@
 import { forwardRef, useId, useState } from 'react';
 
 /**
- * XXII — TASK 1 (holographic inputs: neon border, scan effect on focus) and
+ * XXII — TASK 1 (holographic inputs: neon border) and
  * TASK 5 (instant validation: red/blue glow, micro-shake on error).
  *
- * A field is three things stacked:
+ * A field is two things stacked:
  *   1. the control itself (input / textarea / select),
- *   2. a scan bar that sweeps once when the field takes focus,
- *   3. a status line that reserves its own height so the layout never jumps
+ *   2. a status line that reserves its own height so the layout never jumps
  *      between the valid and invalid states.
  *
  * `status` is deliberately a three-value prop (`null` | 'valid' | 'invalid')
@@ -17,6 +16,12 @@ import { forwardRef, useId, useState } from 'react';
  * The micro-shake runs on the *transition* into the invalid state, not for as
  * long as the state lasts, so a field that stays invalid while the user keeps
  * typing shakes exactly once.
+ *
+ * An earlier version drew a cyan "scan" bar meant to sweep once on focus, but
+ * it was built on an animation utility that loops forever for as long as the
+ * field holds focus — a continuous, distracting sweep on every field the
+ * operator types into, not the one-shot cue it was meant to be. Removed
+ * outright rather than re-timed: a validation-status border is signal enough.
  */
 
 const HoloInput = forwardRef(function HoloInput(
@@ -40,7 +45,6 @@ const HoloInput = forwardRef(function HoloInput(
   const generatedId = useId();
   const id = providedId || `xx-field-${generatedId}`;
   const messageId = `${id}-msg`;
-  const [focused, setFocused] = useState(false);
   const [shakeKey, setShakeKey] = useState(0);
   const [lastStatus, setLastStatus] = useState(status);
 
@@ -89,29 +93,13 @@ const HoloInput = forwardRef(function HoloInput(
           className={controlClasses}
           aria-invalid={status === 'invalid' || undefined}
           aria-describedby={message || hint ? messageId : undefined}
-          onFocus={(e) => {
-            setFocused(true);
-            if (onFocus) onFocus(e);
-          }}
-          onBlur={(e) => {
-            setFocused(false);
-            if (onBlur) onBlur(e);
-          }}
+          onFocus={onFocus}
+          onBlur={onBlur}
           {...rest}
         />
 
         {suffix ? (
           <span className="absolute right-3 top-1/2 z-10 -translate-y-1/2 xx-ink-dim">{suffix}</span>
-        ) : null}
-
-        {/* Focus scan — a single cyan sweep across the field. Keyed on `focused`
-            so it replays on every focus rather than only on the first one. */}
-        {focused ? (
-          <span
-            key="scan"
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-y-0 left-0 w-1/3 animate-xx-scan-x bg-gradient-to-r from-transparent via-aqua-400/25 to-transparent"
-          />
         ) : null}
       </div>
 

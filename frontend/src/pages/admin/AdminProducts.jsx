@@ -51,12 +51,29 @@ const DELETE_KEYWORD = 'STERG';
  */
 const FORCE_DELETE_KEYWORD = 'ISTORIC';
 
-/** Quick-filter shortcuts (feature: filtre rapide) — mirrors the backend's `quickFilter` param. */
-const QUICK_FILTERS = [
-  { key: null, label: 'Toate', icon: 'grid' },
+/**
+ * Stock/image quick filters (feature: filtre rapide) — genuine checkboxes, so
+ * any combination can be active at once ("Fără stoc" + "Fără imagine" finds
+ * products that are simultaneously out of stock AND missing a photo). Each
+ * maps 1:1 to a boolean the backend's `/admin/products` endpoint ANDs
+ * together; see AdminController#listProducts.
+ */
+const STOCK_FILTERS = [
   { key: 'low_stock', label: 'Stoc redus', icon: 'alert' },
   { key: 'out_of_stock', label: 'Fără stoc', icon: 'box' },
   { key: 'no_image', label: 'Fără imagine', icon: 'zoom' },
+];
+
+/**
+ * Active/inactive status — mutually exclusive by nature (a product cannot be
+ * both), so this stays a single-select chip group rather than a checkbox,
+ * unlike STOCK_FILTERS above. Gives "Active" / "Dezactivate" their own
+ * dedicated one-click view instead of only being visible as a per-row badge.
+ */
+const STATUS_FILTERS = [
+  { key: null, label: 'Toate', icon: 'grid' },
+  { key: 'active', label: 'Active', icon: 'check' },
+  { key: 'inactive', label: 'Dezactivate', icon: 'clock' },
 ];
 
 /**
@@ -129,7 +146,12 @@ export default function AdminProducts() {
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [search, setSearch] = useState('');
-  const [quickFilter, setQuickFilter] = useState(null);
+  // Stock/image checkboxes (any combination) + the active/inactive status chip
+  // (single choice) — kept as two separate pieces of state because they are
+  // combined differently: stockFilters is a Set of independently ANDed flags,
+  // statusFilter is one mutually-exclusive value.
+  const [stockFilters, setStockFilters] = useState(() => new Set());
+  const [statusFilter, setStatusFilter] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // The filters/sort strip is always on screen — it used to be a collapsible
@@ -242,7 +264,10 @@ export default function AdminProducts() {
       page,
       size: pageSize,
       search: debouncedSearch,
-      quickFilter: quickFilter || undefined,
+      lowStock: stockFilters.has('low_stock') || undefined,
+      outOfStock: stockFilters.has('out_of_stock') || undefined,
+      noImage: stockFilters.has('no_image') || undefined,
+      status: statusFilter || undefined,
       sortBy: activeSort.sortBy,
       direction: activeSort.direction,
     };
@@ -259,13 +284,13 @@ export default function AdminProducts() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(load, [page, pageSize, debouncedSearch, quickFilter, sortValue]);
+  useEffect(load, [page, pageSize, debouncedSearch, stockFilters, statusFilter, sortValue]);
 
   // A tick only ever refers to a row the operator can currently see, so the
   // selection is dropped whenever the visible set, filter or sort order changes.
   useEffect(() => {
     setSelectedIds(new Set());
-  }, [page, pageSize, debouncedSearch, quickFilter, sortValue]);
+  }, [page, pageSize, debouncedSearch, stockFilters, statusFilter, sortValue]);
 
   const allOnPageSelected = products.length > 0 && products.every((p) => selectedIds.has(p.id));
   const someOnPageSelected = products.some((p) => selectedIds.has(p.id));
@@ -316,9 +341,22 @@ export default function AdminProducts() {
     }
   };
 
-  const chooseQuickFilter = (key) => {
+  const toggleStockFilter = (key) => {
     setPage(0);
-    setQuickFilter(key);
+    setStockFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const chooseStatusFilter = (key) => {
+    setPage(0);
+    setStatusFilter(key);
   };
 
   const changeSort = (value) => {
@@ -1094,19 +1132,55 @@ export default function AdminProducts() {
         className="mb-4 rounded-[1rem] border border-[rgba(122,60,255,0.32)] bg-[rgba(122,60,255,0.07)] p-4"
       >
         <div className="flex flex-wrap items-end gap-6">
-          <fieldset className="min-w-[16rem] flex-1">
+          {/* Genuine checkboxes — unlike the status chips below, any combination
+              can be ticked at once, so "Fără stoc" + "Fără imagine" together
+              narrows to products missing BOTH, not just one or the other. */}
+          <fieldset className="min-w-[14rem]">
             <legend className="mb-2 text-[0.65rem] font-semibold uppercase tracking-[0.16em] xx-ink-dim">
               Filtre rapide
             </legend>
             <div className="flex flex-wrap gap-2">
-              {QUICK_FILTERS.map((f) => (
+              {STOCK_FILTERS.map((f) => {
+                const checked = stockFilters.has(f.key);
+                return (
+                  <label
+                    key={f.key}
+                    className={`flex h-9 cursor-pointer items-center gap-2 rounded-full border px-3 text-xs font-semibold transition-all duration-xx ease-xx ${
+                      checked
+                        ? 'border-[rgba(34,232,245,0.55)] bg-[rgba(34,232,245,0.14)] text-[color:var(--xx-ink)] shadow-[0_0_26px_-10px_rgba(34,232,245,0.9)]'
+                        : 'border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] hover:border-[rgba(122,60,255,0.5)] hover:text-[color:var(--xx-ink)]'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="h-3.5 w-3.5 shrink-0 cursor-pointer rounded accent-[#22e8f5]"
+                      checked={checked}
+                      onChange={() => toggleStockFilter(f.key)}
+                    />
+                    <GeoIcon name={f.icon} className="h-3.5 w-3.5" accent="currentColor" />
+                    {f.label}
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          {/* Active/Dezactivate/Fără stoc as a dedicated one-click view, distinct
+              from the checkboxes above — single-select because a product can't
+              be both active and inactive at once. */}
+          <fieldset className="min-w-[14rem]">
+            <legend className="mb-2 text-[0.65rem] font-semibold uppercase tracking-[0.16em] xx-ink-dim">
+              Status
+            </legend>
+            <div className="flex flex-wrap gap-2">
+              {STATUS_FILTERS.map((f) => (
                 <button
                   key={f.key ?? 'all'}
                   type="button"
-                  onClick={() => chooseQuickFilter(f.key)}
-                  aria-pressed={quickFilter === f.key}
+                  onClick={() => chooseStatusFilter(f.key)}
+                  aria-pressed={statusFilter === f.key}
                   className={`flex h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-all duration-xx ease-xx ${
-                    quickFilter === f.key
+                    statusFilter === f.key
                       ? 'border-[rgba(34,232,245,0.55)] bg-[rgba(34,232,245,0.14)] text-[color:var(--xx-ink)] shadow-[0_0_26px_-10px_rgba(34,232,245,0.9)]'
                       : 'border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] hover:border-[rgba(122,60,255,0.5)] hover:text-[color:var(--xx-ink)]'
                   }`}
@@ -1199,7 +1273,7 @@ export default function AdminProducts() {
       ) : products.length === 0 ? (
         <div className="card card-static p-10 text-center">
           <p className="text-sm xx-ink-muted">
-            {search || quickFilter
+            {search || stockFilters.size > 0 || statusFilter
               ? 'Niciun produs nu corespunde filtrelor curente.'
               : 'Catalogul este gol. Adaugă primul produs.'}
           </p>
@@ -1285,11 +1359,14 @@ export default function AdminProducts() {
                       <div>
                         <p className="flex items-center gap-1.5 font-medium text-[color:var(--xx-ink)] transition-colors duration-xx group-hover:text-[color:var(--xx-cyan)]">
                           {p.name}
-                          {!p.active && (
-                            <span className="rounded-full border border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.06)] px-2 py-0.5 text-[0.65rem] font-semibold text-[#a8b0d4]">
-                              Inactiv
-                            </span>
-                          )}
+                          {/* Status is always shown, never just for the "unusual" state — a row
+                              read at a glance should never require checking for the ABSENCE of a
+                              badge to conclude "this one's active". Green/amber carries the state;
+                              the check icon + text keep it readable without relying on color alone. */}
+                          <NeonBadge tone={p.active ? 'good' : 'warning'} className="shrink-0">
+                            <GeoIcon name="check" className="h-3 w-3" accent="currentColor" />
+                            {p.active ? 'Activ' : 'Inactiv'}
+                          </NeonBadge>
                         </p>
                         <p className="text-xs xx-ink-dim">{p.brand}</p>
                       </div>
@@ -2455,7 +2532,13 @@ function ProductTile({
         </label>
 
         <div className="absolute right-3 top-3 flex flex-col items-end gap-1.5">
-          {!p.active && <NeonBadge tone="warning">Inactiv</NeonBadge>}
+          {/* Same always-on green/amber status badge as the table view — the grid
+              is the "visual scan" surface, so status has to read at a glance here
+              too, not just in the denser table. */}
+          <NeonBadge tone={p.active ? 'good' : 'warning'}>
+            <GeoIcon name="check" className="h-3 w-3" accent="currentColor" />
+            {p.active ? 'Activ' : 'Inactiv'}
+          </NeonBadge>
           {inCart > 0 && <NeonBadge tone="good" pulse>{`În vânzare: ${inCart}`}</NeonBadge>}
         </div>
 

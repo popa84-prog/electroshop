@@ -6,11 +6,11 @@ import { useEffect, useState } from 'react';
  * fire its own API request — only the value the user settles on does.
  */
 export function useDebounce(value, delayMs = 350) {
-    const [debounced, setDebounced] = useState(value);
+  const [debounced, setDebounced] = useState(value);
 
   useEffect(() => {
-        const timer = setTimeout(() => setDebounced(value), delayMs);
-        return () => clearTimeout(timer);
+    const timer = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(timer);
   }, [value, delayMs]);
 
   return debounced;

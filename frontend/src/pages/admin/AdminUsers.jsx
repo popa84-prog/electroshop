@@ -3,10 +3,38 @@ import adminService from '../../api/adminService';
 import AdminNav from '../../components/AdminNav';
 import Modal from '../../components/Modal';
 import Pagination from '../../components/Pagination';
-import Spinner from '../../components/Spinner';
+import {
+  GeoIcon,
+  HoloInput,
+  HoloLoader,
+  NeonBadge,
+  NeonButton,
+  Reveal,
+  SectionHeader,
+} from '../../components/xxii';
 import { formatDate } from '../../utils/format';
 import { ROLE_BADGE_STYLE, ROLE_LABELS } from '../../utils/permissions';
 import { useDebounce } from '../../hooks/useDebounce';
+
+/**
+ * XXII — TASK 6: user management inside the Quantum Control Center.
+ *
+ * The permission model, the debounce and every service call are unchanged. The
+ * redesign concentrates on the two things this screen gets wrong when it is
+ * busy:
+ *
+ *   · **Pending approvals used to be an amber strip that looked like an alert
+ *     and behaved like a queue.** It is now an explicitly labelled queue panel
+ *     with a count, a pulsing badge and per-row approve/reject controls — the
+ *     operator can see at a glance whether anything is waiting without reading
+ *     the text.
+ *   · **Account state was four badges of similar weight.** Locked and 2FA are
+ *     now marked with icons as well as colour, because "blocat" is an
+ *     actionable condition and must not disappear into a row of chips.
+ *
+ * Roles keep their own accent ladder (see `ROLE_BADGE_STYLE`), and the role
+ * name is always printed, so privilege is never inferred from hue alone.
+ */
 
 const emptyForm = { fullName: '', email: '', password: '', enabled: true, roles: ['ROLE_USER'] };
 // Feature #6: Admin/Manager/Editor + the plain storefront-customer role.
@@ -158,150 +186,227 @@ export default function AdminUsers() {
   return (
     <div>
       <AdminNav />
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-slate-800">Management utilizatori</h1>
-        <button className="btn-primary" onClick={openCreate}>
-          + Utilizator nou
-        </button>
-      </div>
 
-      {pending.length > 0 && (
-        <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <span className="badge bg-amber-200 text-amber-900">{pending.length}</span>
-            <h2 className="text-sm font-semibold text-amber-800">
-              Conturi în așteptarea aprobării
-            </h2>
-          </div>
-          <div className="space-y-2">
-            {pending.map((u) => (
-              <div
-                key={u.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white px-3 py-2 shadow-sm"
-              >
-                <div>
-                  <p className="font-medium text-slate-800">{u.fullName}</p>
-                  <p className="text-xs text-slate-500">{u.email}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleApprove(u)}
-                    disabled={approvingId === u.id}
-                    className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-60"
-                  >
-                    {approvingId === u.id ? 'Se aprobă...' : '✓ Aprobă'}
-                  </button>
-                  <button
-                    onClick={() => handleReject(u)}
-                    className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
-                  >
-                    ✕ Respinge
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <input
-        className="input mb-4 sm:w-72"
-        placeholder="Caută după nume sau email..."
-        value={search}
-        onChange={(e) => {
-          setPage(0);
-          setSearch(e.target.value);
-        }}
+      <SectionHeader
+        eyebrow="Acces"
+        title="Management utilizatori"
+        subtitle="Conturi, roluri, aprobări și intervenții de securitate."
+        as="h1"
+        action={
+          <NeonButton
+            onClick={openCreate}
+            icon={<GeoIcon name="user" className="h-4 w-4" accent="currentColor" />}
+          >
+            Utilizator nou
+          </NeonButton>
+        }
       />
 
-      {loading ? (
-        <Spinner />
-      ) : (
-        <div className="card overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50 text-left text-slate-500">
-              <tr>
-                <th className="px-4 py-3">Nume</th>
-                <th className="px-4 py-3">Email</th>
-                <th className="px-4 py-3">Roluri</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Ultima conectare</th>
-                <th className="px-4 py-3">Creat</th>
-                <th className="px-4 py-3 text-right">Acțiuni</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {users.map((u) => (
-                <tr key={u.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-medium text-slate-800">{u.fullName}</td>
-                  <td className="px-4 py-3 text-slate-600">{u.email}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      {u.roles.map((r) => (
-                        <span key={r} className={`badge ${ROLE_BADGE_STYLE[r] || 'bg-slate-100 text-slate-700'}`}>
-                          {ROLE_LABELS[r] || r.replace('ROLE_', '')}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      <span
-                        className={`badge ${
-                          u.enabled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {u.enabled ? 'Activ' : 'Inactiv'}
-                      </span>
-                      {!u.approved && (
-                        <span className="badge bg-amber-100 text-amber-800">În așteptare</span>
-                      )}
-                      {u.locked && <span className="badge bg-red-100 text-red-800">🔒 Blocat</span>}
-                      {u.twoFactorEnabled && (
-                        <span className="badge bg-cyan-100 text-cyan-800">🔑 2FA</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">
-                    {u.lastLoginAt ? (
-                      <div>
-                        <p className="text-xs">{formatDate(u.lastLoginAt)}</p>
-                        <p className="text-xs text-slate-400">
-                          {u.lastLoginLocation || u.lastLoginIp || ''}
-                        </p>
-                      </div>
-                    ) : (
-                      <span className="text-slate-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-slate-500">{formatDate(u.createdAt)}</td>
-                  <td className="px-4 py-3 text-right">
-                    {u.locked && (
-                      <button onClick={() => handleUnlock(u)} className="mr-2 text-amber-600 hover:underline">
-                        Deblochează
-                      </button>
-                    )}
-                    {u.twoFactorEnabled && (
-                      <button
-                        onClick={() => handleDisableTwoFactor(u)}
-                        className="mr-2 text-amber-600 hover:underline"
-                      >
-                        Dezactivează 2FA
-                      </button>
-                    )}
-                    <button onClick={() => openEdit(u)} className="mr-2 text-brand-600 hover:underline">
-                      Editează
-                    </button>
-                    <button onClick={() => handleDelete(u)} className="text-red-600 hover:underline">
-                      Șterge
-                    </button>
-                  </td>
-                </tr>
+      {pending.length > 0 && (
+        <Reveal>
+          <div className="card card-static mb-5 border-[rgba(255,194,75,0.4)] p-4 shadow-[0_0_50px_-24px_rgba(255,194,75,0.8)]">
+            <div className="mb-3 flex items-center gap-2">
+              <NeonBadge
+                tone="warning"
+                pulse
+                icon={<GeoIcon name="clock" className="h-3 w-3" accent="currentColor" />}
+              >
+                {pending.length} în așteptare
+              </NeonBadge>
+              <h2 className="font-display text-sm font-semibold text-[color:var(--xx-ink)]">
+                Conturi care așteaptă aprobare
+              </h2>
+            </div>
+            <div className="space-y-2">
+              {pending.map((u) => (
+                <div
+                  key={u.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.05)] px-3 py-2"
+                >
+                  <div>
+                    <p className="font-medium text-[color:var(--xx-ink)]">{u.fullName}</p>
+                    <p className="text-xs xx-ink-dim">{u.email}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <NeonButton
+                      size="sm"
+                      disabled={approvingId === u.id}
+                      charging={approvingId === u.id}
+                      onClick={() => handleApprove(u)}
+                      icon={<GeoIcon name="check" className="h-3.5 w-3.5" accent="currentColor" />}
+                    >
+                      {approvingId === u.id ? 'Se aprobă…' : 'Aprobă'}
+                    </NeonButton>
+                    <NeonButton
+                      size="sm"
+                      variant="danger"
+                      onClick={() => handleReject(u)}
+                      icon={<GeoIcon name="close" className="h-3.5 w-3.5" accent="currentColor" />}
+                    >
+                      Respinge
+                    </NeonButton>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </div>
+          </div>
+        </Reveal>
       )}
+
+      <div className="mb-5 sm:max-w-md">
+        <HoloInput
+          label="Caută utilizatori"
+          placeholder="Nume sau email…"
+          icon={<GeoIcon name="search" className="h-4 w-4" accent="currentColor" />}
+          value={search}
+          onChange={(e) => {
+            setPage(0);
+            setSearch(e.target.value);
+          }}
+        />
+      </div>
+
+      {loading ? (
+        <HoloLoader label="Se încarcă utilizatorii" />
+      ) : users.length === 0 ? (
+        <div className="card card-static p-10 text-center">
+          <p className="text-sm xx-ink-muted">Niciun utilizator nu corespunde căutării.</p>
+        </div>
+      ) : (
+        <Reveal>
+          <div className="card overflow-x-auto">
+            <table className="min-w-full divide-y divide-[rgba(255,255,255,0.08)] text-sm">
+              <thead className="text-left">
+                <tr className="bg-[rgba(255,255,255,0.03)]">
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Nume</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Email</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Roluri</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Status</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">
+                    Ultima conectare
+                  </th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Creat</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.14em]">
+                    Acțiuni
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[rgba(255,255,255,0.07)]">
+                {users.map((u) => (
+                  <tr key={u.id}>
+                    <td className="px-4 py-3 font-medium text-[color:var(--xx-ink)]">{u.fullName}</td>
+                    <td className="px-4 py-3 text-xs xx-ink-muted">{u.email}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {u.roles.map((r) => (
+                          <span
+                            key={r}
+                            className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                              ROLE_BADGE_STYLE[r] || ROLE_BADGE_STYLE.ROLE_USER
+                            }`}
+                          >
+                            {ROLE_LABELS[r] || r.replace('ROLE_', '')}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                            u.enabled
+                              ? 'border border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.16)] text-[#93e9c4]'
+                              : 'border border-[rgba(184,47,60,0.45)] bg-[rgba(184,47,60,0.16)] text-[#ffb3bd]'
+                          }`}
+                        >
+                          <span aria-hidden="true">{u.enabled ? '●' : '○'}</span>
+                          {u.enabled ? 'Activ' : 'Inactiv'}
+                        </span>
+                        {!u.approved && (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-[rgba(176,140,9,0.45)] bg-[rgba(176,140,9,0.16)] px-2.5 py-0.5 text-xs font-semibold text-[#f0d089]">
+                            <span aria-hidden="true">◷</span>
+                            În așteptare
+                          </span>
+                        )}
+                        {u.locked && (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-[rgba(184,47,60,0.45)] bg-[rgba(184,47,60,0.16)] px-2.5 py-0.5 text-xs font-semibold text-[#ffb3bd]">
+                            <GeoIcon name="shield" className="h-3 w-3" accent="currentColor" />
+                            Blocat
+                          </span>
+                        )}
+                        {u.twoFactorEnabled && (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-[rgba(34,232,245,0.45)] bg-[rgba(34,232,245,0.14)] px-2.5 py-0.5 text-xs font-semibold text-[#a5f0f8]">
+                            <GeoIcon name="bolt" className="h-3 w-3" accent="currentColor" />
+                            2FA
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {u.lastLoginAt ? (
+                        <div>
+                          <p className="text-xs xx-ink-muted">{formatDate(u.lastLoginAt)}</p>
+                          <p className="text-xs xx-ink-dim">
+                            {u.lastLoginLocation || u.lastLoginIp || ''}
+                          </p>
+                        </div>
+                      ) : (
+                        <span className="xx-ink-dim">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-xs xx-ink-dim">{formatDate(u.createdAt)}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {u.locked && (
+                          <button
+                            type="button"
+                            onClick={() => handleUnlock(u)}
+                            title="Deblochează contul"
+                            aria-label={`Deblochează contul ${u.email}`}
+                            className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-amber)] transition-all duration-xx ease-xx hover:border-[rgba(255,194,75,0.55)]"
+                          >
+                            <GeoIcon name="shield" className="h-4 w-4" accent="currentColor" />
+                          </button>
+                        )}
+                        {u.twoFactorEnabled && (
+                          <button
+                            type="button"
+                            onClick={() => handleDisableTwoFactor(u)}
+                            title="Dezactivează autentificarea în doi pași"
+                            aria-label={`Dezactivează 2FA pentru ${u.email}`}
+                            className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-amber)] transition-all duration-xx ease-xx hover:border-[rgba(255,194,75,0.55)]"
+                          >
+                            <GeoIcon name="bolt" className="h-4 w-4" accent="currentColor" />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => openEdit(u)}
+                          title="Editează utilizatorul"
+                          aria-label={`Editează utilizatorul ${u.email}`}
+                          className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(46,123,255,0.5)] hover:text-[#7fb0ff]"
+                        >
+                          <GeoIcon name="gear" className="h-4 w-4" accent="currentColor" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(u)}
+                          title="Șterge utilizatorul"
+                          aria-label={`Șterge utilizatorul ${u.email}`}
+                          className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.55)] hover:text-[color:var(--xx-red)]"
+                        >
+                          <GeoIcon name="trash" className="h-4 w-4" accent="currentColor" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Reveal>
+      )}
+
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />
 
       <Modal
@@ -310,73 +415,82 @@ export default function AdminUsers() {
         onClose={() => setModalOpen(false)}
       >
         {error && (
-          <div className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>
+          <div className="mb-4 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-4 py-2 text-sm text-[#ffc2cc]">
+            {error}
+          </div>
         )}
         <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-600">Nume complet</label>
-            <input
-              className="input"
-              value={form.fullName}
-              onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-              required
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-600">Email</label>
-            <input
-              type="email"
-              className="input"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              required
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-600">
-              Parolă {editing && <span className="text-slate-400">(lasă gol pentru a păstra)</span>}
-            </label>
-            <input
-              type="password"
-              className="input"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              required={!editing}
-            />
-          </div>
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-600">Roluri</label>
-            <div className="flex flex-wrap gap-4">
-              {ASSIGNABLE_ROLES.map((r) => (
-                <label key={r} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={form.roles.includes(r)}
-                    onChange={() => toggleRole(r)}
-                  />
-                  {ROLE_LABELS[r] || r.replace('ROLE_', '')}
-                </label>
-              ))}
+          <HoloInput
+            label="Nume complet"
+            value={form.fullName}
+            onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+            required
+          />
+          <HoloInput
+            label="Email"
+            type="email"
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            required
+          />
+          <HoloInput
+            label="Parolă"
+            type="password"
+            hint={editing ? 'Lasă gol pentru a păstra parola actuală.' : undefined}
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            required={!editing}
+          />
+
+          <fieldset>
+            <legend className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] xx-ink-dim">
+              Roluri
+            </legend>
+            <div className="flex flex-wrap gap-2">
+              {ASSIGNABLE_ROLES.map((r) => {
+                const active = form.roles.includes(r);
+                return (
+                  <label
+                    key={r}
+                    className={`flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-all duration-xx ease-xx ${
+                      active
+                        ? 'border-[rgba(34,232,245,0.55)] bg-[rgba(34,232,245,0.12)] text-[color:var(--xx-ink)]'
+                        : 'border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] hover:border-[rgba(122,60,255,0.5)]'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="h-3.5 w-3.5 accent-[#22e8f5]"
+                      checked={active}
+                      onChange={() => toggleRole(r)}
+                    />
+                    {ROLE_LABELS[r] || r.replace('ROLE_', '')}
+                  </label>
+                );
+              })}
             </div>
-            <p className="mt-1.5 text-xs text-slate-400">
+            <p className="mt-2 text-xs leading-relaxed xx-ink-dim">
               Editor: editează produse. Manager: și stoc, prețuri, comenzi, ștergeri. Admin: acces total.
             </p>
-          </div>
-          <label className="flex items-center gap-2 text-sm">
+          </fieldset>
+
+          <label className="flex cursor-pointer items-center gap-2 text-sm xx-ink-muted">
             <input
               type="checkbox"
+              className="h-3.5 w-3.5 accent-[#22e8f5]"
               checked={form.enabled}
               onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
             />
             Cont activ
           </label>
+
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" className="btn-secondary" onClick={() => setModalOpen(false)}>
+            <NeonButton type="button" variant="ghost" onClick={() => setModalOpen(false)}>
               Anulează
-            </button>
-            <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? 'Se salvează...' : 'Salvează'}
-            </button>
+            </NeonButton>
+            <NeonButton type="submit" disabled={saving} charging={saving}>
+              {saving ? 'Se salvează…' : 'Salvează'}
+            </NeonButton>
           </div>
         </form>
       </Modal>

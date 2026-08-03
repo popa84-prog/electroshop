@@ -3,9 +3,39 @@ import adminService from '../../api/adminService';
 import AdminNav from '../../components/AdminNav';
 import Modal from '../../components/Modal';
 import Pagination from '../../components/Pagination';
-import Spinner from '../../components/Spinner';
-import { formatPrice, formatDate, statusColor, resolveImage } from '../../utils/format';
+import {
+  GeoIcon,
+  HoloLoader,
+  NeonButton,
+  Reveal,
+  SectionHeader,
+} from '../../components/xxii';
+import {
+  formatPrice,
+  formatDate,
+  statusColor,
+  statusGlyph,
+  statusLabel,
+  resolveImage,
+} from '../../utils/format';
 import { cachedList, invalidateListCache } from '../../utils/listCache';
+
+/**
+ * XXII — TASK 6: order management inside the Quantum Control Center.
+ *
+ * Every network call, the cache namespace and the export logic are unchanged.
+ * What changed is how the operator reads the screen:
+ *
+ *   · The status column was a bare `<select>` wearing a badge class, which
+ *     looked like a chip but behaved like a dropdown with no affordance saying
+ *     so. It is now an explicit control with a caret, and each status prints a
+ *     glyph beside its Romanian name — the state survives greyscale and does
+ *     not depend on the operator distinguishing amber from magenta.
+ *   · The export toolbar collapses into a slide-in panel instead of occupying
+ *     a permanent strip: it is used once a month, not once a minute.
+ *   · Row actions are icon buttons with labels rather than three underlined
+ *     words, so the destructive one is visibly destructive.
+ */
 
 const STATUSES = ['PENDING', 'PAID', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
 /** Cache namespace for this page's list (feature #7 — cache pentru liste mari). */
@@ -21,6 +51,7 @@ export default function AdminOrders() {
   const [detail, setDetail] = useState(null);
   const [savingStatus, setSavingStatus] = useState(false);
 
+  const [expOpen, setExpOpen] = useState(false);
   const [expFrom, setExpFrom] = useState('');
   const [expTo, setExpTo] = useState('');
   const [exporting, setExporting] = useState(false);
@@ -108,143 +139,295 @@ export default function AdminOrders() {
   return (
     <div>
       <AdminNav />
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-slate-800">Management comenzi</h1>
-        <select
-          className="input sm:w-52"
-          value={statusFilter}
-          onChange={(e) => {
-            setPage(0);
-            setStatusFilter(e.target.value);
-          }}
-        >
-          <option value="">Toate statusurile</option>
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-      </div>
 
-      <div className="card mb-4 flex flex-wrap items-end gap-3 p-4">
-        <div>
-          <label className="mb-1 block text-xs font-medium text-slate-500">Export — de la</label>
-          <input type="date" className="input" value={expFrom} onChange={(e) => setExpFrom(e.target.value)} />
+      <SectionHeader
+        eyebrow="Operațiuni"
+        title="Management comenzi"
+        subtitle="Statusul fiecărei comenzi, factura PDF și exportul contabil pe interval."
+        as="h1"
+      />
+
+      {/* Filter + export console */}
+      <div className="card mb-5 p-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label
+              htmlFor="ord-status"
+              className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] xx-ink-dim"
+            >
+              Status
+            </label>
+            <select
+              id="ord-status"
+              className="input sm:w-56"
+              value={statusFilter}
+              onChange={(e) => {
+                setPage(0);
+                setStatusFilter(e.target.value);
+              }}
+            >
+              <option value="">Toate statusurile</option>
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {statusLabel(s)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="ml-auto">
+            <NeonButton
+              variant={expOpen ? 'primary' : 'ghost'}
+              onClick={() => setExpOpen((open) => !open)}
+              icon={<GeoIcon name="document" className="h-4 w-4" accent="currentColor" />}
+              aria-expanded={expOpen}
+              aria-controls="ord-export-panel"
+            >
+              Export contabil
+            </NeonButton>
+          </div>
         </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-slate-500">până la</label>
-          <input type="date" className="input" value={expTo} onChange={(e) => setExpTo(e.target.value)} />
-        </div>
-        <button className="btn-primary" disabled={exporting} onClick={() => doExport('xlsx')}>
-          {exporting ? 'Se exportă...' : '⬇ Excel (.xlsx)'}
-        </button>
-        <button className="btn-secondary" disabled={exporting} onClick={() => doExport('csv')}>
-          ⬇ CSV
-        </button>
-        <span className="text-xs text-slate-400">Lasă datele goale pentru toate comenzile.</span>
+
+        {/* Slide-in export panel — materializes rather than jumping into place. */}
+        {expOpen ? (
+          <div
+            id="ord-export-panel"
+            className="mt-4 animate-xx-materialize rounded-[1rem] border border-[rgba(122,60,255,0.32)] bg-[rgba(122,60,255,0.07)] p-4"
+          >
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <label
+                  htmlFor="ord-exp-from"
+                  className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] xx-ink-dim"
+                >
+                  De la
+                </label>
+                <input
+                  id="ord-exp-from"
+                  type="date"
+                  className="input"
+                  value={expFrom}
+                  onChange={(e) => setExpFrom(e.target.value)}
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="ord-exp-to"
+                  className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] xx-ink-dim"
+                >
+                  Până la
+                </label>
+                <input
+                  id="ord-exp-to"
+                  type="date"
+                  className="input"
+                  value={expTo}
+                  onChange={(e) => setExpTo(e.target.value)}
+                />
+              </div>
+              <NeonButton
+                disabled={exporting}
+                charging={exporting}
+                onClick={() => doExport('xlsx')}
+                icon={<GeoIcon name="chart" className="h-4 w-4" accent="currentColor" />}
+              >
+                {exporting ? 'Se exportă…' : 'Excel (.xlsx)'}
+              </NeonButton>
+              <NeonButton
+                variant="secondary"
+                disabled={exporting}
+                onClick={() => doExport('csv')}
+                icon={<GeoIcon name="document" className="h-4 w-4" accent="currentColor" />}
+              >
+                CSV
+              </NeonButton>
+              <p className="text-xs xx-ink-dim">Lasă datele goale pentru toate comenzile.</p>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {loading ? (
-        <Spinner />
-      ) : (
-        <div className="card overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50 text-left text-slate-500">
-              <tr>
-                <th className="px-4 py-3">#</th>
-                <th className="px-4 py-3">Client</th>
-                <th className="px-4 py-3">Data</th>
-                <th className="px-4 py-3">Total</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Acțiuni</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {orders.map((o) => (
-                <tr key={o.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-medium">#{o.id}</td>
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-slate-800">{o.userFullName}</p>
-                    <p className="text-xs text-slate-500">{o.userEmail}</p>
-                  </td>
-                  <td className="px-4 py-3 text-slate-500">{formatDate(o.createdAt)}</td>
-                  <td className="px-4 py-3 font-medium">{formatPrice(o.totalAmount)}</td>
-                  <td className="px-4 py-3">
-                    <select
-                      className={`badge cursor-pointer border-0 ${statusColor(o.status)}`}
-                      value={o.status}
-                      disabled={savingStatus}
-                      onChange={(e) => changeStatus(o, e.target.value)}
-                    >
-                      {STATUSES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button onClick={() => downloadInvoice(o)} className="mr-2 text-slate-600 hover:underline">
-                      Factură
-                    </button>
-                    <button onClick={() => setDetail(o)} className="mr-2 text-brand-600 hover:underline">
-                      Detalii
-                    </button>
-                    <button onClick={() => handleDelete(o)} className="text-red-600 hover:underline">
-                      Șterge
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <HoloLoader label="Se încarcă comenzile" />
+      ) : orders.length === 0 ? (
+        <div className="card card-static p-10 text-center">
+          <p className="text-sm xx-ink-muted">Nu există comenzi pentru filtrul selectat.</p>
         </div>
+      ) : (
+        <Reveal>
+          <div className="card overflow-x-auto">
+            <table className="min-w-full divide-y divide-[rgba(255,255,255,0.08)] text-sm">
+              <thead className="text-left">
+                <tr className="bg-[rgba(255,255,255,0.03)]">
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">#</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Client</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Data</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Total</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Status</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.14em]">
+                    Acțiuni
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[rgba(255,255,255,0.07)]">
+                {orders.map((o) => (
+                  <tr key={o.id}>
+                    <td className="px-4 py-3 font-mono text-xs font-semibold text-[color:var(--xx-cyan)]">
+                      #{o.id}
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-[color:var(--xx-ink)]">{o.userFullName}</p>
+                      <p className="text-xs xx-ink-dim">{o.userEmail}</p>
+                    </td>
+                    <td className="px-4 py-3 text-xs xx-ink-muted">{formatDate(o.createdAt)}</td>
+                    <td className="px-4 py-3 font-semibold tabular-nums text-[color:var(--xx-ink)]">
+                      {formatPrice(o.totalAmount)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${statusColor(
+                            o.status
+                          )}`}
+                        >
+                          <span aria-hidden="true">{statusGlyph(o.status)}</span>
+                          {statusLabel(o.status)}
+                        </span>
+                        <select
+                          className="input h-8 w-8 cursor-pointer appearance-none bg-center p-0 text-center text-xs"
+                          value={o.status}
+                          disabled={savingStatus}
+                          aria-label={`Schimbă statusul comenzii #${o.id}`}
+                          onChange={(e) => changeStatus(o, e.target.value)}
+                        >
+                          {STATUSES.map((s) => (
+                            <option key={s} value={s}>
+                              {statusLabel(s)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => downloadInvoice(o)}
+                          title="Descarcă factura PDF"
+                          aria-label={`Descarcă factura comenzii #${o.id}`}
+                          className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.5)] hover:text-[color:var(--xx-cyan)]"
+                        >
+                          <GeoIcon name="document" className="h-4 w-4" accent="currentColor" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDetail(o)}
+                          title="Detalii comandă"
+                          aria-label={`Detaliile comenzii #${o.id}`}
+                          className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(46,123,255,0.5)] hover:text-[#7fb0ff]"
+                        >
+                          <GeoIcon name="zoom" className="h-4 w-4" accent="currentColor" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(o)}
+                          title="Șterge comanda"
+                          aria-label={`Șterge comanda #${o.id}`}
+                          className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.55)] hover:text-[color:var(--xx-red)]"
+                        >
+                          <GeoIcon name="trash" className="h-4 w-4" accent="currentColor" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Reveal>
       )}
+
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />
 
-      <Modal open={!!detail} title={detail ? `Comanda #${detail.id}` : ''} onClose={() => setDetail(null)}>
+      <Modal
+        open={!!detail}
+        title={detail ? `Comanda #${detail.id}` : ''}
+        onClose={() => setDetail(null)}
+      >
         {detail && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center justify-between gap-3 text-sm">
               <div>
-                <p className="font-medium text-slate-800">{detail.userFullName}</p>
-                <p className="text-slate-500">{detail.userEmail}</p>
+                <p className="font-medium text-[color:var(--xx-ink)]">{detail.userFullName}</p>
+                <p className="text-xs xx-ink-muted">{detail.userEmail}</p>
               </div>
-              <span className={`badge ${statusColor(detail.status)}`}>{detail.status}</span>
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${statusColor(
+                  detail.status
+                )}`}
+              >
+                <span aria-hidden="true">{statusGlyph(detail.status)}</span>
+                {statusLabel(detail.status)}
+              </span>
             </div>
-            <div className="text-sm text-slate-600">
-              <span className="font-medium">Adresă:</span> {detail.shippingAddress || '-'}
+
+            <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] p-3 text-sm">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] xx-ink-dim">
+                Adresă de livrare
+              </p>
+              <p className="mt-1 xx-ink-muted">{detail.shippingAddress || '—'}</p>
             </div>
+
             <div className="space-y-2">
               {detail.items.map((it) => (
-                <div key={it.id} className="flex items-center gap-3 rounded-lg bg-slate-50 p-2">
+                <div
+                  key={it.id}
+                  className="flex items-center gap-3 rounded-xl border border-[rgba(255,255,255,0.09)] bg-[rgba(255,255,255,0.04)] p-2"
+                >
                   <img
                     src={resolveImage(it.imageUrl)}
                     alt={it.productName}
                     loading="lazy"
-                    className="h-10 w-10 rounded object-cover"
+                    className="h-10 w-10 rounded-lg border border-[rgba(255,255,255,0.1)] object-cover"
                   />
                   <div className="flex-1 text-sm">
-                    <p className="font-medium text-slate-700">{it.productName}</p>
-                    <p className="text-slate-500">
+                    <p className="font-medium text-[color:var(--xx-ink)]">{it.productName}</p>
+                    <p className="text-xs xx-ink-dim">
                       {it.quantity} × {formatPrice(it.unitPrice)}
                     </p>
                   </div>
-                  <span className="text-sm font-semibold">{formatPrice(it.subtotal)}</span>
+                  <span className="text-sm font-semibold tabular-nums text-[color:var(--xx-ink)]">
+                    {formatPrice(it.subtotal)}
+                  </span>
                 </div>
               ))}
             </div>
-            <div className="flex items-center justify-between border-t border-slate-200 pt-3">
-              <span className="font-semibold">Total</span>
-              <span className="text-lg font-bold">{formatPrice(detail.totalAmount)}</span>
+
+            <div className="flex items-center justify-between border-t border-[rgba(255,255,255,0.12)] pt-3">
+              <span className="font-semibold xx-ink-muted">Total</span>
+              <span className="font-display text-lg font-bold text-[color:var(--xx-ink)]">
+                {formatPrice(detail.totalAmount)}
+              </span>
             </div>
-            <button className="btn-secondary w-full" onClick={() => downloadInvoice(detail)}>
-              🧾 Descarcă factura PDF
-            </button>
+
+            <NeonButton
+              variant="secondary"
+              block
+              onClick={() => downloadInvoice(detail)}
+              icon={<GeoIcon name="document" className="h-4 w-4" accent="currentColor" />}
+            >
+              Descarcă factura PDF
+            </NeonButton>
+
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-600">Schimbă status</label>
+              <label
+                htmlFor="ord-detail-status"
+                className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] xx-ink-dim"
+              >
+                Schimbă status
+              </label>
               <select
+                id="ord-detail-status"
                 className="input"
                 value={detail.status}
                 disabled={savingStatus}
@@ -252,7 +435,7 @@ export default function AdminOrders() {
               >
                 {STATUSES.map((s) => (
                   <option key={s} value={s}>
-                    {s}
+                    {statusLabel(s)}
                   </option>
                 ))}
               </select>

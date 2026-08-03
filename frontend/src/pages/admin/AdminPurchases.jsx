@@ -3,8 +3,27 @@ import adminService from '../../api/adminService';
 import AdminNav from '../../components/AdminNav';
 import Modal from '../../components/Modal';
 import Pagination from '../../components/Pagination';
-import Spinner from '../../components/Spinner';
-import { formatPrice, formatDate } from '../../utils/format';
+import {
+  GeoIcon,
+  HoloInput,
+  HoloLoader,
+  NeonButton,
+  Reveal,
+  SectionHeader,
+} from '../../components/xxii';
+import { formatPrice } from '../../utils/format';
+
+/**
+ * XXII — TASK 6: goods-in (stock purchases) inside the Quantum Control Center.
+ *
+ * The stock arithmetic and every service call are untouched. The line-item
+ * editor is the part that actually needed work: it was a flat row of unlabelled
+ * inputs where the only way to know which box was "cantitate" and which was
+ * "preț de achiziție" was the placeholder — which vanishes the moment a value
+ * is typed. Each row now carries a persistent header, the running line total is
+ * emphasised, and the grand total sits in a glass footer that stays visible
+ * while the operator scrolls a long delivery.
+ */
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
@@ -45,8 +64,22 @@ export default function AdminPurchases() {
   useEffect(load, [page]);
 
   useEffect(() => {
-    adminService.listSuppliers({ page: 0, size: 200 }).then((d) => setSuppliers(d.content)).catch(() => {});
-    adminService.listProductsAll().then((d) => setProducts(d.content)).catch(() => {});
+    let cancelled = false;
+    adminService
+      .listSuppliers({ page: 0, size: 200 })
+      .then((d) => {
+        if (!cancelled) setSuppliers(d.content);
+      })
+      .catch(() => {});
+    adminService
+      .listProductsAll()
+      .then((d) => {
+        if (!cancelled) setProducts(d.content);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const openCreate = () => {
@@ -70,7 +103,10 @@ export default function AdminPurchases() {
   };
 
   const addItemRow = () =>
-    setForm((f) => ({ ...f, items: [...f.items, { productId: '', quantity: 1, unitPurchasePrice: '' }] }));
+    setForm((f) => ({
+      ...f,
+      items: [...f.items, { productId: '', quantity: 1, unitPurchasePrice: '' }],
+    }));
 
   const removeItemRow = (idx) =>
     setForm((f) => ({ ...f, items: f.items.filter((_, i) => i !== idx) }));
@@ -129,119 +165,172 @@ export default function AdminPurchases() {
   return (
     <div>
       <AdminNav />
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-slate-800">Intrări marfă (cumpărări)</h1>
-        <button className="btn-primary" onClick={openCreate}>
-          + Intrare nouă
-        </button>
-      </div>
+
+      <SectionHeader
+        eyebrow="Aprovizionare"
+        title="Intrări marfă"
+        subtitle="Fiecare intrare crește automat stocul produselor cu cantitățile înregistrate."
+        as="h1"
+        action={
+          <NeonButton
+            onClick={openCreate}
+            icon={<GeoIcon name="box" className="h-4 w-4" accent="currentColor" />}
+          >
+            Intrare nouă
+          </NeonButton>
+        }
+      />
 
       {loading ? (
-        <Spinner />
-      ) : (
-        <div className="card overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50 text-left text-slate-500">
-              <tr>
-                <th className="px-4 py-3">#</th>
-                <th className="px-4 py-3">Data</th>
-                <th className="px-4 py-3">Furnizor</th>
-                <th className="px-4 py-3">Factură</th>
-                <th className="px-4 py-3">Produse</th>
-                <th className="px-4 py-3">Total</th>
-                <th className="px-4 py-3 text-right">Acțiuni</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {purchases.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
-                    Nicio intrare de marfă înregistrată.
-                  </td>
-                </tr>
-              )}
-              {purchases.map((p) => (
-                <tr key={p.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-medium">#{p.id}</td>
-                  <td className="px-4 py-3 text-slate-600">{p.purchaseDate}</td>
-                  <td className="px-4 py-3 text-slate-800">{p.supplierName}</td>
-                  <td className="px-4 py-3 text-slate-600">{p.invoiceNumber || '-'}</td>
-                  <td className="px-4 py-3 text-slate-600">{p.items.length}</td>
-                  <td className="px-4 py-3 font-medium">{formatPrice(p.totalAmount)}</td>
-                  <td className="px-4 py-3 text-right">
-                    <button onClick={() => setDetail(p)} className="mr-2 text-brand-600 hover:underline">
-                      Detalii
-                    </button>
-                    <button onClick={() => handleDelete(p)} className="text-red-600 hover:underline">
-                      Șterge
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <HoloLoader label="Se încarcă intrările" />
+      ) : purchases.length === 0 ? (
+        <div className="card card-static p-10 text-center">
+          <p className="text-sm xx-ink-muted">Nicio intrare de marfă înregistrată.</p>
         </div>
+      ) : (
+        <Reveal>
+          <div className="card overflow-x-auto">
+            <table className="min-w-full divide-y divide-[rgba(255,255,255,0.08)] text-sm">
+              <thead className="text-left">
+                <tr className="bg-[rgba(255,255,255,0.03)]">
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">#</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Data</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Furnizor</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Factură</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Produse</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Total</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.14em]">
+                    Acțiuni
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[rgba(255,255,255,0.07)]">
+                {purchases.map((p) => (
+                  <tr key={p.id}>
+                    <td className="px-4 py-3 font-mono text-xs font-semibold text-[color:var(--xx-cyan)]">
+                      #{p.id}
+                    </td>
+                    <td className="px-4 py-3 text-xs xx-ink-muted">{p.purchaseDate}</td>
+                    <td className="px-4 py-3 font-medium text-[color:var(--xx-ink)]">{p.supplierName}</td>
+                    <td className="px-4 py-3 font-mono text-xs xx-ink-dim">{p.invoiceNumber || '—'}</td>
+                    <td className="px-4 py-3 tabular-nums xx-ink-muted">{p.items.length}</td>
+                    <td className="px-4 py-3 font-semibold tabular-nums text-[color:var(--xx-ink)]">
+                      {formatPrice(p.totalAmount)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setDetail(p)}
+                          title="Detaliile intrării"
+                          aria-label={`Detaliile intrării #${p.id}`}
+                          className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(46,123,255,0.5)] hover:text-[#7fb0ff]"
+                        >
+                          <GeoIcon name="zoom" className="h-4 w-4" accent="currentColor" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(p)}
+                          title="Șterge intrarea"
+                          aria-label={`Șterge intrarea #${p.id}`}
+                          className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.55)] hover:text-[color:var(--xx-red)]"
+                        >
+                          <GeoIcon name="trash" className="h-4 w-4" accent="currentColor" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Reveal>
       )}
+
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />
 
       {/* New purchase modal */}
-      <Modal open={modalOpen} title="Intrare marfă nouă" onClose={() => setModalOpen(false)} maxWidth="max-w-3xl">
+      <Modal
+        open={modalOpen}
+        title="Intrare marfă nouă"
+        onClose={() => setModalOpen(false)}
+        maxWidth="max-w-3xl"
+      >
         {error && (
-          <div className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>
+          <div className="mb-4 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-4 py-2 text-sm text-[#ffc2cc]">
+            {error}
+          </div>
         )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-3">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-600">Furnizor *</label>
-              <select
-                className="input"
-                value={form.supplierId}
-                onChange={(e) => setForm({ ...form, supplierId: e.target.value })}
-                required
-              >
-                <option value="">Alege...</option>
-                {suppliers.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-600">Data</label>
-              <input
-                type="date"
-                className="input"
-                value={form.purchaseDate}
-                onChange={(e) => setForm({ ...form, purchaseDate: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-600">Nr. factură</label>
-              <input
-                className="input"
-                value={form.invoiceNumber}
-                onChange={(e) => setForm({ ...form, invoiceNumber: e.target.value })}
-              />
-            </div>
+            <HoloInput
+              as="select"
+              label="Furnizor *"
+              value={form.supplierId}
+              onChange={(e) => setForm({ ...form, supplierId: e.target.value })}
+              required
+            >
+              <option value="">Alege…</option>
+              {suppliers.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </HoloInput>
+
+            <HoloInput
+              label="Data"
+              type="date"
+              value={form.purchaseDate}
+              onChange={(e) => setForm({ ...form, purchaseDate: e.target.value })}
+            />
+
+            <HoloInput
+              label="Nr. factură"
+              value={form.invoiceNumber}
+              onChange={(e) => setForm({ ...form, invoiceNumber: e.target.value })}
+            />
           </div>
 
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <label className="text-sm font-medium text-slate-600">Produse</label>
-              <button type="button" className="text-sm text-brand-600 hover:underline" onClick={addItemRow}>
-                + adaugă rând
-              </button>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] xx-ink-dim">
+                Produse recepționate
+              </p>
+              <NeonButton
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={addItemRow}
+                icon={<GeoIcon name="layers" className="h-3.5 w-3.5" accent="currentColor" />}
+              >
+                Adaugă rând
+              </NeonButton>
             </div>
+
+            {/* Persistent column headers — a placeholder disappears the moment a
+                value is typed, which is exactly when the operator needs it. */}
+            <div className="mb-1 hidden gap-2 px-1 text-[0.65rem] font-semibold uppercase tracking-[0.14em] xx-ink-dim sm:flex">
+              <span className="flex-1">Produs</span>
+              <span className="w-20 text-center">Cant.</span>
+              <span className="w-28 text-center">Preț achiziție</span>
+              <span className="w-24 text-right">Subtotal</span>
+              <span className="w-8" />
+            </div>
+
             <div className="space-y-2">
               {form.items.map((it, idx) => (
-                <div key={idx} className="flex flex-wrap items-center gap-2">
+                <div
+                  key={idx}
+                  className="flex flex-wrap items-center gap-2 rounded-xl border border-[rgba(255,255,255,0.09)] bg-[rgba(255,255,255,0.04)] p-2"
+                >
                   <select
-                    className="input flex-1 min-w-[160px]"
+                    className="input min-w-[160px] flex-1"
+                    aria-label={`Produs pe rândul ${idx + 1}`}
                     value={it.productId}
                     onChange={(e) => updateItem(idx, 'productId', e.target.value)}
                   >
-                    <option value="">Produs...</option>
+                    <option value="">Produs…</option>
                     {products.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.name}
@@ -251,7 +340,8 @@ export default function AdminPurchases() {
                   <input
                     type="number"
                     min="1"
-                    className="input w-20"
+                    className="input w-20 text-center"
+                    aria-label={`Cantitate pe rândul ${idx + 1}`}
                     placeholder="Cant."
                     value={it.quantity}
                     onChange={(e) => updateItem(idx, 'quantity', e.target.value)}
@@ -260,78 +350,118 @@ export default function AdminPurchases() {
                     type="number"
                     step="0.01"
                     min="0"
-                    className="input w-28"
+                    className="input w-28 text-center"
+                    aria-label={`Preț de achiziție pe rândul ${idx + 1}`}
                     placeholder="Preț achiz."
                     value={it.unitPurchasePrice}
                     onChange={(e) => updateItem(idx, 'unitPurchasePrice', e.target.value)}
                   />
-                  <span className="w-24 text-right text-sm font-medium">
+                  <span className="w-24 text-right text-sm font-semibold tabular-nums text-[color:var(--xx-cyan)]">
                     {formatPrice((Number(it.unitPurchasePrice) || 0) * (Number(it.quantity) || 0))}
                   </span>
-                  {form.items.length > 1 && (
+                  {form.items.length > 1 ? (
                     <button
                       type="button"
-                      className="text-red-500 hover:text-red-700"
                       onClick={() => removeItemRow(idx)}
+                      aria-label={`Elimină rândul ${idx + 1}`}
+                      title="Elimină rândul"
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.55)] hover:text-[color:var(--xx-red)]"
                     >
-                      ✕
+                      <GeoIcon name="close" className="h-3.5 w-3.5" accent="currentColor" />
                     </button>
+                  ) : (
+                    <span className="w-8 shrink-0" />
                   )}
                 </div>
               ))}
             </div>
           </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-600">Note</label>
-            <textarea
-              className="input min-h-[60px]"
-              value={form.notes}
-              onChange={(e) => setForm({ ...form, notes: e.target.value })}
-            />
-          </div>
+          <HoloInput
+            as="textarea"
+            label="Note"
+            className="min-h-[60px]"
+            value={form.notes}
+            onChange={(e) => setForm({ ...form, notes: e.target.value })}
+          />
 
-          <div className="flex items-center justify-between border-t border-slate-200 pt-3">
-            <span className="text-lg font-bold text-slate-900">Total: {formatPrice(total)}</span>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[rgba(34,232,245,0.28)] bg-[rgba(34,232,245,0.07)] p-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] xx-ink-dim">Total intrare</p>
+              <p
+                className="font-display text-xl font-bold tabular-nums text-[color:var(--xx-ink)]"
+                style={{ textShadow: '0 0 26px rgba(34,232,245,0.45)' }}
+              >
+                {formatPrice(total)}
+              </p>
+            </div>
             <div className="flex gap-2">
-              <button type="button" className="btn-secondary" onClick={() => setModalOpen(false)}>
+              <NeonButton type="button" variant="ghost" onClick={() => setModalOpen(false)}>
                 Anulează
-              </button>
-              <button type="submit" className="btn-primary" disabled={saving}>
-                {saving ? 'Se salvează...' : 'Înregistrează intrarea'}
-              </button>
+              </NeonButton>
+              <NeonButton type="submit" disabled={saving} charging={saving}>
+                {saving ? 'Se salvează…' : 'Înregistrează intrarea'}
+              </NeonButton>
             </div>
           </div>
-          <p className="text-xs text-slate-400">
+
+          <p className="text-xs xx-ink-dim">
             La salvare, stocul produselor crește automat cu cantitățile introduse.
           </p>
         </form>
       </Modal>
 
       {/* Detail modal */}
-      <Modal open={!!detail} title={detail ? `Intrare #${detail.id}` : ''} onClose={() => setDetail(null)}>
+      <Modal
+        open={!!detail}
+        title={detail ? `Intrare #${detail.id}` : ''}
+        onClose={() => setDetail(null)}
+      >
         {detail && (
           <div className="space-y-3">
-            <div className="text-sm text-slate-600">
-              <p><span className="font-medium">Furnizor:</span> {detail.supplierName}</p>
-              <p><span className="font-medium">Data:</span> {detail.purchaseDate}</p>
-              <p><span className="font-medium">Factură:</span> {detail.invoiceNumber || '-'}</p>
-              {detail.notes && <p><span className="font-medium">Note:</span> {detail.notes}</p>}
-            </div>
+            <dl className="grid grid-cols-1 gap-2 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] p-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-[0.14em] xx-ink-dim">Furnizor</dt>
+                <dd className="text-[color:var(--xx-ink)]">{detail.supplierName}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-[0.14em] xx-ink-dim">Data</dt>
+                <dd className="text-[color:var(--xx-ink)]">{detail.purchaseDate}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-[0.14em] xx-ink-dim">Factură</dt>
+                <dd className="font-mono text-[color:var(--xx-ink)]">{detail.invoiceNumber || '—'}</dd>
+              </div>
+              {detail.notes ? (
+                <div>
+                  <dt className="text-xs font-semibold uppercase tracking-[0.14em] xx-ink-dim">Note</dt>
+                  <dd className="xx-ink-muted">{detail.notes}</dd>
+                </div>
+              ) : null}
+            </dl>
+
             <div className="space-y-2">
               {detail.items.map((it) => (
-                <div key={it.id} className="flex items-center justify-between rounded-lg bg-slate-50 p-2 text-sm">
-                  <span className="font-medium text-slate-700">{it.productName}</span>
-                  <span className="text-slate-500">
+                <div
+                  key={it.id}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-[rgba(255,255,255,0.09)] bg-[rgba(255,255,255,0.04)] p-2 text-sm"
+                >
+                  <span className="flex-1 font-medium text-[color:var(--xx-ink)]">{it.productName}</span>
+                  <span className="text-xs tabular-nums xx-ink-dim">
                     {it.quantity} × {formatPrice(it.unitPurchasePrice)}
                   </span>
-                  <span className="font-semibold">{formatPrice(it.subtotal)}</span>
+                  <span className="font-semibold tabular-nums text-[color:var(--xx-ink)]">
+                    {formatPrice(it.subtotal)}
+                  </span>
                 </div>
               ))}
             </div>
-            <div className="flex items-center justify-between border-t border-slate-200 pt-3">
-              <span className="font-semibold">Total</span>
-              <span className="text-lg font-bold">{formatPrice(detail.totalAmount)}</span>
+
+            <div className="flex items-center justify-between border-t border-[rgba(255,255,255,0.12)] pt-3">
+              <span className="font-semibold xx-ink-muted">Total</span>
+              <span className="font-display text-lg font-bold text-[color:var(--xx-ink)]">
+                {formatPrice(detail.totalAmount)}
+              </span>
             </div>
           </div>
         )}

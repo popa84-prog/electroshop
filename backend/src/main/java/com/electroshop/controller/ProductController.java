@@ -5,6 +5,7 @@ import com.electroshop.dto.ApiResponse;
 import com.electroshop.dto.BulkIdsRequest;
 import com.electroshop.dto.CategoryStatDto;
 import com.electroshop.dto.CompanyPublicDto;
+import com.electroshop.dto.OfferPublicDto;
 import com.electroshop.dto.PageResponse;
 import com.electroshop.dto.ProductDto;
 import com.electroshop.dto.ProductImportResult;
@@ -13,6 +14,7 @@ import com.electroshop.dto.ReorderImagesRequest;
 import com.electroshop.dto.SellProductRequest;
 import com.electroshop.service.CompanySettingsService;
 import com.electroshop.service.FileStorageService;
+import com.electroshop.service.OfferService;
 import com.electroshop.service.OrderService;
 import com.electroshop.service.ProductImportService;
 import com.electroshop.service.ProductService;
@@ -38,16 +40,19 @@ public class ProductController {
     private final ProductImportService productImportService;
     private final CompanySettingsService companySettingsService;
     private final OrderService orderService;
+    private final OfferService offerService;
 
     public ProductController(ProductService productService, FileStorageService fileStorageService,
                              ProductImportService productImportService,
                              CompanySettingsService companySettingsService,
-                             OrderService orderService) {
+                             OrderService orderService,
+                             OfferService offerService) {
         this.productService = productService;
         this.fileStorageService = fileStorageService;
         this.productImportService = productImportService;
         this.companySettingsService = companySettingsService;
         this.orderService = orderService;
+        this.offerService = offerService;
     }
 
     /** Public company contact details for the storefront footer (feature #1). */
@@ -55,6 +60,19 @@ public class ProductController {
     public ResponseEntity<ApiResponse<CompanyPublicDto>> companyInfo() {
         return ResponseEntity.ok(ApiResponse.ok(
                 CompanyPublicDto.from(companySettingsService.getEntity())));
+    }
+
+    /**
+     * Ofertele afișabile chiar acum într-o anumită zonă a magazinului.
+     * {@code placement} acceptă {@code HOME_PROMO} (modulul mare de promoție)
+     * sau {@code BENEFIT_BAR} (banda de patru cartonașe). Serviciul filtrează
+     * după fereastra de timp și aplică limitele de layout, deci interfața poate
+     * randa direct ce primește, fără verificări suplimentare.
+     */
+    @GetMapping("/offers")
+    public ResponseEntity<ApiResponse<List<OfferPublicDto>>> offers(
+            @RequestParam(defaultValue = "HOME_PROMO") String placement) {
+        return ResponseEntity.ok(ApiResponse.ok(offerService.livePublic(placement)));
     }
 
     // ---- Public ----

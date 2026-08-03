@@ -3,6 +3,8 @@ package com.electroshop.repository;
 import com.electroshop.model.PurchaseItem;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
+
 public interface PurchaseItemRepository extends JpaRepository<PurchaseItem, Long> {
 
     /**
@@ -12,4 +14,12 @@ public interface PurchaseItemRepository extends JpaRepository<PurchaseItem, Long
      * the accounting trail must stay intact.
      */
     boolean existsByProductId(Long productId);
+
+    /**
+     * Every purchase line that ever referenced this product, each with its
+     * owning {@code Purchase} reachable via {@code getPurchase()}. Used only
+     * by the explicit, irreversible force-delete path — mirrors
+     * {@link com.electroshop.repository.OrderItemRepository#findByProductId(Long)}.
+     */
+    List<PurchaseItem> findByProductId(Long productId);
 }

@@ -28,6 +28,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -147,11 +148,21 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.ok("Product updated", productService.update(id, request)));
     }
 
+    /**
+     * A product with order or purchase history cannot be hard-deleted without
+     * corrupting past invoices and goods-in entries, so {@link ProductService#delete}
+     * deactivates it instead in that case — the response message reflects
+     * whichever actually happened rather than always claiming a deletion.
+     */
     @DeleteMapping("/{id}")
     @PreAuthorize("@permissionService.has('PRODUCTS_DELETE')")
     public ResponseEntity<ApiResponse<Object>> delete(@PathVariable Long id) {
-        productService.delete(id);
-        return ResponseEntity.ok(ApiResponse.ok("Product deleted", null));
+        boolean deleted = productService.delete(id);
+        String message = deleted
+                ? "Produs șters"
+                : "Produsul are comenzi sau achiziții înregistrate — a fost dezactivat în loc să fie șters, "
+                        + "pentru a păstra istoricul comenzilor și al contabilității intact.";
+        return ResponseEntity.ok(ApiResponse.ok(message, null));
     }
 
     /** Hides the product from the public storefront without deleting it (feature #5). */
@@ -188,15 +199,28 @@ public class ProductController {
      * idempotent from the caller's point of view (the response reports how many
      * rows were actually removed) and request bodies on DELETE are not handled
      * consistently by proxies and HTTP clients.
+     * <p>
+     * Products with order or purchase history are deactivated rather than
+     * removed (see {@link ProductService#deleteBulk}) — the summary message
+     * names both outcomes so a batch that mixes fresh, never-sold products
+     * with previously-sold ones reads as the partial success it is, not as a
+     * plain deletion count that quietly excludes what really happened.
      */
     @PostMapping("/bulk-delete")
     @PreAuthorize("@permissionService.has('PRODUCTS_DELETE')")
     public ResponseEntity<ApiResponse<ProductService.BulkDeleteResult>> bulkDelete(
             @Valid @RequestBody BulkIdsRequest request) {
         ProductService.BulkDeleteResult result = productService.deleteBulk(request.getIds());
-        String message = result.deleted() == 1
-                ? "1 produs șters"
-                : result.deleted() + " produse șterse";
+        List<String> parts = new ArrayList<>();
+        if (result.deleted() > 0) {
+            parts.add(result.deleted() == 1 ? "1 produs șters" : result.deleted() + " produse șterse");
+        }
+        if (!result.deactivated().isEmpty()) {
+            parts.add(result.deactivated().size() == 1
+                    ? "1 produs dezactivat (are comenzi/achiziții înregistrate)"
+                    : result.deactivated().size() + " produse dezactivate (au comenzi/achiziții înregistrate)");
+        }
+        String message = parts.isEmpty() ? "Niciun produs nu a fost modificat" : String.join(", ", parts);
         return ResponseEntity.ok(ApiResponse.ok(message, result));
     }
 

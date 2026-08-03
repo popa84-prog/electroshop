@@ -42,6 +42,15 @@ const VIEW_MODES = ['table', 'grid'];
 /** Word the operator must type to confirm a deletion. */
 const DELETE_KEYWORD = 'STERG';
 
+/**
+ * Word the operator must type to confirm the separate, irreversible
+ * force-delete override — deliberately different from {@link DELETE_KEYWORD}
+ * so the two confirmations can never be typed on autopilot from muscle
+ * memory. This path removes a product's order/purchase history rows
+ * permanently, not just the product row.
+ */
+const FORCE_DELETE_KEYWORD = 'ISTORIC';
+
 /** Quick-filter shortcuts (feature: filtre rapide) — mirrors the backend's `quickFilter` param. */
 const QUICK_FILTERS = [
   { key: null, label: 'Toate', icon: 'grid' },
@@ -110,6 +119,19 @@ export default function AdminProducts() {
   const [deleteWord, setDeleteWord] = useState('');
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
+
+  // Force-delete offer: shown right after a normal delete/bulk-delete leaves
+  // one or more products deactivated instead of removed (they have
+  // order/purchase history). `forceCandidates` holds exactly those products
+  // — never the whole original selection — and `forceStep` is 0 (closed) or
+  // 1 (type-the-keyword confirmation). A single step is enough here: the
+  // operator already reviewed the product list during the normal delete
+  // flow moments earlier, so this only needs the one, more severe warning.
+  const [forceCandidates, setForceCandidates] = useState([]);
+  const [forceStep, setForceStep] = useState(0);
+  const [forceWord, setForceWord] = useState('');
+  const [forceBusy, setForceBusy] = useState(false);
+  const [forceError, setForceError] = useState(null);
 
   // Spreadsheet export of the stock list.
   const [exporting, setExporting] = useState(false);
@@ -738,7 +760,10 @@ export default function AdminProducts() {
   /**
    * Runs only after both confirmation steps have been cleared. A single item
    * still goes through the dedicated endpoint; anything larger uses the batch
-   * endpoint so the whole set is removed in one transaction.
+   * endpoint so the whole set is removed in one transaction. Any product that
+   * comes back deactivated instead of deleted (it has order/purchase history)
+   * is immediately offered through the separate, more severe force-delete
+   * flow below — never executed automatically, only opened for review.
    */
   const confirmDelete = async () => {
     if (deleteWord.trim().toUpperCase() !== DELETE_KEYWORD) {
@@ -750,15 +775,20 @@ export default function AdminProducts() {
     try {
       const ids = pending.map((p) => p.id);
       let toastMessage;
+      let deactivatedCandidates = [];
 
-      // A product cu comenzi sau achiziții înregistrate nu poate fi șters
+      // A produs cu comenzi sau achiziții înregistrate nu poate fi șters
       // definitiv fără să strice istoricul facturilor — backend-ul îl
       // dezactivează în schimb și ne spune exact ce s-a întâmplat, ca să nu
       // afișăm un mesaj generic care ascunde diferența dintre „șters” și
-      // „dezactivat”.
+      // „dezactivat”. Produsele dezactivate astfel sunt oferite mai jos
+      // pentru eliminare definitivă, opțional și ireversibil.
       if (ids.length === 1) {
         const result = await productService.remove(ids[0]);
         toastMessage = result.message;
+        if (result.data?.deleted === false) {
+          deactivatedCandidates = pending;
+        }
       } else {
         const result = await productService.bulkRemove(ids);
         const parts = [];
@@ -771,6 +801,7 @@ export default function AdminProducts() {
               ? '1 produs dezactivat (are comenzi/achiziții înregistrate)'
               : `${result.deactivated.length} produse dezactivate (au comenzi/achiziții înregistrate)`
           );
+          deactivatedCandidates = pending.filter((p) => result.deactivated.includes(p.id));
         }
         toastMessage = parts.length > 0 ? `${parts.join(', ')}.` : 'Niciun produs nu a fost modificat.';
       }
@@ -791,10 +822,84 @@ export default function AdminProducts() {
       } else {
         load();
       }
+      if (deactivatedCandidates.length > 0) {
+        setForceCandidates(deactivatedCandidates);
+        setForceWord('');
+        setForceError(null);
+        setForceStep(1);
+      }
     } catch (err) {
       setDeleteError(err.response?.data?.message || 'Ștergerea a eșuat.');
     } finally {
       setDeleteBusy(false);
+    }
+  };
+
+  // ---- Force-delete (permanently removes history too) — opt-in override ----
+
+  const closeForceDelete = () => {
+    setForceStep(0);
+    setForceCandidates([]);
+    setForceWord('');
+    setForceError(null);
+  };
+
+  /**
+   * Runs after the operator types FORCE_DELETE_KEYWORD to confirm removing
+   * `forceCandidates` permanently, including their order/purchase history
+   * rows. Unlike confirmDelete, there is no fallback here: every candidate
+   * offered at this step already has confirmed sales history, so the
+   * backend always hard-deletes it — this endpoint never deactivates.
+   */
+  const confirmForceDelete = async () => {
+    if (forceWord.trim().toUpperCase() !== FORCE_DELETE_KEYWORD) {
+      setForceError(`Scrie exact ${FORCE_DELETE_KEYWORD} pentru a confirma.`);
+      return;
+    }
+    setForceBusy(true);
+    setForceError(null);
+    try {
+      const ids = forceCandidates.map((p) => p.id);
+      let toastMessage;
+      if (ids.length === 1) {
+        const result = await productService.forceRemove(ids[0]);
+        toastMessage = result.message;
+      } else {
+        const result = await productService.bulkForceRemove(ids);
+        const lineParts = [];
+        if (result.orderItemsRemoved > 0) {
+          lineParts.push(
+            result.orderItemsRemoved === 1 ? '1 linie de comandă' : `${result.orderItemsRemoved} linii de comandă`
+          );
+        }
+        if (result.purchaseItemsRemoved > 0) {
+          lineParts.push(
+            result.purchaseItemsRemoved === 1
+              ? '1 linie de achiziție'
+              : `${result.purchaseItemsRemoved} linii de achiziție`
+          );
+        }
+        toastMessage =
+          `${result.deleted} ${result.deleted === 1 ? 'produs șters definitiv' : 'produse șterse definitiv'}` +
+          (lineParts.length > 0 ? `, împreună cu ${lineParts.join(' și ')} eliminate ireversibil.` : '.');
+      }
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        ids.forEach((id) => next.delete(id));
+        return next;
+      });
+      closeForceDelete();
+      showToast(toastMessage, 'success');
+      invalidateListCache(LIST_CACHE_NS);
+      if (products.length === ids.length && page > 0) {
+        setPage((p) => p - 1);
+      } else {
+        load();
+      }
+    } catch (err) {
+      setForceError(err.response?.data?.message || 'Ștergerea definitivă a eșuat.');
+    } finally {
+      setForceBusy(false);
     }
   };
 
@@ -1520,6 +1625,86 @@ export default function AdminProducts() {
             icon={<GeoIcon name="trash" className="h-4 w-4" accent="currentColor" />}
           >
             {deleteBusy ? 'Se șterge…' : 'Șterge definitiv'}
+          </NeonButton>
+        </div>
+      </Modal>
+
+      {/*
+        Force-delete offer — shown automatically right after a normal delete
+        leaves one or more products deactivated instead of removed (they have
+        order/purchase history). Distinct keyword, distinct wording, distinct
+        color emphasis from the normal delete modal above: this one also
+        erases historical order/purchase line items and cannot be reached by
+        muscle memory alone.
+      */}
+      <Modal
+        open={forceStep === 1}
+        title="Eliminare definitivă, inclusiv istoricul"
+        onClose={closeForceDelete}
+        maxWidth="max-w-lg"
+      >
+        <p className="text-sm xx-ink-muted">
+          {forceCandidates.length === 1
+            ? 'Următorul produs are comenzi sau achiziții înregistrate, așa că a fost dezactivat în loc să fie șters:'
+            : `Următoarele ${forceCandidates.length} produse au comenzi sau achiziții înregistrate, așa că au fost dezactivate în loc să fie șterse:`}
+        </p>
+        <ul className="mt-3 max-h-40 space-y-1 overflow-y-auto rounded-xl border border-[rgba(255,84,112,0.3)] bg-[rgba(255,84,112,0.07)] p-3 text-sm text-[color:var(--xx-ink)]">
+          {forceCandidates.map((p) => (
+            <li key={p.id} className="flex items-center gap-2 truncate">
+              <span aria-hidden="true" className="text-[color:var(--xx-red)]">
+                ▪
+              </span>
+              {p.name}
+            </li>
+          ))}
+        </ul>
+        <div className="mt-3 flex items-start gap-3 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.1)] px-4 py-3 text-sm text-[#ffc2cc]">
+          <GeoIcon name="alert" className="mt-0.5 h-5 w-5 shrink-0" accent="currentColor" />
+          <span>
+            Poți să le elimini definitiv, împreună cu liniile de comandă și de achiziție care le
+            referențiază. Comenzile și achizițiile afectate rămân, dar cu totalul recalculat fără acest
+            produs — facturile care conțineau acest produs nu mai reflectă exact ce s-a vândut atunci.{' '}
+            <strong className="text-[color:var(--xx-ink)]">Operațiunea nu poate fi anulată.</strong> Pentru
+            a confirma, scrie <strong className="font-mono text-[color:var(--xx-ink)]">{FORCE_DELETE_KEYWORD}</strong>{' '}
+            în câmpul de mai jos.
+          </span>
+        </div>
+        {forceError && (
+          <div
+            role="alert"
+            className="mt-3 rounded-xl border border-[rgba(255,84,112,0.5)] bg-[rgba(255,84,112,0.16)] px-4 py-2 text-sm text-[#ffc2cc]"
+          >
+            {forceError}
+          </div>
+        )}
+        <div className="mt-3">
+          <HoloInput
+            label={`Scrie ${FORCE_DELETE_KEYWORD} pentru a confirma`}
+            value={forceWord}
+            onChange={(e) => setForceWord(e.target.value)}
+            placeholder={FORCE_DELETE_KEYWORD}
+            autoComplete="off"
+            status={
+              forceWord.trim() === ''
+                ? null
+                : forceWord.trim().toUpperCase() === FORCE_DELETE_KEYWORD
+                ? 'valid'
+                : 'invalid'
+            }
+          />
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <NeonButton variant="ghost" onClick={closeForceDelete}>
+            Lasă dezactivat
+          </NeonButton>
+          <NeonButton
+            variant="danger"
+            disabled={forceBusy || forceWord.trim().toUpperCase() !== FORCE_DELETE_KEYWORD}
+            charging={forceBusy}
+            onClick={confirmForceDelete}
+            icon={<GeoIcon name="trash" className="h-4 w-4" accent="currentColor" />}
+          >
+            {forceBusy ? 'Se elimină definitiv…' : 'Elimină definitiv, inclusiv istoricul'}
           </NeonButton>
         </div>
       </Modal>

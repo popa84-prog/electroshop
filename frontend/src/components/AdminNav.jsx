@@ -140,6 +140,12 @@ export const adminGroups = [
     ],
   },
   {
+    key: 'marketing',
+    label: 'Marketing',
+    icon: 'tag',
+    items: [{ to: '/admin/offers', label: 'Oferte', icon: 'tag', permission: 'OFFERS_MANAGE' }],
+  },
+  {
     key: 'sales',
     label: 'Vânzări',
     icon: 'trend',

@@ -117,6 +117,12 @@ export default function Footer() {
               <li>
                 <FooterLink to="/orders">Comenzi</FooterLink>
               </li>
+              <li>
+                <FooterLink to="/retur">Retur</FooterLink>
+              </li>
+              <li>
+                <FooterLink to="/garantie">Garanție</FooterLink>
+              </li>
             </ul>
           </FooterModule>
 
@@ -150,11 +156,15 @@ export default function Footer() {
               </li>
               <li className="flex items-start gap-2.5 text-sm xx-ink-muted">
                 <GeoIcon name="shield" className="mt-0.5 h-4 w-4 shrink-0" accent="var(--xx-lime)" />
-                Garanție conform legislației în vigoare
+                Garanție legală + garanție comercială 7 zile
               </li>
-              <li className="flex items-start gap-2.5 text-sm xx-ink-muted">
-                <GeoIcon name="refresh" className="mt-0.5 h-4 w-4 shrink-0" accent="var(--xx-amber)" />
-                Retur în 14 zile
+            </ul>
+            <ul className="mt-3 space-y-2.5 border-t border-[rgba(255,255,255,0.08)] pt-3">
+              <li>
+                <FooterLink to="/retur">Condiții de retur</FooterLink>
+              </li>
+              <li>
+                <FooterLink to="/garantie">Condiții de garanție</FooterLink>
               </li>
             </ul>
           </FooterModule>

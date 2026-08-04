@@ -51,6 +51,8 @@ public class PurchaseService {
 
             PurchaseItem pi = new PurchaseItem();
             pi.setProduct(product);
+            // Snapshot the product's name at intake time — see PurchaseItem.productName.
+            pi.setProductName(product.getName());
             pi.setQuantity(item.quantity());
             pi.setUnitPurchasePrice(item.unitPurchasePrice());
             purchase.addItem(pi);
@@ -80,6 +82,12 @@ public class PurchaseService {
         Purchase purchase = findEntity(id);
         for (PurchaseItem item : purchase.getItems()) {
             Product p = item.getProduct();
+            // A force-deleted product (see ProductService#forceDeleteWithHistory) has
+            // no live row left to adjust — the line itself is kept intact for
+            // accounting, but there is nothing in the catalogue to reverse stock on.
+            if (p == null) {
+                continue;
+            }
             int reversed = p.getStockQuantity() - item.getQuantity();
             p.setStockQuantity(Math.max(0, reversed));
         }

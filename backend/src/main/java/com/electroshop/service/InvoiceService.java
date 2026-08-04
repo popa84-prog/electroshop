@@ -143,8 +143,16 @@ public class InvoiceService {
         int idx = 1;
         for (OrderItem it : o.getItems()) {
             BigDecimal lineValue = it.getUnitPrice().multiply(BigDecimal.valueOf(it.getQuantity()));
+            // Prefers the live product's current name; falls back to the sale-time
+            // snapshot (OrderItem.productName) once the product has been permanently
+            // removed from the catalogue — see ProductService#forceDeleteWithHistory.
+            // A past invoice must keep reprinting identically no matter what happens
+            // to the catalogue afterwards.
+            String productLabel = it.getProduct() != null
+                    ? it.getProduct().getName()
+                    : (it.getProductName() != null ? it.getProductName() : "Produs șters din catalog");
             addBodyCell(items, String.valueOf(idx++), normal, Element.ALIGN_CENTER);
-            addBodyCell(items, ascii(it.getProduct().getName()), normal, Element.ALIGN_LEFT);
+            addBodyCell(items, ascii(productLabel), normal, Element.ALIGN_LEFT);
             addBodyCell(items, String.valueOf(it.getQuantity()), normal, Element.ALIGN_CENTER);
             addBodyCell(items, money(it.getUnitPrice()), normal, Element.ALIGN_RIGHT);
             addBodyCell(items, money(lineValue), normal, Element.ALIGN_RIGHT);

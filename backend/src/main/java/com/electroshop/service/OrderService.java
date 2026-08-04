@@ -82,6 +82,10 @@ public class OrderService {
 
             OrderItem orderItem = new OrderItem();
             orderItem.setProduct(product);
+            // Snapshot the product's name at sale time — see OrderItem.productName.
+            // Populated unconditionally, not only in anticipation of a future
+            // force-delete, so it is always there once needed.
+            orderItem.setProductName(product.getName());
             orderItem.setQuantity(item.quantity());
             orderItem.setUnitPrice(product.getPrice());
             // Snapshot the acquisition cost at sale time so the accounting report's
@@ -133,6 +137,8 @@ public class OrderService {
 
         OrderItem item = new OrderItem();
         item.setProduct(product);
+        // Snapshot the product's name at sale time — see OrderItem.productName.
+        item.setProductName(product.getName());
         item.setQuantity(req.quantity());
         item.setUnitPrice(req.unitPrice());
         // Snapshot the acquisition cost at sale time — see OrderItem.costPrice.
@@ -200,6 +206,8 @@ public class OrderService {
             Product lineProduct = products.get(line.productId());
             OrderItem item = new OrderItem();
             item.setProduct(lineProduct);
+            // Snapshot the product's name at sale time — see OrderItem.productName.
+            item.setProductName(lineProduct.getName());
             item.setQuantity(line.quantity());
             item.setUnitPrice(line.unitPrice());
             // Snapshot the acquisition cost at sale time — see OrderItem.costPrice.
@@ -290,6 +298,12 @@ public class OrderService {
         if (newStatus == OrderStatus.CANCELLED && order.getStatus() != OrderStatus.CANCELLED) {
             for (OrderItem item : order.getItems()) {
                 Product p = item.getProduct();
+                // A force-deleted product (see ProductService#forceDeleteWithHistory)
+                // has no live row left to restock — the line itself is kept intact
+                // for accounting, but there is nothing in the catalogue to add back.
+                if (p == null) {
+                    continue;
+                }
                 p.setStockQuantity(p.getStockQuantity() + item.getQuantity());
             }
         }

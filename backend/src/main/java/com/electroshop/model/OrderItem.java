@@ -25,9 +25,28 @@ public class OrderItem {
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "product_id", nullable = false)
+    // Nullable (and optional = true) so a product can be permanently removed from
+    // the catalogue — via ProductService#forceDeleteWithHistory — without deleting
+    // this row: the historical line survives with product_id set to NULL instead
+    // of the database refusing the deletion outright over the foreign key, or the
+    // application deleting the line and silently corrupting past invoices and the
+    // accounting report's gross-margin figure. See productName below for how the
+    // line keeps displaying correctly once this link is gone.
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "product_id", nullable = true)
     private Product product;
+
+    // Snapshot of the product's name at sale time. Always populated going forward
+    // from the release that introduced it (set alongside setProduct(...) at every
+    // OrderItem creation site in OrderService); order items created before that
+    // carry a null value here. It exists so the line still shows a real product
+    // name after a force-delete nulls out `product` above — OrderItemDto prefers
+    // the live product's current name when the link is intact (so a rename shows
+    // up on old orders too, matching pre-existing behavior) and falls back to this
+    // snapshot only once the product is gone. Backfilled from the product's name
+    // at the moment of force-delete for any pre-existing row that never had it set.
+    @Column(name = "product_name", length = 255)
+    private String productName;
 
     @Column(nullable = false)
     private Integer quantity;

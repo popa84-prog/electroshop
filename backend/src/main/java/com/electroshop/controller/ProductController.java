@@ -10,6 +10,7 @@ import com.electroshop.dto.PageResponse;
 import com.electroshop.dto.ProductDto;
 import com.electroshop.dto.ProductImportResult;
 import com.electroshop.dto.ProductRequest;
+import com.electroshop.dto.RecategorizeResult;
 import com.electroshop.dto.ReorderImagesRequest;
 import com.electroshop.dto.SellProductRequest;
 import com.electroshop.service.CompanySettingsService;
@@ -17,6 +18,7 @@ import com.electroshop.service.FileStorageService;
 import com.electroshop.service.OfferService;
 import com.electroshop.service.OrderService;
 import com.electroshop.service.ProductImportService;
+import com.electroshop.service.ProductRecategorizeService;
 import com.electroshop.service.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -39,18 +41,21 @@ public class ProductController {
     private final ProductService productService;
     private final FileStorageService fileStorageService;
     private final ProductImportService productImportService;
+    private final ProductRecategorizeService productRecategorizeService;
     private final CompanySettingsService companySettingsService;
     private final OrderService orderService;
     private final OfferService offerService;
 
     public ProductController(ProductService productService, FileStorageService fileStorageService,
                              ProductImportService productImportService,
+                             ProductRecategorizeService productRecategorizeService,
                              CompanySettingsService companySettingsService,
                              OrderService orderService,
                              OfferService offerService) {
         this.productService = productService;
         this.fileStorageService = fileStorageService;
         this.productImportService = productImportService;
+        this.productRecategorizeService = productRecategorizeService;
         this.companySettingsService = companySettingsService;
         this.orderService = orderService;
         this.offerService = offerService;
@@ -379,6 +384,38 @@ public class ProductController {
         ProductImportResult result = productImportService.syncPurchasePrices(file, dryRun);
         String msg = dryRun ? "Previzualizare sincronizare prețuri achiziție"
                             : "Prețuri de achiziție actualizate";
+        return ResponseEntity.ok(ApiResponse.ok(msg, result));
+    }
+
+    /**
+     * Repairs the category / subcategory columns of products that are already in the
+     * database, using the same rule table the import uses.
+     *
+     * <p>{@code mode} selects how aggressive the run is:</p>
+     * <ul>
+     *   <li>{@code PLACEHOLDER} — only products whose stored category or subcategory
+     *       is unusable (empty, {@code "0"}, {@code "-"}, {@code "N/A"}, a bare
+     *       number, or a condition word such as {@code "Folosit"}).</li>
+     *   <li>{@code INCONSISTENT} (default) — the above, plus pairs where the
+     *       subcategory sits under the wrong parent category or either value is
+     *       spelled in a non-canonical form.</li>
+     *   <li>{@code ALL} — re-derives both columns from the product name for every
+     *       product, overwriting manual classifications.</li>
+     * </ul>
+     *
+     * <p>With {@code dryRun=true} (the default) nothing is written and the response
+     * is the exact change list an applied run would produce.</p>
+     */
+    @PostMapping("/recategorize")
+    @PreAuthorize("@permissionService.has('PRODUCTS_IMPORT')")
+    public ResponseEntity<ApiResponse<RecategorizeResult>> recategorize(
+            @RequestParam(name = "mode", defaultValue = "INCONSISTENT") String mode,
+            @RequestParam(name = "dryRun", defaultValue = "true") boolean dryRun) {
+        ProductRecategorizeService.Mode selected = ProductRecategorizeService.Mode.parse(mode);
+        RecategorizeResult result = productRecategorizeService.run(selected, dryRun);
+        String msg = dryRun
+                ? "Previzualizare recategorizare: " + result.changed() + " produse de corectat"
+                : "Recategorizare finalizată: " + result.changed() + " produse actualizate";
         return ResponseEntity.ok(ApiResponse.ok(msg, result));
     }
 }

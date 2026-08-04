@@ -252,6 +252,16 @@ export default function AdminProducts() {
   // added and a quantity-weighted average purchase price.
   const [restockMode, setRestockMode] = useState(false);
 
+  // Recategorize state — repararea categoriilor/subcategoriilor deja salvate în
+  // baza de date. Rularea are întotdeauna două faze: o previzualizare care nu
+  // scrie nimic și abia apoi aplicarea aceleiași liste de modificări.
+  const [recatOpen, setRecatOpen] = useState(false);
+  const [recatMode, setRecatMode] = useState('INCONSISTENT');
+  const [recatReport, setRecatReport] = useState(null);
+  const [recatBusy, setRecatBusy] = useState(false);
+  const [recatError, setRecatError] = useState(null);
+  const [recatDone, setRecatDone] = useState(null);
+
   // Feature #7 (performance): the input stays instantly responsive, but the
   // actual request only fires 350ms after the operator stops typing — instead
   // of one API call per keystroke.
@@ -1044,6 +1054,43 @@ export default function AdminProducts() {
     }
   };
 
+  // ---- Recategorizare (reparare categorii/subcategorii existente) ----
+  const openRecategorize = () => {
+    setRecatMode('INCONSISTENT');
+    setRecatReport(null);
+    setRecatError(null);
+    setRecatDone(null);
+    setRecatOpen(true);
+  };
+
+  // Schimbarea modului invalidează previzualizarea: lista de modificări este
+  // calculată pentru un mod anume și nu poate fi aplicată cu altul.
+  const changeRecatMode = (mode) => {
+    setRecatMode(mode);
+    setRecatReport(null);
+    setRecatDone(null);
+    setRecatError(null);
+  };
+
+  const runRecategorize = async (dryRun) => {
+    setRecatBusy(true);
+    setRecatError(null);
+    try {
+      const report = await productService.recategorize(recatMode, dryRun);
+      setRecatReport(report);
+      if (!dryRun) {
+        setRecatDone(report);
+        showToast(`Recategorizare finalizată: ${report.changed} produse actualizate.`, 'success');
+        invalidateListCache(LIST_CACHE_NS);
+        load();
+      }
+    } catch (err) {
+      setRecatError(err.response?.data?.message || 'Recategorizarea a eșuat.');
+    } finally {
+      setRecatBusy(false);
+    }
+  };
+
   return (
     <div>
       <AdminNav />
@@ -1074,6 +1121,13 @@ export default function AdminProducts() {
               icon={<GeoIcon name="layers" className="h-4 w-4" accent="currentColor" />}
             >
               Import Excel
+            </NeonButton>
+            <NeonButton
+              variant="ghost"
+              onClick={openRecategorize}
+              icon={<GeoIcon name="shield" className="h-4 w-4" accent="currentColor" />}
+            >
+              Repară categoriile
             </NeonButton>
             <NeonButton
               onClick={openCreate}
@@ -2314,6 +2368,187 @@ export default function AdminProducts() {
               : restockMode
               ? `Înregistrează intrarea (${importReport ? importReport.validCount : ''})`
               : `Importă ${importReport ? importReport.validCount : ''} produse`}
+          </NeonButton>
+        </div>
+      </Modal>
+
+      {/* Recategorize modal — repară categoria/subcategoria produselor existente. */}
+      <Modal
+        open={recatOpen}
+        title="Repară categoriile și subcategoriile"
+        onClose={() => setRecatOpen(false)}
+        maxWidth="max-w-4xl"
+      >
+        {recatError && (
+          <div
+            role="alert"
+            className="mb-4 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-4 py-2 text-sm text-[#ffc2cc]"
+          >
+            {recatError}
+          </div>
+        )}
+
+        <p className="mb-3 text-sm xx-ink-muted">
+          Recalculez categoria și subcategoria produselor deja salvate, folosind același tabel de
+          reguli ca importul. Rulez întâi o previzualizare care nu scrie nimic în baza de date și îți
+          arăt exact ce s-ar schimba; abia după ce confirmi, aplic aceleași modificări.
+        </p>
+
+        <div className="mb-4 space-y-2">
+          {[
+            {
+              value: 'PLACEHOLDER',
+              title: 'Doar produsele neclasificate',
+              text: 'Repar exclusiv produsele la care categoria sau subcategoria nu spune nimic despre produs: câmp gol, valoare fără sens („0”, „-”, „N/A”, un număr, „Folosit”) sau eticheta generică „Diverse electronice / Gadgeturi” scrisă de rulările anterioare. Produsele clasificate corect nu sunt atinse.',
+            },
+            {
+              value: 'INCONSISTENT',
+              title: 'Neclasificate + perechi contradictorii (recomandat)',
+              text: 'Pe lângă produsele neclasificate, corectez și cazurile unde subcategoria este trecută sub o categorie care nu o conține sau unde denumirile nu sunt scrise în forma canonică. Denumirile produselor nu sunt recitite pentru aceste cazuri, deci o clasificare manuală coerentă rămâne neschimbată.',
+            },
+            {
+              value: 'ALL',
+              title: 'Recalculează tot din denumire',
+              text: 'Recalculez ambele câmpuri pentru toate produsele, pornind de la denumire. Este singurul mod care suprascrie o clasificare făcută manual — folosește-l după ce regulile de clasificare au fost corectate.',
+            },
+          ].map((opt) => (
+            <label
+              key={opt.value}
+              className={`flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5 text-sm transition-all duration-xx ease-xx ${
+                recatMode === opt.value
+                  ? 'border-[rgba(34,232,245,0.55)] bg-[rgba(34,232,245,0.08)]'
+                  : 'border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] hover:border-[rgba(34,232,245,0.4)]'
+              }`}
+            >
+              <input
+                type="radio"
+                name="recat-mode"
+                className="mt-0.5 h-4 w-4 cursor-pointer accent-[#22e8f5]"
+                checked={recatMode === opt.value}
+                onChange={() => changeRecatMode(opt.value)}
+              />
+              <span className="xx-ink-muted">
+                <span className="font-semibold text-[color:var(--xx-ink)]">{opt.title}</span>
+                <span className="mt-0.5 block">{opt.text}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+
+        {recatReport && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <Stat label="Produse scanate" value={recatReport.scanned} />
+              <Stat
+                label={recatDone ? 'Corectate' : 'De corectat'}
+                value={recatReport.changed}
+                tone="green"
+              />
+              <Stat label="Neidentificate" value={recatReport.unresolved} tone="amber" />
+              <Stat
+                label="Neschimbate"
+                value={recatReport.scanned - recatReport.changed}
+                tone="slate"
+              />
+            </div>
+
+            {recatDone ? (
+              <div
+                role="status"
+                className="flex items-start gap-2 rounded-xl border border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.12)] px-4 py-2.5 text-sm text-[#93e9c4]"
+              >
+                <GeoIcon name="check" className="mt-0.5 h-4 w-4 shrink-0" accent="currentColor" />
+                Recategorizare finalizată: {recatDone.changed} produse au primit categoria și
+                subcategoria corectă.
+              </div>
+            ) : (
+              <div
+                role="status"
+                className="flex items-start gap-2 rounded-xl border border-[rgba(34,232,245,0.4)] bg-[rgba(34,232,245,0.08)] px-4 py-2.5 text-sm text-[#a8f0f7]"
+              >
+                <GeoIcon name="shield" className="mt-0.5 h-4 w-4 shrink-0" accent="currentColor" />
+                Previzualizare — nu s-a scris nimic în baza de date.
+              </div>
+            )}
+
+            {recatReport.unresolved > 0 && (
+              <div className="rounded-xl border border-[rgba(176,140,9,0.42)] bg-[rgba(176,140,9,0.1)] px-4 py-2.5 text-sm text-[#f0d089]">
+                {recatReport.unresolved}{' '}
+                {recatReport.unresolved === 1 ? 'produs a ajuns' : 'produse au ajuns'} în „Diverse
+                electronice / Gadgeturi”: denumirea lor nu conține niciun indiciu suficient de clar.
+                Le poți clasifica manual din tabel.
+              </div>
+            )}
+
+            {recatReport.changed > recatReport.changes.length && (
+              <p className="text-xs xx-ink-muted">
+                Se afișează primele {recatReport.changes.length} modificări din {recatReport.changed}
+                . Restul se aplică identic, doar lista de detaliu este limitată.
+              </p>
+            )}
+
+            {recatReport.changes.length > 0 && (
+              <div className="max-h-80 overflow-y-auto rounded-xl border border-[rgba(255,255,255,0.12)]">
+                <table className="w-full text-left text-sm">
+                  <thead className="sticky top-0 bg-[rgba(12,16,32,0.96)] text-[0.68rem] uppercase tracking-[0.12em] xx-ink-muted">
+                    <tr>
+                      <th className="px-3 py-2 font-semibold">Produs</th>
+                      <th className="px-3 py-2 font-semibold">Acum</th>
+                      <th className="px-3 py-2 font-semibold">Devine</th>
+                      <th className="px-3 py-2 font-semibold">Motiv</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recatReport.changes.map((c) => (
+                      <tr
+                        key={c.id}
+                        className="border-t border-[rgba(255,255,255,0.08)] align-top"
+                      >
+                        <td className="px-3 py-2 text-[color:var(--xx-ink)]">{c.name}</td>
+                        <td className="px-3 py-2 text-[#ff8fa8]">
+                          {c.oldCategory} / {c.oldSubcategory}
+                        </td>
+                        <td className="px-3 py-2 text-[#7ee9bd]">
+                          {c.newCategory} / {c.newSubcategory}
+                        </td>
+                        <td className="px-3 py-2 text-xs xx-ink-muted">{c.reason}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {recatReport.changed === 0 && (
+              <div className="rounded-xl border border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.12)] px-4 py-2.5 text-sm text-[#93e9c4]">
+                Nu am găsit nimic de corectat în acest mod — categoriile și subcategoriile sunt deja
+                consecvente.
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="mt-5 flex flex-wrap justify-end gap-2">
+          <NeonButton variant="ghost" onClick={() => setRecatOpen(false)}>
+            Închide
+          </NeonButton>
+          <NeonButton
+            variant="secondary"
+            disabled={recatBusy}
+            charging={recatBusy}
+            onClick={() => runRecategorize(true)}
+            icon={<GeoIcon name="shield" className="h-4 w-4" accent="currentColor" />}
+          >
+            {recatBusy ? 'Se analizează…' : 'Previzualizează'}
+          </NeonButton>
+          <NeonButton
+            disabled={recatBusy || !recatReport || recatReport.changed === 0 || !!recatDone}
+            onClick={() => runRecategorize(false)}
+            icon={<GeoIcon name="check" className="h-4 w-4" accent="currentColor" />}
+          >
+            {recatDone
+              ? 'Aplicat ✓'
+              : `Aplică ${recatReport ? recatReport.changed : ''} corecții`}
           </NeonButton>
         </div>
       </Modal>

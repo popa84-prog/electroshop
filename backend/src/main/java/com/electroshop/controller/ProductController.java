@@ -10,6 +10,7 @@ import com.electroshop.dto.PageResponse;
 import com.electroshop.dto.ProductDto;
 import com.electroshop.dto.ProductImportResult;
 import com.electroshop.dto.ProductRequest;
+import com.electroshop.dto.RebrandResult;
 import com.electroshop.dto.RecategorizeResult;
 import com.electroshop.dto.ReorderImagesRequest;
 import com.electroshop.dto.SellProductRequest;
@@ -17,6 +18,7 @@ import com.electroshop.service.CompanySettingsService;
 import com.electroshop.service.FileStorageService;
 import com.electroshop.service.OfferService;
 import com.electroshop.service.OrderService;
+import com.electroshop.service.ProductBrandBackfillService;
 import com.electroshop.service.ProductImportService;
 import com.electroshop.service.ProductRecategorizeService;
 import com.electroshop.service.ProductService;
@@ -42,6 +44,7 @@ public class ProductController {
     private final FileStorageService fileStorageService;
     private final ProductImportService productImportService;
     private final ProductRecategorizeService productRecategorizeService;
+    private final ProductBrandBackfillService productBrandBackfillService;
     private final CompanySettingsService companySettingsService;
     private final OrderService orderService;
     private final OfferService offerService;
@@ -49,6 +52,7 @@ public class ProductController {
     public ProductController(ProductService productService, FileStorageService fileStorageService,
                              ProductImportService productImportService,
                              ProductRecategorizeService productRecategorizeService,
+                             ProductBrandBackfillService productBrandBackfillService,
                              CompanySettingsService companySettingsService,
                              OrderService orderService,
                              OfferService offerService) {
@@ -56,6 +60,7 @@ public class ProductController {
         this.fileStorageService = fileStorageService;
         this.productImportService = productImportService;
         this.productRecategorizeService = productRecategorizeService;
+        this.productBrandBackfillService = productBrandBackfillService;
         this.companySettingsService = companySettingsService;
         this.orderService = orderService;
         this.offerService = offerService;
@@ -416,6 +421,45 @@ public class ProductController {
         String msg = dryRun
                 ? "Previzualizare recategorizare: " + result.changed() + " produse de corectat"
                 : "Recategorizare finalizată: " + result.changed() + " produse actualizate";
+        return ResponseEntity.ok(ApiResponse.ok(msg, result));
+    }
+
+    /**
+     * Repairs the {@code brand} column of products that are already in the database,
+     * using the same whole-word resolver the import now uses.
+     *
+     * <p>{@code mode} selects how aggressive the run is:</p>
+     * <ul>
+     *   <li>{@code MISSING} — only products with no usable brand at all: an empty
+     *       column, or a junk sentinel such as {@code "0"}, {@code "-"} or
+     *       {@code "N/A"} typed in place of a blank cell. A product that already
+     *       carries a real-looking brand is never touched, even a wrong one.</li>
+     *   <li>{@code WRONG} (default) — the above, plus every value that is provably
+     *       wrong: a brand that does not appear in the product's own name as a whole
+     *       word (the {@code "Ring"} extracted from {@code "Behringer"}, the
+     *       {@code "HP"} extracted from the model number {@code HP2564}), and a brand
+     *       that appears only inside a compatibility list ({@code "pentru Apple
+     *       Watch"}). Casing is normalised in this mode too, so {@code LOGITECH} and
+     *       {@code Logitech} stop being two entries in the storefront filter.</li>
+     *   <li>{@code ALL} — re-derives the brand from the product name for every
+     *       product. This is the mode to run after the brand table itself has been
+     *       extended; it keeps a stored brand the table does not recognise when the
+     *       name introduces that brand before the one the table found.</li>
+     * </ul>
+     *
+     * <p>With {@code dryRun=true} (the default) nothing is written and the response is
+     * the exact change list an applied run would produce.</p>
+     */
+    @PostMapping("/rebrand")
+    @PreAuthorize("@permissionService.has('PRODUCTS_IMPORT')")
+    public ResponseEntity<ApiResponse<RebrandResult>> rebrand(
+            @RequestParam(name = "mode", defaultValue = "WRONG") String mode,
+            @RequestParam(name = "dryRun", defaultValue = "true") boolean dryRun) {
+        ProductBrandBackfillService.Mode selected = ProductBrandBackfillService.Mode.parse(mode);
+        RebrandResult result = productBrandBackfillService.run(selected, dryRun);
+        String msg = dryRun
+                ? "Previzualizare mărci: " + result.changed() + " produse de corectat"
+                : "Mărci actualizate: " + result.changed() + " produse modificate";
         return ResponseEntity.ok(ApiResponse.ok(msg, result));
     }
 }

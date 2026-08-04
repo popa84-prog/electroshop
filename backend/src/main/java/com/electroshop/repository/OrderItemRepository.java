@@ -16,12 +16,13 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
     boolean existsByProductId(Long productId);
 
     /**
-     * Every order line that ever referenced this product, each with its
-     * owning {@code Order} reachable via {@code getOrder()}. Used only by the
-     * explicit, irreversible force-delete path — removing each returned item
-     * from its order's item list (and recalculating that order's total) is
-     * how the caller physically deletes these rows via JPA's orphan-removal
-     * cascade, instead of leaving them as dangling references.
+     * Every order line that ever referenced this product. Used only by the
+     * explicit, irreversible force-delete path
+     * ({@code ProductService#forceDeleteWithHistory}) — each returned item has
+     * its {@code product} link set to {@code null} and is otherwise left
+     * untouched (quantity, prices, and the {@code productName} snapshot all
+     * survive), so the accounting trail stays intact even after the product
+     * row itself is gone.
      */
     List<OrderItem> findByProductId(Long productId);
 }

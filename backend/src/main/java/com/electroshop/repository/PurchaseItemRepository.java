@@ -16,10 +16,11 @@ public interface PurchaseItemRepository extends JpaRepository<PurchaseItem, Long
     boolean existsByProductId(Long productId);
 
     /**
-     * Every purchase line that ever referenced this product, each with its
-     * owning {@code Purchase} reachable via {@code getPurchase()}. Used only
-     * by the explicit, irreversible force-delete path — mirrors
-     * {@link com.electroshop.repository.OrderItemRepository#findByProductId(Long)}.
+     * Every purchase line that ever referenced this product. Used only by the
+     * explicit, irreversible force-delete path — mirrors
+     * {@link com.electroshop.repository.OrderItemRepository#findByProductId(Long)}:
+     * each returned item has its {@code product} link set to {@code null} and
+     * is otherwise preserved unchanged.
      */
     List<PurchaseItem> findByProductId(Long productId);
 }

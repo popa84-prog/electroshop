@@ -68,10 +68,21 @@ public class ProductRecategorizeService {
         INCONSISTENT,
 
         /**
-         * Re-derives both columns from the product name for every product,
-         * discarding all stored values. This is the mode to use after the rule
-         * table itself has been corrected, and the only mode that can overwrite a
-         * manual classification.
+         * Re-derives both columns from the product name for every product. This is
+         * the mode to use after the rule table itself has been corrected, and the
+         * only mode that can overwrite a classification the rules disagree with even
+         * when the stored pair is internally coherent.
+         *
+         * <p>It is also the only mode that repairs the damage the previous
+         * substring-matching classifier left behind, because that classifier always
+         * wrote a <em>matching</em> pair: a phone whose name contains "AMOLED" was
+         * stored as {@code Televizoare / Televizoare}, which no consistency check can
+         * flag — the subcategory really does belong to that category. Only the
+         * product name reveals the error.</p>
+         *
+         * <p>The one thing it will not do is trade information for ignorance: when the
+         * rules recognise nothing in a product's name, a meaningful stored value is
+         * kept rather than overwritten with the miscellaneous fallback.</p>
          */
         ALL;
 
@@ -186,8 +197,25 @@ public class ProductRecategorizeService {
 
         if (mode == Mode.ALL) {
             ProductCategorizer.Categorization auto = categorizer.categorize(name);
-            return new Resolution(auto.category(), auto.subcategory(),
-                    "Reclasificare completă din denumirea produsului");
+
+            if (!ProductCategorizer.DEFAULT_SUBCATEGORY.equals(auto.subcategory())) {
+                // The rules recognise the product: in this mode they win outright.
+                return new Resolution(auto.category(), auto.subcategory(),
+                        "Reclasificare completă din denumirea produsului");
+            }
+
+            // The rules recognise nothing in this name. Replacing a meaningful stored
+            // value with the miscellaneous fallback would destroy information and add
+            // none, so whatever is still meaningful stays. This is what keeps a
+            // deliberate label such as "Vitrina magazin" alive through a full
+            // re-derivation, without granting stored values any authority on the
+            // products the rules can actually identify.
+            String keptSubcategory = subcategoryMissing ? auto.subcategory() : subcategory.trim();
+            String keptCategory = categoryMissing
+                    ? firstNonNull(parentOf(keptSubcategory), auto.category())
+                    : category.trim();
+            return new Resolution(keptCategory, keptSubcategory,
+                    "Denumirea nu identifică produsul — valorile utilizabile au fost păstrate");
         }
 
         if (categoryMissing || subcategoryMissing) {
@@ -262,21 +290,55 @@ public class ProductRecategorizeService {
                             + "” nu corespunde denumirii — ambele recalculate");
         }
 
-        // Only the category is unusable. A known subcategory already determines its
-        // parent unambiguously, so the classifier is not consulted at all in that case
-        // and a deliberate manual subcategory is preserved.
+        // Only the category is unusable.
         String canonicalSubcategory = categorizer.canonicalSubcategory(subcategory);
-        if (canonicalSubcategory != null) {
-            String owner = categorizer.canonicalCategoryFor(canonicalSubcategory);
-            return new Resolution(owner, canonicalSubcategory,
+
+        if (canonicalSubcategory == null) {
+            // The subcategory is not in the rule table, so no classifier produced it:
+            // a human typed it. It is kept verbatim and only the category is filled in.
+            return new Resolution(auto.category(), subcategory.trim(),
                     "Categoria „" + display(category)
-                            + "” nu identifica produsul — dedusă din subcategoria „"
-                            + canonicalSubcategory + "”");
+                            + "” nu identifica produsul — recalculată din denumire, subcategoria "
+                            + "personalizată „" + subcategory.trim() + "” a fost păstrată");
         }
-        return new Resolution(auto.category(), subcategory.trim(),
+
+        // The subcategory IS in the rule table, which means it was almost certainly
+        // written by an earlier import rather than chosen by hand — a row that a
+        // human had curated would not have been left with "0" in the category column
+        // next to it. Trusting it is what kept a Motorola phone under Auto & Moto and
+        // a mirrorless body under Obiective: the broken classifier wrote the
+        // subcategory, the import wrote junk into the category, and reading the
+        // subcategory back as evidence would make that error permanent. The name is
+        // the only independent source, so it decides.
+        if (!ProductCategorizer.DEFAULT_SUBCATEGORY.equals(auto.subcategory())
+                && !auto.subcategory().equals(canonicalSubcategory)) {
+            return new Resolution(auto.category(), auto.subcategory(),
+                    "Categoria „" + display(category) + "” nu identifica produsul, iar subcategoria „"
+                            + canonicalSubcategory + "” contrazice denumirea — ambele recalculate");
+        }
+
+        // Either the name agrees with the stored subcategory, or the name identifies
+        // nothing at all. In both cases the stored subcategory is the best available
+        // information and its parent follows from the taxonomy.
+        String owner = categorizer.canonicalCategoryFor(canonicalSubcategory);
+        return new Resolution(owner, canonicalSubcategory,
                 "Categoria „" + display(category)
-                        + "” nu identifica produsul — recalculată din denumire, subcategoria "
-                        + "personalizată „" + subcategory.trim() + "” a fost păstrată");
+                        + "” nu identifica produsul — dedusă din subcategoria „"
+                        + canonicalSubcategory + "”");
+    }
+
+    /** Returns the first non-{@code null} of the two values. */
+    private String firstNonNull(String preferred, String fallback) {
+        return preferred != null ? preferred : fallback;
+    }
+
+    /**
+     * The taxonomy parent of a subcategory, or {@code null} when the subcategory is
+     * not part of the rule table and therefore has no declared parent.
+     */
+    private String parentOf(String subcategory) {
+        String canonical = categorizer.canonicalSubcategory(subcategory);
+        return canonical == null ? null : categorizer.canonicalCategoryFor(canonical);
     }
 
     /**

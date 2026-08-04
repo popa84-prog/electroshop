@@ -45,6 +45,18 @@ public class SchemaFixer implements CommandLineRunner {
         safeExecute("UPDATE users SET token_version = 0 WHERE token_version IS NULL");
         safeExecute("UPDATE users SET two_factor_enabled = FALSE WHERE two_factor_enabled IS NULL");
         safeExecute("UPDATE login_events SET success = TRUE WHERE success IS NULL");
+
+        // Force-delete-with-history-preservation feature: a permanently removed
+        // product (ProductService#forceDeleteWithHistory) unlinks itself from every
+        // order_items/purchase_items row that ever referenced it — product_id is set
+        // to NULL on each — instead of the row being deleted, so accounting and
+        // profit history survive intact. That requires product_id to actually accept
+        // NULL at the database level; Hibernate's ddl-auto=update never relaxes an
+        // existing NOT NULL constraint on its own, only ever adds new columns/tables,
+        // so both foreign key columns are widened here explicitly. Re-applying the
+        // same definition on every boot is a no-op once already nullable.
+        safeExecute("ALTER TABLE order_items MODIFY COLUMN product_id BIGINT NULL");
+        safeExecute("ALTER TABLE purchase_items MODIFY COLUMN product_id BIGINT NULL");
     }
 
     private void safeExecute(String sql) {

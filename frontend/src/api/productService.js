@@ -49,6 +49,18 @@ const productService = {
       .post(`/products/recategorize?mode=${mode}&dryRun=${dryRun}`)
       .then((r) => r.data.data),
 
+  // Repara coloana "marca" a produselor deja existente in baza de date,
+  // folosind acelasi rezolvator pe cuvinte intregi ca importul.
+  //   mode = 'MISSING' -> doar valorile inutilizabile ("0", "-", "N/A", gol)
+  //   mode = 'WRONG'   -> cele de mai sus + valorile demonstrabil gresite
+  //                       ("Ring" extras din "Behringer", "HP" extras din HP2564,
+  //                       o marca prezenta doar ca mentiune de compatibilitate)
+  //   mode = 'ALL'     -> rederiva marca din denumire pentru toate produsele
+  // Cu dryRun = true nu se scrie nimic; raspunsul contine exact lista de
+  // modificari pe care ar aplica-o rularea reala.
+  rebrand: (mode = 'WRONG', dryRun = true) =>
+    api.post(`/products/rebrand?mode=${mode}&dryRun=${dryRun}`).then((r) => r.data.data),
+
   // Admin
   create: (payload) => api.post('/products', payload).then((r) => r.data.data),
   update: (id, payload) => api.put(`/products/${id}`, payload).then((r) => r.data.data),

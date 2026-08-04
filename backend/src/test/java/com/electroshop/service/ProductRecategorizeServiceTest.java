@@ -63,7 +63,16 @@ class ProductRecategorizeServiceTest {
                 // 7: deliberate custom subcategory outside the taxonomy, junk category.
                 product(7L, "Produs cu subcategorie personalizata", "-", "Vitrina magazin"),
                 // 9: unclassifiable name — must land on the fallback and be counted.
-                product(9L, "Ceva total neinteligibil zzz qqq", "0", "0")
+                product(9L, "Ceva total neinteligibil zzz qqq", "0", "0"),
+                // 10: junk category next to a subcategory that IS in the rule table.
+                //     That subcategory was written by the old substring classifier
+                //     ("MOTOROLA" contains "moto"), not by a human — a curated row
+                //     would not have been left with "0" in the category column. It
+                //     must not be trusted.
+                product(10L, "Telefon MOTOROLA Edge 60 Fusion 5G, 256GB", "0", "Auto & Moto"),
+                // 11: coherent category next to a subcategory outside the taxonomy —
+                //     a merchandising label no classifier could have produced.
+                product(11L, "Laptop ASUS Vivobook 15", "Laptopuri", "Oferta saptamanii")
         ));
 
         // 3: both columns empty.
@@ -106,7 +115,7 @@ class ProductRecategorizeServiceTest {
                 service.run(ProductRecategorizeService.Mode.INCONSISTENT, true);
 
         assertTrue(result.dryRun());
-        assertEquals(9, result.scanned());
+        assertEquals(11, result.scanned());
         verify(productRepository, never()).saveAll(any());
         assertEquals("0", row(1L).getCategory());
         assertEquals("Gadgeturi", row(1L).getSubcategory());
@@ -122,7 +131,7 @@ class ProductRecategorizeServiceTest {
                 service.run(ProductRecategorizeService.Mode.PLACEHOLDER, true);
 
         assertEquals("PLACEHOLDER", result.mode());
-        assertEquals(5, result.changed());
+        assertEquals(6, result.changed());
 
         // The junk category is replaced, and the generic subcategory next to it is
         // treated as "unclassified" rather than as evidence, so the product finally
@@ -153,6 +162,27 @@ class ProductRecategorizeServiceTest {
         assertEquals(null, changeFor(result, 5L));
         assertEquals(null, changeFor(result, 6L));
         assertEquals(null, changeFor(result, 8L));
+        // A coherent pair carrying a custom subcategory is left alone entirely.
+        assertEquals(null, changeFor(result, 11L));
+    }
+
+    /**
+     * The regression this whole backfill exists for: a junk category next to a
+     * subcategory the old classifier invented. Deducing the parent from that stored
+     * subcategory looks safe — it is a real subcategory, and the parent it yields is
+     * genuinely its own — but it silently re-certifies the substring bug. The stored
+     * subcategory has exactly as much authority as the "0" beside it: none.
+     */
+    @Test
+    void aSubcategoryWrittenNextToAJunkCategoryIsNotTreatedAsEvidence() {
+        RecategorizeResult result =
+                service.run(ProductRecategorizeService.Mode.PLACEHOLDER, true);
+
+        RecategorizeResult.Change phone = changeFor(result, 10L);
+        assertNotNull(phone);
+        assertEquals("Telefoane", phone.newCategory());
+        assertEquals("Telefoane", phone.newSubcategory());
+        assertTrue(phone.reason().contains("contrazice denumirea"));
     }
 
     @Test
@@ -177,7 +207,7 @@ class ProductRecategorizeServiceTest {
                 service.run(ProductRecategorizeService.Mode.INCONSISTENT, true);
 
         assertEquals("INCONSISTENT", result.mode());
-        assertEquals(6, result.changed());
+        assertEquals(7, result.changed());
 
         RecategorizeResult.Change watch = changeFor(result, 4L);
         assertNotNull(watch);
@@ -215,7 +245,7 @@ class ProductRecategorizeServiceTest {
         RecategorizeResult result = service.run(ProductRecategorizeService.Mode.ALL, true);
 
         assertEquals("ALL", result.mode());
-        assertEquals(7, result.changed());
+        assertEquals(9, result.changed());
 
         // The only mode that re-spells a coherent manual pair.
         RecategorizeResult.Change speaker = changeFor(result, 6L);
@@ -223,14 +253,34 @@ class ProductRecategorizeServiceTest {
         assertEquals("Audio", speaker.newCategory());
         assertEquals("Boxe & Soundbar", speaker.newSubcategory());
 
-        // And the only mode that discards a custom subcategory.
-        RecategorizeResult.Change custom = changeFor(result, 7L);
-        assertNotNull(custom);
-        assertEquals(ProductCategorizer.DEFAULT_SUBCATEGORY, custom.newSubcategory());
-
         // Products the rules already agree with stay out of the report.
         assertEquals(null, changeFor(result, 5L));
         assertEquals(null, changeFor(result, 8L));
+    }
+
+    /**
+     * The boundary of the full re-derivation, asserted from both sides. A full
+     * re-derivation is allowed to overwrite anything the rules can improve on, but it
+     * may not trade information for ignorance: replacing a label a human typed with
+     * the miscellaneous fallback loses data and gains nothing.
+     */
+    @Test
+    void allModeOverwritesWhatItRecognisesAndKeepsWhatItDoesNot() {
+        RecategorizeResult result = service.run(ProductRecategorizeService.Mode.ALL, true);
+
+        // Name says nothing: the custom subcategory survives, only the junk category
+        // beside it is replaced.
+        RecategorizeResult.Change unknown = changeFor(result, 7L);
+        assertNotNull(unknown);
+        assertEquals("Vitrina magazin", unknown.newSubcategory());
+
+        // Name says "Laptop": the rules win, custom label and all. This is the mode's
+        // entire purpose and the reason it is not the default.
+        RecategorizeResult.Change laptop = changeFor(result, 11L);
+        assertNotNull(laptop);
+        assertEquals("Oferta saptamanii", laptop.oldSubcategory());
+        assertEquals("Laptopuri", laptop.newCategory());
+        assertEquals("Laptopuri", laptop.newSubcategory());
     }
 
     // ---------------------------------------------------------------------
@@ -261,6 +311,8 @@ class ProductRecategorizeServiceTest {
         assertEquals("Telefoane", row(2L).getCategory());
         assertEquals("Foto & Video", row(3L).getCategory());
         assertEquals("Vitrina magazin", row(7L).getSubcategory());
+        assertEquals("Telefoane", row(10L).getCategory());
+        assertEquals("Telefoane", row(10L).getSubcategory());
     }
 
     @Test

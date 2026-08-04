@@ -256,7 +256,7 @@ export default function AdminProducts() {
   // baza de date. Rularea are întotdeauna două faze: o previzualizare care nu
   // scrie nimic și abia apoi aplicarea aceleiași liste de modificări.
   const [recatOpen, setRecatOpen] = useState(false);
-  const [recatMode, setRecatMode] = useState('INCONSISTENT');
+  const [recatMode, setRecatMode] = useState('ALL');
   const [recatReport, setRecatReport] = useState(null);
   const [recatBusy, setRecatBusy] = useState(false);
   const [recatError, setRecatError] = useState(null);
@@ -1056,7 +1056,7 @@ export default function AdminProducts() {
 
   // ---- Recategorizare (reparare categorii/subcategorii existente) ----
   const openRecategorize = () => {
-    setRecatMode('INCONSISTENT');
+    setRecatMode('ALL');
     setRecatReport(null);
     setRecatError(null);
     setRecatDone(null);
@@ -2403,13 +2403,13 @@ export default function AdminProducts() {
             },
             {
               value: 'INCONSISTENT',
-              title: 'Neclasificate + perechi contradictorii (recomandat)',
-              text: 'Pe lângă produsele neclasificate, corectez și cazurile unde subcategoria este trecută sub o categorie care nu o conține sau unde denumirile nu sunt scrise în forma canonică. Denumirile produselor nu sunt recitite pentru aceste cazuri, deci o clasificare manuală coerentă rămâne neschimbată.',
+              title: 'Neclasificate + perechi contradictorii',
+              text: 'Pe lângă produsele neclasificate, corectez și cazurile unde subcategoria este trecută sub o categorie care nu o conține sau unde denumirile nu sunt scrise în forma canonică. Denumirile produselor nu sunt recitite pentru aceste cazuri. Atenție: acest mod nu repară produsele puse în categoria greșită de vechiul clasificator, pentru că acela scria mereu o pereche coerentă — un telefon ajuns la „Televizoare / Televizoare” nu are nicio contradicție de semnalat.',
             },
             {
               value: 'ALL',
-              title: 'Recalculează tot din denumire',
-              text: 'Recalculez ambele câmpuri pentru toate produsele, pornind de la denumire. Este singurul mod care suprascrie o clasificare făcută manual — folosește-l după ce regulile de clasificare au fost corectate.',
+              title: 'Recalculează tot din denumire (recomandat)',
+              text: 'Recalculez ambele câmpuri pentru toate produsele, pornind de la denumire. Este singurul mod care repară produsele clasificate greșit de vechiul clasificator, pentru că denumirea este singura sursă independentă. Suprascrie și o clasificare făcută manual, cu o singură excepție: dacă regulile nu recunosc nimic în denumire, valorile existente care spun ceva despre produs sunt păstrate, nu înlocuite cu eticheta generică.',
             },
           ].map((opt) => (
             <label

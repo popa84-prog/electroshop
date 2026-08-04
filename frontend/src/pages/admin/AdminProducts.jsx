@@ -46,8 +46,11 @@ const DELETE_KEYWORD = 'STERG';
  * Word the operator must type to confirm the separate, irreversible
  * force-delete override — deliberately different from {@link DELETE_KEYWORD}
  * so the two confirmations can never be typed on autopilot from muscle
- * memory. This path removes a product's order/purchase history rows
- * permanently, not just the product row.
+ * memory. This path permanently removes the product itself from the
+ * catalogue — its order/purchase history rows are NOT deleted; they are kept
+ * exactly as they were (quantity, prices, product name) and only unlinked
+ * from the live product, for accounting and profit-history purposes. See the
+ * modal copy below for what the operator is actually confirming.
  */
 const FORCE_DELETE_KEYWORD = 'ISTORIC';
 
@@ -963,21 +966,25 @@ export default function AdminProducts() {
       } else {
         const result = await productService.bulkForceRemove(ids);
         const lineParts = [];
-        if (result.orderItemsRemoved > 0) {
+        if (result.orderItemsPreserved > 0) {
           lineParts.push(
-            result.orderItemsRemoved === 1 ? '1 linie de comandă' : `${result.orderItemsRemoved} linii de comandă`
+            result.orderItemsPreserved === 1
+              ? '1 linie de comandă'
+              : `${result.orderItemsPreserved} linii de comandă`
           );
         }
-        if (result.purchaseItemsRemoved > 0) {
+        if (result.purchaseItemsPreserved > 0) {
           lineParts.push(
-            result.purchaseItemsRemoved === 1
+            result.purchaseItemsPreserved === 1
               ? '1 linie de achiziție'
-              : `${result.purchaseItemsRemoved} linii de achiziție`
+              : `${result.purchaseItemsPreserved} linii de achiziție`
           );
         }
         toastMessage =
-          `${result.deleted} ${result.deleted === 1 ? 'produs șters definitiv' : 'produse șterse definitiv'}` +
-          (lineParts.length > 0 ? `, împreună cu ${lineParts.join(' și ')} eliminate ireversibil.` : '.');
+          `${result.deleted} ${result.deleted === 1 ? 'produs șters definitiv din catalog' : 'produse șterse definitiv din catalog'}` +
+          (lineParts.length > 0
+            ? `. ${lineParts.join(' și ')} au fost păstrate neschimbate, pentru contabilitate.`
+            : '.');
       }
       setSelectedIds((prev) => {
         const next = new Set(prev);
@@ -1811,13 +1818,14 @@ export default function AdminProducts() {
         Force-delete offer — shown automatically right after a normal delete
         leaves one or more products deactivated instead of removed (they have
         order/purchase history). Distinct keyword, distinct wording, distinct
-        color emphasis from the normal delete modal above: this one also
-        erases historical order/purchase line items and cannot be reached by
-        muscle memory alone.
+        color emphasis from the normal delete modal above: this one removes
+        the product itself from the catalogue for good, even though — unlike
+        before this feature — the order/purchase history rows are preserved,
+        not erased, so it still cannot be reached by muscle memory alone.
       */}
       <Modal
         open={forceStep === 1}
-        title="Eliminare definitivă, inclusiv istoricul"
+        title="Eliminare definitivă din catalog"
         onClose={closeForceDelete}
         maxWidth="max-w-lg"
       >
@@ -1836,12 +1844,21 @@ export default function AdminProducts() {
             </li>
           ))}
         </ul>
+        <div className="mt-3 flex items-start gap-3 rounded-xl border border-[rgba(34,197,148,0.4)] bg-[rgba(34,197,148,0.08)] px-4 py-3 text-sm text-[#b8ffd6]">
+          <GeoIcon name="check" className="mt-0.5 h-5 w-5 shrink-0" accent="currentColor" />
+          <span>
+            Comenzile și achizițiile care conțin acest produs <strong className="text-[color:var(--xx-ink)]">rămân neschimbate</strong> —
+            cantitate, preț de vânzare, profit și denumirea produsului sunt păstrate exact cum erau la
+            vânzare/achiziție, pentru contabilitate și istoricul profitului. Facturile deja emise se
+            regenerează identic.
+          </span>
+        </div>
         <div className="mt-3 flex items-start gap-3 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.1)] px-4 py-3 text-sm text-[#ffc2cc]">
           <GeoIcon name="alert" className="mt-0.5 h-5 w-5 shrink-0" accent="currentColor" />
           <span>
-            Poți să le elimini definitiv, împreună cu liniile de comandă și de achiziție care le
-            referențiază. Comenzile și achizițiile afectate rămân, dar cu totalul recalculat fără acest
-            produs — facturile care conțineau acest produs nu mai reflectă exact ce s-a vândut atunci.{' '}
+            Ce se pierde este doar prezența produsului în catalog: nu mai poate fi editat, restocat,
+            vândut sau afișat în magazin, iar liniile din istoric nu mai afișează poza sau linkul către
+            el (rămâne doar numele).{' '}
             <strong className="text-[color:var(--xx-ink)]">Operațiunea nu poate fi anulată.</strong> Pentru
             a confirma, scrie <strong className="font-mono text-[color:var(--xx-ink)]">{FORCE_DELETE_KEYWORD}</strong>{' '}
             în câmpul de mai jos.
@@ -1882,7 +1899,7 @@ export default function AdminProducts() {
             onClick={confirmForceDelete}
             icon={<GeoIcon name="trash" className="h-4 w-4" accent="currentColor" />}
           >
-            {forceBusy ? 'Se elimină definitiv…' : 'Elimină definitiv, inclusiv istoricul'}
+            {forceBusy ? 'Se elimină din catalog…' : 'Elimină definitiv din catalog'}
           </NeonButton>
         </div>
       </Modal>

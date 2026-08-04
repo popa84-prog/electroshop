@@ -62,6 +62,36 @@ class ProductCategorizerTest {
                 "Wearables", "Smartwatch & Ceasuri");
     }
 
+    /**
+     * Two products from the live catalogue that a full re-derivation filed under
+     * Foto &amp; Video / Camere. Their names are English marketing dumps that list
+     * "16MP Camera" among the specs, and the phone rule disqualified itself on that
+     * word. A spec sheet describing a feature is not a different product; only an
+     * accessory sitting at the head of the name is.
+     */
+    @Test
+    void aCameraInAPhonesSpecSheetDoesNotMakeItACamera() {
+        assertCategorized("Telefon invens NOTE TK01 Unlocked Smartphone 4GB+32GB, 6.52\" HD "
+                        + "Display, 4250mAh Battery, 16MP Camera, 4G Dual SIM",
+                "Telefoane", "Telefoane");
+        assertCategorized("Telefon mobil Blackview Wave 6C, Android 15, Smartphone 6.56 inch, "
+                        + "camera 13MP, 5180mAh",
+                "Telefoane", "Telefoane");
+    }
+
+    /**
+     * The other half of the same rule: when the accessory noun really is the head of
+     * the name, the product is the accessory and the phone named after it is only the
+     * device it fits.
+     */
+    @Test
+    void anAccessoryNamedBeforeThePhoneIsStillAnAccessory() {
+        assertCategorized("Husa telefon Samsung Galaxy S24 Ultra, silicon",
+                "Accesorii", "Huse & Folii");
+        assertCategorized("Camera supraveghere TP-Link Tapo C210, control din telefon",
+                "Smart Home", "Camere supraveghere");
+    }
+
     @Test
     void aRealMonitorStillClassifiesAsAMonitor() {
         assertCategorized("Monitor Gaming LED Samsung Odyssey G5, 27\"",

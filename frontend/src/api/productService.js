@@ -37,6 +37,18 @@ const productService = {
       .then((r) => r.data.data);
   },
 
+  // Repara categoria/subcategoria produselor deja existente in baza de date,
+  // folosind acelasi tabel de reguli ca importul.
+  //   mode = 'PLACEHOLDER'  -> doar valorile inutilizabile ("0", "-", "Folosit", gol)
+  //   mode = 'INCONSISTENT' -> cele de mai sus + perechile care contrazic taxonomia
+  //   mode = 'ALL'          -> recalculeaza tot din denumirea produsului
+  // Cu dryRun = true nu se scrie nimic; raspunsul contine exact lista de
+  // modificari pe care ar aplica-o rularea reala.
+  recategorize: (mode = 'INCONSISTENT', dryRun = true) =>
+    api
+      .post(`/products/recategorize?mode=${mode}&dryRun=${dryRun}`)
+      .then((r) => r.data.data),
+
   // Admin
   create: (payload) => api.post('/products', payload).then((r) => r.data.data),
   update: (id, payload) => api.put(`/products/${id}`, payload).then((r) => r.data.data),

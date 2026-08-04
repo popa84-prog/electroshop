@@ -262,6 +262,16 @@ export default function AdminProducts() {
   const [recatError, setRecatError] = useState(null);
   const [recatDone, setRecatDone] = useState(null);
 
+  // Rebrand state — repararea coloanei „marcă”. Aceeași disciplină în două faze
+  // ca recategorizarea: întâi o previzualizare care nu scrie nimic, apoi
+  // aplicarea exact a aceleiași liste de modificări.
+  const [brandOpen, setBrandOpen] = useState(false);
+  const [brandMode, setBrandMode] = useState('WRONG');
+  const [brandReport, setBrandReport] = useState(null);
+  const [brandBusy, setBrandBusy] = useState(false);
+  const [brandError, setBrandError] = useState(null);
+  const [brandDone, setBrandDone] = useState(null);
+
   // Feature #7 (performance): the input stays instantly responsive, but the
   // actual request only fires 350ms after the operator stops typing — instead
   // of one API call per keystroke.
@@ -1091,6 +1101,43 @@ export default function AdminProducts() {
     }
   };
 
+  // ---- Reparare mărci (coloana brand a produselor existente) ----
+  const openRebrand = () => {
+    setBrandMode('WRONG');
+    setBrandReport(null);
+    setBrandError(null);
+    setBrandDone(null);
+    setBrandOpen(true);
+  };
+
+  // Ca la recategorizare: lista de modificări aparține modului pentru care a
+  // fost calculată, deci schimbarea modului o invalidează.
+  const changeBrandMode = (mode) => {
+    setBrandMode(mode);
+    setBrandReport(null);
+    setBrandDone(null);
+    setBrandError(null);
+  };
+
+  const runRebrand = async (dryRun) => {
+    setBrandBusy(true);
+    setBrandError(null);
+    try {
+      const report = await productService.rebrand(brandMode, dryRun);
+      setBrandReport(report);
+      if (!dryRun) {
+        setBrandDone(report);
+        showToast(`Mărci actualizate: ${report.changed} produse modificate.`, 'success');
+        invalidateListCache(LIST_CACHE_NS);
+        load();
+      }
+    } catch (err) {
+      setBrandError(err.response?.data?.message || 'Repararea mărcilor a eșuat.');
+    } finally {
+      setBrandBusy(false);
+    }
+  };
+
   return (
     <div>
       <AdminNav />
@@ -1128,6 +1175,13 @@ export default function AdminProducts() {
               icon={<GeoIcon name="shield" className="h-4 w-4" accent="currentColor" />}
             >
               Repară categoriile
+            </NeonButton>
+            <NeonButton
+              variant="ghost"
+              onClick={openRebrand}
+              icon={<GeoIcon name="shield" className="h-4 w-4" accent="currentColor" />}
+            >
+              Repară mărcile
             </NeonButton>
             <NeonButton
               onClick={openCreate}
@@ -2549,6 +2603,181 @@ export default function AdminProducts() {
             {recatDone
               ? 'Aplicat ✓'
               : `Aplică ${recatReport ? recatReport.changed : ''} corecții`}
+          </NeonButton>
+        </div>
+      </Modal>
+
+      {/* Rebrand modal — repară coloana „marcă” a produselor existente. */}
+      <Modal
+        open={brandOpen}
+        title="Repară mărcile produselor"
+        onClose={() => setBrandOpen(false)}
+        maxWidth="max-w-4xl"
+      >
+        {brandError && (
+          <div
+            role="alert"
+            className="mb-4 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-4 py-2 text-sm text-[#ffc2cc]"
+          >
+            {brandError}
+          </div>
+        )}
+
+        <p className="mb-3 text-sm xx-ink-muted">
+          Recitesc marca fiecărui produs din propria lui denumire, pe cuvinte întregi. Așa dispar
+          valorile scoase din interiorul altor cuvinte — „Ring” tăiat din „Behringer”, „HP” tăiat din
+          codul HP2564 — și mărcile care descriau de fapt aparatul cu care produsul este compatibil.
+          Rulez întâi o previzualizare care nu scrie nimic în baza de date; abia după ce confirmi,
+          aplic exact aceleași modificări.
+        </p>
+
+        <div className="mb-4 space-y-2">
+          {[
+            {
+              value: 'MISSING',
+              title: 'Doar produsele fără marcă',
+              text: 'Completez marca doar acolo unde coloana este goală sau conține o valoare fără sens („0”, „-”, „N/A”, un cuvânt de stare precum „Folosit”). Un produs care are deja o marcă scrisă nu este atins, nici măcar dacă marca este greșită.',
+            },
+            {
+              value: 'WRONG',
+              title: 'Fără marcă + mărcile demonstrabil greșite (recomandat)',
+              text: 'Pe lângă produsele fără marcă, înlocuiesc fiecare valoare pe care o pot dovedi greșită: marca nu apare deloc ca un cuvânt întreg în denumire, sau apare doar în lista de compatibilitate („pentru Apple Watch”). Tot aici uniformizez scrierea, ca „LOGITECH” și „Logitech” să nu mai fie două filtre separate în magazin. O marcă pe care tabelul nu o cunoaște, dar care este scrisă în denumire, rămâne neatinsă — necunoscută nu înseamnă greșită.',
+            },
+            {
+              value: 'ALL',
+              title: 'Rederivă marca pentru toate produsele',
+              text: 'Recalculez marca pentru întregul catalog, pornind de la denumire. Este modul de rulat după ce tabelul de mărci a fost extins. Păstrează două plase de siguranță: dacă în denumire nu este recunoscut niciun producător, marca existentă care spune ceva se păstrează; iar dacă denumirea introduce marca stocată înaintea celei recunoscute, valoarea stocată câștigă — o denumire își spune propriul producător înainte de orice altceva.',
+            },
+          ].map((opt) => (
+            <label
+              key={opt.value}
+              className={`flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5 text-sm transition-all duration-xx ease-xx ${
+                brandMode === opt.value
+                  ? 'border-[rgba(34,232,245,0.55)] bg-[rgba(34,232,245,0.08)]'
+                  : 'border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] hover:border-[rgba(34,232,245,0.4)]'
+              }`}
+            >
+              <input
+                type="radio"
+                name="brand-mode"
+                className="mt-0.5 h-4 w-4 cursor-pointer accent-[#22e8f5]"
+                checked={brandMode === opt.value}
+                onChange={() => changeBrandMode(opt.value)}
+              />
+              <span className="xx-ink-muted">
+                <span className="font-semibold text-[color:var(--xx-ink)]">{opt.title}</span>
+                <span className="mt-0.5 block">{opt.text}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+
+        {brandReport && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+              <Stat label="Produse scanate" value={brandReport.scanned} />
+              <Stat
+                label={brandDone ? 'Modificate' : 'De modificat'}
+                value={brandReport.changed}
+                tone="green"
+              />
+              <Stat label="Completate" value={brandReport.filled} />
+              <Stat label="Înlocuite" value={brandReport.corrected} tone="amber" />
+              <Stat label="Eliminate" value={brandReport.cleared} tone="slate" />
+            </div>
+
+            {brandDone ? (
+              <div
+                role="status"
+                className="flex items-start gap-2 rounded-xl border border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.12)] px-4 py-2.5 text-sm text-[#93e9c4]"
+              >
+                <GeoIcon name="check" className="mt-0.5 h-4 w-4 shrink-0" accent="currentColor" />
+                Reparare finalizată: {brandDone.changed} produse au primit marca corectă.
+              </div>
+            ) : (
+              <div
+                role="status"
+                className="flex items-start gap-2 rounded-xl border border-[rgba(34,232,245,0.4)] bg-[rgba(34,232,245,0.08)] px-4 py-2.5 text-sm text-[#a8f0f7]"
+              >
+                <GeoIcon name="shield" className="mt-0.5 h-4 w-4 shrink-0" accent="currentColor" />
+                Previzualizare — nu s-a scris nimic în baza de date.
+              </div>
+            )}
+
+            {brandReport.cleared > 0 && (
+              <div className="rounded-xl border border-[rgba(176,140,9,0.42)] bg-[rgba(176,140,9,0.1)] px-4 py-2.5 text-sm text-[#f0d089]">
+                {brandReport.cleared}{' '}
+                {brandReport.cleared === 1
+                  ? 'produs rămâne fără marcă'
+                  : 'produse rămân fără marcă'}
+                : valoarea stocată era dovedit greșită, iar denumirea nu conține niciun producător
+                cunoscut. O coloană goală este corectă; o marcă inventată nu era. Le poți completa
+                manual din tabel.
+              </div>
+            )}
+
+            {brandReport.changed > brandReport.changes.length && (
+              <p className="text-xs xx-ink-muted">
+                Se afișează primele {brandReport.changes.length} modificări din {brandReport.changed}
+                . Restul se aplică identic, doar lista de detaliu este limitată.
+              </p>
+            )}
+
+            {brandReport.changes.length > 0 && (
+              <div className="max-h-80 overflow-y-auto rounded-xl border border-[rgba(255,255,255,0.12)]">
+                <table className="w-full text-left text-sm">
+                  <thead className="sticky top-0 bg-[rgba(12,16,32,0.96)] text-[0.68rem] uppercase tracking-[0.12em] xx-ink-muted">
+                    <tr>
+                      <th className="px-3 py-2 font-semibold">Produs</th>
+                      <th className="px-3 py-2 font-semibold">Acum</th>
+                      <th className="px-3 py-2 font-semibold">Devine</th>
+                      <th className="px-3 py-2 font-semibold">Motiv</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {brandReport.changes.map((c) => (
+                      <tr key={c.id} className="border-t border-[rgba(255,255,255,0.08)] align-top">
+                        <td className="px-3 py-2 text-[color:var(--xx-ink)]">{c.name}</td>
+                        <td className="px-3 py-2 text-[#ff8fa8]">{c.oldBrand}</td>
+                        <td className="px-3 py-2 text-[#7ee9bd]">{c.newBrand}</td>
+                        <td className="px-3 py-2 text-xs xx-ink-muted">{c.reason}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {brandReport.changed === 0 && (
+              <div className="rounded-xl border border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.12)] px-4 py-2.5 text-sm text-[#93e9c4]">
+                Nu am găsit nimic de corectat în acest mod — mărcile sunt deja consecvente cu
+                denumirile produselor.
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="mt-5 flex flex-wrap justify-end gap-2">
+          <NeonButton variant="ghost" onClick={() => setBrandOpen(false)}>
+            Închide
+          </NeonButton>
+          <NeonButton
+            variant="secondary"
+            disabled={brandBusy}
+            charging={brandBusy}
+            onClick={() => runRebrand(true)}
+            icon={<GeoIcon name="shield" className="h-4 w-4" accent="currentColor" />}
+          >
+            {brandBusy ? 'Se analizează…' : 'Previzualizează'}
+          </NeonButton>
+          <NeonButton
+            disabled={brandBusy || !brandReport || brandReport.changed === 0 || !!brandDone}
+            onClick={() => runRebrand(false)}
+            icon={<GeoIcon name="check" className="h-4 w-4" accent="currentColor" />}
+          >
+            {brandDone
+              ? 'Aplicat ✓'
+              : `Aplică ${brandReport ? brandReport.changed : ''} corecții`}
           </NeonButton>
         </div>
       </Modal>

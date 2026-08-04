@@ -956,4 +956,31 @@ public class ProductCategorizer {
         return tokenize(keyword).toArray(new String[0]);
     }
 
+    /**
+     * Exposes the classifier's own tokenisation to the other services that must read a
+     * product name exactly the way the rules read it.
+     *
+     * <p>{@link ProductBrandResolver} matches brands on whole words. If it split names
+     * with its own regex the two components would drift apart the first time this one
+     * changed — a name the classifier reads as {@code [casti, sennheiser, ie, 100, pro]}
+     * must not be read by the brand resolver as {@code [căşti, sennheiser, ie, 100,
+     * pro]}, or a brand table written in ASCII would stop matching diacritics. One
+     * tokeniser, one behaviour.</p>
+     *
+     * @param name raw product name; {@code null} is tolerated
+     * @return lower-cased, diacritic-free words, never {@code null}
+     */
+    public static List<String> words(String name) {
+        return tokenize(name);
+    }
+
+    /**
+     * True when the word is a condition or packaging word that never names a product.
+     * Shared with {@link ProductBrandResolver}, which must skip the same leading noise
+     * when it looks for how early in the name a brand appears.
+     */
+    public static boolean isLeadingFiller(String word) {
+        return word != null && isFiller(word);
+    }
+
 }

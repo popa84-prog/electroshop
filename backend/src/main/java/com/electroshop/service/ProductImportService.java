@@ -34,10 +34,13 @@ public class ProductImportService {
 
     private final ProductRepository productRepository;
     private final ProductCategorizer categorizer;
+    private final ProductBrandResolver brandResolver;
 
-    public ProductImportService(ProductRepository productRepository, ProductCategorizer categorizer) {
+    public ProductImportService(ProductRepository productRepository, ProductCategorizer categorizer,
+                                ProductBrandResolver brandResolver) {
         this.productRepository = productRepository;
         this.categorizer = categorizer;
+        this.brandResolver = brandResolver;
     }
 
     @Transactional
@@ -186,6 +189,52 @@ public class ProductImportService {
                     String canonicalCat = categorizer.canonicalCategory(category);
                     if (canonicalCat != null) {
                         category = canonicalCat;
+                    }
+                }
+
+                // Auto-fill / repair the brand column from the product name.
+                //
+                // The same family of junk that reaches the category column reaches this
+                // one: a numeric 0, a dash, "N/A", a condition word. On top of that, the
+                // supplier sheets carry brands their own tooling extracted by substring
+                // matching, which is how a Behringer mixer arrived labelled "Ring" and an
+                // Ecowitt weather station labelled "HP" (from the model number HP2564).
+                //
+                // A value the operator typed deliberately is never overruled here: the
+                // brand is replaced only when it is unusable, or when it is demonstrably
+                // not this product's own brand — it does not appear in the name as a
+                // whole word, or it appears there only as the device the product is
+                // compatible with ("pentru Apple Watch"). A brand the resolver has never
+                // heard of survives untouched as long as the name contains it, because an
+                // unknown maker is a gap in the table, not an error in the sheet.
+                if (ProductCategorizer.isPlaceholder(brand)) {
+                    String derived = brandResolver.resolve(name);
+                    if (derived != null) {
+                        brand = derived;
+                        warnings.add("Rând " + humanRow + " (" + name
+                                + "): marcă completată automat → " + derived + ".");
+                    } else {
+                        // Nothing recognised. An unusable value is dropped rather than
+                        // stored, so the storefront filter never grows a brand named "0".
+                        brand = "";
+                    }
+                } else if (!brandResolver.mentionsAsOwnBrand(name, brand)) {
+                    String derived = brandResolver.resolve(name);
+                    if (derived != null) {
+                        warnings.add("Rând " + humanRow + " (" + name + "): marca „" + brand
+                                + "” nu identifică producătorul → corectată în „" + derived + "”.");
+                        brand = derived;
+                    } else {
+                        warnings.add("Rând " + humanRow + " (" + name + "): marca „" + brand
+                                + "” nu apare în denumire → eliminată.");
+                        brand = "";
+                    }
+                } else {
+                    // Correct brand: only its spelling is snapped to the canonical form,
+                    // so "LOGITECH" and "Logitech" stop being two storefront filters.
+                    String canonical = brandResolver.canonicalise(brand);
+                    if (canonical != null) {
+                        brand = canonical;
                     }
                 }
 

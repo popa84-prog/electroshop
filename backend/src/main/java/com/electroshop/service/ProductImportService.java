@@ -139,15 +139,54 @@ public class ProductImportService {
                     continue;
                 }
 
-                // Auto-fill category / subcategory from the product name when the
-                // Excel leaves them blank (feature #3). Keeps any value provided.
-                if (category.isBlank() || subcategory.isBlank()) {
+                // Auto-fill category / subcategory from the product name whenever the
+                // Excel does not actually carry one (feature #3).
+                //
+                // A blank cell is not the only way a supplier sheet expresses "no
+                // category". Real imports arrive with a numeric 0 (an empty NUMERIC cell
+                // read back as the string "0"), with dashes, with "N/A", and with the
+                // product *condition* typed into the category column ("Folosit",
+                // "Resigilat"). The previous isBlank() test accepted every one of those
+                // as a genuine category and stored it verbatim, which is how the catalog
+                // ended up with a category literally named "0" while the subcategory next
+                // to it had been auto-filled correctly. ProductCategorizer#isPlaceholder
+                // recognises the whole family, so junk is now replaced instead of saved.
+                boolean categoryMissing = ProductCategorizer.isPlaceholder(category);
+                boolean subcategoryMissing = ProductCategorizer.isPlaceholder(subcategory);
+                if (categoryMissing || subcategoryMissing) {
                     ProductCategorizer.Categorization auto = categorizer.categorize(name);
-                    if (category.isBlank()) category = auto.category();
-                    if (subcategory.isBlank()) subcategory = auto.subcategory();
+                    if (categoryMissing) category = auto.category();
+                    if (subcategoryMissing) subcategory = auto.subcategory();
                     warnings.add("Rând " + humanRow + " (" + name
                             + "): categorie/subcategorie completate automat → "
                             + category + " / " + subcategory + ".");
+                }
+
+                // The two columns must also agree with each other. A sheet that names a
+                // known subcategory under the wrong parent ("Casti" / "Casti",
+                // "Stocare & Memorie" under "Stocare & Memorie") is repaired to the
+                // canonical pair declared by the rule table, and both values are snapped
+                // to their canonical spelling so the storefront facets do not split into
+                // near-duplicate entries.
+                String canonicalSub = categorizer.canonicalSubcategory(subcategory);
+                String owner = categorizer.canonicalCategoryFor(canonicalSub);
+                if (owner != null) {
+                    if (!owner.equals(category)) {
+                        warnings.add("Rând " + humanRow + " (" + name
+                                + "): categoria „" + category + "” nu corespunde subcategoriei „"
+                                + canonicalSub + "” → corectată în „" + owner + "”.");
+                    }
+                    category = owner;
+                    subcategory = canonicalSub;
+                } else {
+                    // Subcategory is outside the known taxonomy — a custom value the
+                    // shop owner typed deliberately. It is kept exactly as written; only
+                    // the parent category is snapped to canonical spelling when it is a
+                    // known one, and left untouched otherwise.
+                    String canonicalCat = categorizer.canonicalCategory(category);
+                    if (canonicalCat != null) {
+                        category = canonicalCat;
+                    }
                 }
 
                 if (purchase == null) {

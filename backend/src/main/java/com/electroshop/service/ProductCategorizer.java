@@ -297,9 +297,21 @@ public class ProductCategorizer {
                     .type("telefon", "telefoane", "smartphone", "smartphones", "iphone", "phone")
                     .brand("oukitel", "doogee", "ulefone", "blackview", "cubot")
                     .hint("5g", "dual", "sim")
-                    .not("husa", "folie", "carcasa", "suport", "incarcator", "cablu", "adaptor",
-                            "gamepad", "opener", "rama", "casti", "gate", "garage", "boxa",
-                            "camera", "tripod", "stativ", "lentila", "gimbal"),
+                    // Only words a genuine phone listing can never contain stay absolute.
+                    // A garage-door opener advertises "control from your phone"; no phone
+                    // advertises a garage.
+                    .not("opener", "gate", "garage")
+                    // Everything else here names an accessory, and an accessory announces
+                    // itself at the head of the name: "Husa telefon", "Incarcator rapid",
+                    // "Suport auto". The same words appear deep inside the spec dump of a
+                    // real phone — "16MP Camera", "casti incluse", "lentila macro" — where
+                    // they describe a feature, not the product. Absolute negatives could
+                    // not tell the two apart and threw the phone away: that is how
+                    // "Telefon invens NOTE TK01 ... 16MP Camera" ended up under
+                    // Foto & Video / Camere. Position is what separates them.
+                    .notHead("husa", "folie", "carcasa", "suport", "incarcator", "cablu",
+                            "adaptor", "gamepad", "rama", "casti", "boxa", "camera",
+                            "tripod", "stativ", "lentila", "gimbal"),
 
             // --- Tablets & readers -------------------------------------------------
             rule("Tablete", "E-readere")

@@ -170,24 +170,28 @@ public class ProductController {
     }
 
     /**
-     * Permanently removes a product together with every order/purchase line
-     * item that ever referenced it. Unlike {@link #delete(Long)}, this never
-     * falls back to deactivation — it is the explicit "yes, I understand this
-     * breaks historical invoices" override, so it is gated behind
-     * {@code PRODUCTS_FORCE_DELETE} rather than {@code PRODUCTS_DELETE}: by
-     * default only the Admin role holds it (see
-     * {@link com.electroshop.security.RolePermissions}), because a Manager
-     * who can normally delete products should not, by default, also be able
-     * to erase accounting history.
+     * Permanently removes a product from the catalogue while preserving every
+     * order/purchase line item that ever referenced it — see
+     * {@link ProductService#forceDeleteWithHistory(Long)} for exactly what is
+     * kept (everything relevant to accounting) versus what is lost (the
+     * product's own catalogue presence and its live link from those lines).
+     * Unlike {@link #delete(Long)}, this never falls back to deactivation — it
+     * is the explicit "yes, remove this product from the catalogue for good"
+     * override, so it is gated behind {@code PRODUCTS_FORCE_DELETE} rather
+     * than {@code PRODUCTS_DELETE}: by default only the Admin role holds it
+     * (see {@link com.electroshop.security.RolePermissions}), because a
+     * Manager who can normally delete products should not, by default, also
+     * be able to permanently erase one from the catalogue.
      */
     @DeleteMapping("/{id}/force")
     @PreAuthorize("@permissionService.has('PRODUCTS_FORCE_DELETE')")
     public ResponseEntity<ApiResponse<Object>> forceDelete(@PathVariable Long id) {
         ProductService.ForceDeleteOutcome outcome = productService.forceDeleteWithHistory(id);
-        String message = "Produs șters definitiv"
-                + (outcome.orderItemsRemoved() + outcome.purchaseItemsRemoved() > 0
-                        ? ", împreună cu " + outcome.orderItemsRemoved() + " linie(i) de comandă și "
-                                + outcome.purchaseItemsRemoved() + " linie(i) de achiziție eliminate ireversibil."
+        String message = "Produs șters definitiv din catalog"
+                + (outcome.orderItemsPreserved() + outcome.purchaseItemsPreserved() > 0
+                        ? ". " + outcome.orderItemsPreserved() + " linie(i) de comandă și "
+                                + outcome.purchaseItemsPreserved() + " linie(i) de achiziție au fost păstrate "
+                                + "neschimbate, pentru contabilitate și istoricul profitului."
                         : ".");
         return ResponseEntity.ok(ApiResponse.ok(message, null));
     }
@@ -196,7 +200,9 @@ public class ProductController {
      * Batch counterpart of {@link #forceDelete(Long)} — used after a
      * {@link #bulkDelete} response reports products that were deactivated
      * because of sales history, when the operator explicitly chooses to
-     * remove them anyway, permanently, including their historical lines.
+     * remove them anyway, permanently, from the catalogue. Their historical
+     * order/purchase lines are preserved, not removed — see
+     * {@link ProductService#forceDeleteWithHistory(Long)}.
      */
     @PostMapping("/bulk-force-delete")
     @PreAuthorize("@permissionService.has('PRODUCTS_FORCE_DELETE')")
@@ -204,10 +210,11 @@ public class ProductController {
             @Valid @RequestBody BulkIdsRequest request) {
         ProductService.BulkForceDeleteResult result = productService.forceDeleteBulk(request.getIds());
         String message = result.deleted()
-                + (result.deleted() == 1 ? " produs șters definitiv" : " produse șterse definitiv")
-                + (result.orderItemsRemoved() + result.purchaseItemsRemoved() > 0
-                        ? ", împreună cu " + result.orderItemsRemoved() + " linii de comandă și "
-                                + result.purchaseItemsRemoved() + " linii de achiziție eliminate ireversibil."
+                + (result.deleted() == 1 ? " produs șters definitiv din catalog" : " produse șterse definitiv din catalog")
+                + (result.orderItemsPreserved() + result.purchaseItemsPreserved() > 0
+                        ? ". " + result.orderItemsPreserved() + " linii de comandă și "
+                                + result.purchaseItemsPreserved() + " linii de achiziție au fost păstrate "
+                                + "neschimbate, pentru contabilitate."
                         : ".");
         return ResponseEntity.ok(ApiResponse.ok(message, result));
     }

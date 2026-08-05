@@ -82,11 +82,29 @@ public class ProductBrandResolver {
      * the product fits rather than the product's maker.
      */
     private static final Set<String> COMPATIBILITY_MARKERS = Set.of(
-            "pentru", "for", "compatibil", "compatibila", "compatibile", "compatibili",
+            "pentru", "for", "pt", "compatibil", "compatibila", "compatibile", "compatibili",
             "compatible", "compatibility", "compatibilitate", "fits", "fit", "suitable",
             "replacement", "inlocuire", "potrivit", "potrivita", "potrivite",
             "adaptabil", "adaptabila", "works", "supports", "suporta"
     );
+
+    /**
+     * The subset of {@link #COMPATIBILITY_MARKERS} that only <em>suggests</em> a
+     * compatibility list.
+     *
+     * <p>"pentru" and "for" carry both readings in a retail name. "Sistem de Stabilizare
+     * pentru Telefon DJI Osmo Mobile 8" is a DJI product — "pentru Telefon" describes
+     * what the stabiliser holds, and DJI heads its own model line right after it. The
+     * same word in "Husa pentru Samsung Galaxy" does announce a fit target. The word
+     * alone cannot separate the two, so a weak marker is allowed to lose a tie but is
+     * never allowed to erase the only manufacturer a name contains; see
+     * {@link #rescueMatch}.</p>
+     *
+     * <p>Everything outside this set is explicit — "compatible with", "fits",
+     * "replacement for" — and states the compatibility reading outright. A strong
+     * marker always wins, and no rescue applies behind it.</p>
+     */
+    private static final Set<String> WEAK_MARKERS = Set.of("pentru", "pt", "for");
 
     /**
      * Words a compatibility marker may cross while still reaching the brand behind
@@ -570,7 +588,12 @@ public class ProductBrandResolver {
                 }
             }
         }
-        return bestDef == null ? null : new Match(bestDef.display, bestIndex);
+        if (bestDef == null) {
+            // Every candidate sat behind a compatibility marker. Before the product is
+            // left with an empty brand column, give the suggestive markers a second look.
+            return rescueMatch(name, words, headStart);
+        }
+        return new Match(bestDef.display, bestIndex);
     }
 
     /**
@@ -718,7 +741,80 @@ public class ProductBrandResolver {
                 return false;
             }
         }
-        return !suppressedByCompatibility(words, at);
+        if (suppressedByCompatibility(words, at)) {
+            return false;
+        }
+        return !repeatedAsFitTarget(def, alias, words, at);
+    }
+
+    /**
+     * True when the same alias appears again later in the name, that later occurrence is
+     * explicitly a fit target, and the alias names a product line rather than the company.
+     *
+     * <p>"Husa tastatura WIWU iPad Pro 13 inch Keyboard Case <b>for iPad Pro 13</b>" states
+     * once, unambiguously, what the case fits. The earlier "iPad Pro 13" is the same
+     * phrase describing the same device, so reading it as the manufacturer would credit
+     * Apple with a WIWU accessory. One explicit mention settles every repetition of it.</p>
+     *
+     * <p>The rule is deliberately confined to product-line aliases. A company name
+     * repeated after a marker — "Incarcator Belkin … for Belkin devices" — still names
+     * Belkin as the maker at its first occurrence, and nothing about the repetition
+     * changes that.</p>
+     */
+    /**
+     * True when the name states its own model code before the given position.
+     *
+     * <p>A model code is a token that mixes letters and digits — "VK750II", "85mm",
+     * "DJX900USB". Generic Romanian and English retail vocabulary never does, and a bare
+     * number ("13", "8") is a size or a count rather than an identity, so both are
+     * excluded. When such a code precedes a compatibility marker the product has already
+     * introduced itself, and everything the marker reaches describes what that product
+     * fits. When no code precedes it, the marker is the only thing standing between the
+     * catalogue and the single manufacturer the name contains.</p>
+     */
+    private static boolean identifiedBefore(List<String> words, int at) {
+        for (int i = 0; i < at && i < words.size(); i++) {
+            String word = words.get(i);
+            if (word.length() < 3) {
+                continue;
+            }
+            boolean letter = false;
+            boolean digit = false;
+            for (int c = 0; c < word.length(); c++) {
+                char ch = word.charAt(c);
+                if (ch >= '0' && ch <= '9') {
+                    digit = true;
+                } else {
+                    letter = true;
+                }
+            }
+            if (letter && digit) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean repeatedAsFitTarget(BrandDef def, String[] alias, List<String> words, int at) {
+        if (isCompanyAlias(def, alias)) {
+            return false;
+        }
+        int from = at + 1;
+        while (true) {
+            int later = matchAt(words, alias, from);
+            if (later < 0) {
+                return false;
+            }
+            if (markerStrength(words, later) != MARKER_NONE) {
+                return true;
+            }
+            from = later + 1;
+        }
+    }
+
+    /** Whether this alias is the manufacturer's own name rather than one of its product lines. */
+    private static boolean isCompanyAlias(BrandDef def, String[] alias) {
+        return sameWords(alias, ProductCategorizer.words(def.display));
     }
 
     /**
@@ -732,17 +828,146 @@ public class ProductBrandResolver {
      * fits, and the brand behind it belongs to that other device.</p>
      */
     private boolean suppressedByCompatibility(List<String> words, int at) {
+        return markerStrength(words, at) != MARKER_NONE;
+    }
+
+    /** No compatibility marker reaches the position. */
+    private static final int MARKER_NONE = 0;
+    /** A "pentru"/"for" reaches the position — suggestive, not conclusive. */
+    private static final int MARKER_WEAK = 1;
+    /** An explicit "compatible with"/"fits"/"replacement" reaches the position. */
+    private static final int MARKER_STRONG = 2;
+
+    /**
+     * The strength of the compatibility marker that reaches this position, or
+     * {@link #MARKER_NONE}.
+     *
+     * <p>Same bridge walk as before — the marker must reach the brand across nothing but
+     * connectors, device nouns and numbers — with the answer graded instead of collapsed
+     * to a boolean, so {@link #rescueMatch} can tell an explicit compatibility list from
+     * a Romanian "pentru" that happens to sit in front of the maker's own name.</p>
+     */
+    private int markerStrength(List<String> words, int at) {
         int earliest = Math.max(0, at - MARKER_REACH - 1);
         for (int m = at - 1; m >= earliest; m--) {
             String word = words.get(m);
             if (COMPATIBILITY_MARKERS.contains(word)) {
-                return true;
+                return WEAK_MARKERS.contains(word) ? MARKER_WEAK : MARKER_STRONG;
             }
             if (!COMPATIBILITY_BRIDGE.contains(word) && !word.matches("[0-9]+")) {
-                return false;
+                return MARKER_NONE;
             }
         }
-        return false;
+        return MARKER_NONE;
+    }
+
+    /**
+     * The word indices at which a punctuation-delimited segment of the name ends.
+     *
+     * <p>The shared tokeniser collapses every non-alphanumeric run to a space, which is
+     * what makes whole-word matching reliable but also erases the comma in "… Lens for
+     * Sony, Medium Telephoto Lenses". That comma is the evidence that "Sony" is a bare
+     * fit target rather than the head of a model line, so the boundaries are recovered
+     * here by tokenising each segment separately and accumulating the counts. Splitting
+     * on punctuation and then tokenising yields exactly the same token sequence as
+     * tokenising the whole name, because the separators collapse to spaces either way —
+     * the two views cannot drift apart.</p>
+     *
+     * @param name the raw product name
+     * @return the zero-based index of the last word of every segment
+     */
+    private static Set<Integer> segmentEnds(String name) {
+        Set<Integer> ends = new LinkedHashSet<>();
+        if (name == null || name.isBlank()) {
+            return ends;
+        }
+        int consumed = 0;
+        for (String segment : name.split("[,;:()\\[\\]{}/|\\-\\u2013\\u2014]+")) {
+            int size = ProductCategorizer.words(segment).size();
+            if (size == 0) {
+                continue;
+            }
+            consumed += size;
+            ends.add(consumed - 1);
+        }
+        return ends;
+    }
+
+    /**
+     * The last resort for a name whose every candidate sits behind a compatibility
+     * marker.
+     *
+     * <p>Suppression exists to break ties, not to destroy information. When it removes
+     * the only manufacturer a name contains, the product is left with nothing — and an
+     * empty brand column is strictly worse than the maker the name states plainly. This
+     * pass reinstates such a candidate under three conditions, all of which must hold:</p>
+     *
+     * <ol>
+     *   <li>the marker is weak. "Compatible with Nikon D3500 D3400 …" says outright that
+     *       the Nikon bodies are what the flash fits; nothing is rescued behind an
+     *       explicit statement.</li>
+     *   <li>the candidate heads its own model designation — a further word follows it
+     *       inside the same punctuation-delimited segment, and that word is not another
+     *       connector. "pentru Telefon <b>DJI Osmo Mobile 8</b>" continues into the
+     *       product; "Lens for <b>Sony</b>," stops at the comma and names only the
+     *       mount.</li>
+     *   <li>the name has not already identified the product before the marker. "Flash
+     *       <b>VK750II</b> TTL Camera Flash Speedlite for Nikon D7200" states its own
+     *       model code first, so everything after "for" is what that flash mounts on.
+     *       "Sistem de Stabilizare pentru Telefon DJI Osmo Mobile 8" offers no such
+     *       code — the name carries exactly one identity, and it is DJI's.</li>
+     *   <li>it is the alias's first occurrence. A later repetition of a name the product
+     *       already used as a fit target — "Husa … <b>iPad</b> Pro … for <b>iPad</b>
+     *       Pro" — is the same fit target twice, not a maker.</li>
+     * </ol>
+     *
+     * @param name    the raw product name, needed for the segment boundaries
+     * @param words   the tokenised name
+     * @param headStart the index at which the name stops being packaging filler
+     * @return the reinstated match, or {@code null} when nothing qualifies
+     */
+    private Match rescueMatch(String name, List<String> words, int headStart) {
+        Set<Integer> ends = segmentEnds(name);
+        BrandDef bestDef = null;
+        int bestIndex = Integer.MAX_VALUE;
+        int bestLength = 0;
+
+        for (BrandDef def : BRANDS) {
+            for (String[] alias : def.aliases) {
+                int at = matchAt(words, alias, 0);
+                if (at < 0) {
+                    continue;
+                }
+                if (def.nearHeadOnly && at - headStart > NEAR_HEAD_LIMIT) {
+                    continue;
+                }
+                int after = at + alias.length;
+                if (!def.blockedFollowers.isEmpty()
+                        && after < words.size()
+                        && def.blockedFollowers.contains(words.get(after))) {
+                    continue;
+                }
+                if (markerStrength(words, at) != MARKER_WEAK) {
+                    continue;
+                }
+                if (ends.contains(after - 1) || after >= words.size()) {
+                    continue;
+                }
+                String next = words.get(after);
+                if (COMPATIBILITY_BRIDGE.contains(next) || COMPATIBILITY_MARKERS.contains(next)) {
+                    continue;
+                }
+                if (identifiedBefore(words, at)) {
+                    continue;
+                }
+                if (at < bestIndex || (at == bestIndex && alias.length > bestLength)) {
+                    bestDef = def;
+                    bestIndex = at;
+                    bestLength = alias.length;
+                }
+            }
+        }
+        return bestDef == null ? null : new Match(bestDef.display, bestIndex);
     }
 
     /** The first index at which the alias occurs as a contiguous run of whole words. */

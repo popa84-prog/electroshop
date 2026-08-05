@@ -285,6 +285,70 @@ class ProductBrandResolverTest {
                 "Incarcator Belkin BoostCharge Pro compatibil cu Belkin MagSafe");
     }
 
+    /**
+     * A trademark that doubles as a category noun stands aside for the maker beside it.
+     *
+     * <p>"Smart Ring SAMSUNG Galaxy Ring, Size 14, Titanium" opens with the category and
+     * names its maker one word later. Position alone credits the doorbell company,
+     * because "Ring" stands ahead of "SAMSUNG" — and position alone is right in almost
+     * every other name in the catalogue, which is why the yield is restricted to the two
+     * shapes a category noun actually takes: the alias repeated, or another maker
+     * starting on the very next word.</p>
+     *
+     * <p>Both shapes are present here. The second name keeps only the repetition, the
+     * third keeps only the adjacency, so each trigger is proved on its own.</p>
+     */
+    @Test
+    void aCategoryNounYieldsToTheMakerStandingBesideIt() {
+        assertBrand("Samsung", "Smart Ring SAMSUNG Galaxy Ring, Size 14, Titanium");
+        assertBrand("Oura", "Oura Ring 5 Silver Marimea 13, Titan, Smart Ring");
+        assertBrand("Samsung", "Smart Ring SAMSUNG Galaxy Watch Ultra");
+    }
+
+    /**
+     * The yield is a yield, never a veto.
+     *
+     * <p>A deferring entry alone in a name still wins it outright, so the doorbell
+     * company keeps every product it actually makes. And adjacency is required rather
+     * than mere proximity: "Televizor Sharp 55GP6260E 4K Google TV" is a Sharp television
+     * running Google's operating system, and the four tokens between the two names are
+     * exactly what separates an operating system from a manufacturer.</p>
+     */
+    @Test
+    void aDeferringBrandAloneInTheNameKeepsIt() {
+        assertBrand("Ring", "Ring Battery Video Doorbell Plus");
+        assertBrand("Sharp", "Televizor Sharp 55GP6260E 4K Google TV");
+        assertBrand("Nest", "Nest Learning Thermostat 4th Generation");
+    }
+
+    /**
+     * A product line hands the brand to the company named after "by".
+     *
+     * <p>"Trotineta electrica Ninebot by Segway KickScooter" names both, and both are
+     * real. The catalogue files it under Segway because that is the company, and the word
+     * "by" says so outright — which is why this reads one specific token rather than
+     * guessing at corporate structure. Without the link word the earlier name stands.</p>
+     */
+    @Test
+    void theCompanyNamedAfterByOutranksTheProductLine() {
+        assertBrand("Segway", "Trotineta electrica Ninebot by Segway KickScooter");
+        assertBrand("Ninebot", "Trotineta electrica Ninebot KickScooter F2 Pro");
+    }
+
+    /**
+     * Knowing the maker is what settles a name whose vocabulary belongs to two trades.
+     *
+     * <p>"Launch monitor" is the ordinary term for a golf ball-flight sensor, and Launch
+     * is also a diagnostics-tool company. No positional rule separates the two readings,
+     * because both words are exactly where they would be either way. Putting the real
+     * maker on the table settles it outright: Rapsodo stands first and wins.</p>
+     */
+    @Test
+    void aKnownMakerSettlesVocabularySharedWithAnotherTrade() {
+        assertBrand("Rapsodo", "Rapsodo Golf MLM1 Launch Monitor");
+        assertBrand("Garmin", "Garmin Approach G82, Portable Golf Launch Monitor 010-02943-00");
+    }
+
     @Test
     void theTableReportsWhatItKnows() {
         assertTrue(resolver.isKnownBrand("Sony"));

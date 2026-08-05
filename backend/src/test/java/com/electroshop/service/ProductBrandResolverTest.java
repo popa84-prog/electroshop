@@ -231,6 +231,60 @@ class ProductBrandResolverTest {
         assertEquals(4, match.index());
     }
 
+    /**
+     * Suppression breaks ties; it does not erase the only manufacturer a name contains.
+     *
+     * <p>"Sistem de Stabilizare pentru Telefon DJI Osmo Mobile 8" is a DJI product. The
+     * words before "pentru" are generic vocabulary — the name never identifies itself
+     * with a model code — and DJI heads its own model line immediately after the marker.
+     * Clearing the column here would replace a correct value with nothing.</p>
+     */
+    @Test
+    void theOnlyMakerInTheNameSurvivesASuggestiveMarker() {
+        assertBrand("DJI", "Sistem de Stabilizare pentru Telefon DJI Osmo Mobile 8");
+        assertBrand("Samsung", "Incarcator rapid pentru Samsung Galaxy S24 Ultra");
+    }
+
+    /**
+     * The three conditions that keep the rescue from resurrecting a genuine fit target,
+     * each isolated.
+     *
+     * <p>The first name identifies itself with "VK750II" before the marker, so the Nikon
+     * bodies behind "for" are what the flash mounts on. The second states the
+     * compatibility outright, and an explicit marker is never second-guessed. The third
+     * ends the segment at the comma, so "Sony" names a mount and nothing more.</p>
+     */
+    @Test
+    void theRescueRefusesEveryNameThatStatesItsOwnIdentityFirst() {
+        assertNull(resolver.resolve("Flash VK750II TTL Camera Flash Speedlite for Nikon D7200"));
+        assertNull(resolver.resolve("Stabilizator Gimbal compatibil cu DJI Osmo Mobile 8"));
+        assertNull(resolver.resolve("Obiectiv Portrait Lens for Sony, Medium Telephoto Lenses"));
+    }
+
+    /**
+     * One explicit fit mention settles every repetition of the same phrase.
+     *
+     * <p>"Husa tastatura WIWU iPad Pro 13 inch Keyboard Case for iPad Pro 13" names the
+     * iPad twice and marks the second occurrence as the fit target. Both occurrences are
+     * the same device, so neither may stand in for the maker — and with Apple out of the
+     * way the accessory's own maker, named first, is free to win.</p>
+     *
+     * <p>The second name strips WIWU out to isolate the rule: with no maker left in the
+     * name at all, the answer is nothing rather than Apple.</p>
+     *
+     * <p>The rule is confined to product-line aliases. A company name repeated after a
+     * marker still names the maker at its first occurrence.</p>
+     */
+    @Test
+    void aProductLineNamedTwiceIsTheFitTargetBothTimes() {
+        assertBrand("WIWU",
+                "Husa tastatura WIWU iPad Pro 13 inch Keyboard Case for iPad Pro 13");
+        assertNull(resolver.resolve(
+                "Husa tastatura iPad Pro 13 inch Keyboard Case for iPad Pro 13"));
+        assertBrand("Belkin",
+                "Incarcator Belkin BoostCharge Pro compatibil cu Belkin MagSafe");
+    }
+
     @Test
     void theTableReportsWhatItKnows() {
         assertTrue(resolver.isKnownBrand("Sony"));

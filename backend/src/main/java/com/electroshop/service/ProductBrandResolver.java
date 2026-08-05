@@ -78,6 +78,14 @@ public class ProductBrandResolver {
     private static final int NEAR_HEAD_LIMIT = 6;
 
     /**
+     * The word that hands a product line to its parent company: "Ninebot <b>by</b>
+     * Segway", "Beats <b>by</b> Dre". Both names are real, but the catalogue and the
+     * shopper file the product under the company, so the maker named after this word
+     * outranks the line named before it.
+     */
+    private static final String PARENT_LINK = "by";
+
+    /**
      * Words that announce a compatibility list. Everything they reach names the device
      * the product fits rather than the product's maker.
      */
@@ -146,6 +154,7 @@ public class ProductBrandResolver {
         private final List<String[]> aliases = new ArrayList<>();
         private Set<String> blockedFollowers = Set.of();
         private boolean nearHeadOnly;
+        private boolean deferring;
 
         private BrandDef(String display) {
             this.display = display;
@@ -169,9 +178,38 @@ public class ProductBrandResolver {
             return this;
         }
 
-        /** Restricts the entry to the head region; see {@link #NEAR_HEAD_LIMIT}. */
+        /**
+         * Restricts the entry to the head region; see {@link #NEAR_HEAD_LIMIT}.
+         *
+         * <p>Every entry that needs this restriction is a trademark that doubles as
+         * ordinary vocabulary, which is the same property {@link #deferring()} answers
+         * to, so the two travel together. An entry may still be marked deferring on its
+         * own when its alias is common vocabulary but its position is not in doubt.</p>
+         */
         private BrandDef nearHeadOnly() {
             this.nearHeadOnly = true;
+            this.deferring = true;
+            return this;
+        }
+
+        /**
+         * Marks an entry whose alias is also the ordinary noun for a product category,
+         * so it yields to any other manufacturer the same name contains.
+         *
+         * <p>"Smart Ring SAMSUNG Galaxy Ring" opens with the category, not the maker.
+         * Position alone credits the doorbell company, because "Ring" stands one word
+         * ahead of "SAMSUNG" — and position alone is right in almost every other name,
+         * which is exactly why this handful of entries needs its own rule rather than a
+         * weakening of the general one.</p>
+         *
+         * <p>The rule is a yield, never a veto. A deferring brand still wins every name
+         * that contains no other manufacturer, so "Ring Battery Video Doorbell Plus"
+         * resolves to Ring exactly as before. It loses only where a second maker is
+         * present, and a name that mentions two makers names the category with one of
+         * them far more often than it names two competitors.</p>
+         */
+        private BrandDef deferring() {
+            this.deferring = true;
             return this;
         }
     }
@@ -358,6 +396,11 @@ public class ProductBrandResolver {
             brand("Polar").nearHeadOnly().notFollowedBy("filtru", "filter", "polarizat"),
             brand("Coros"),
             brand("Oura"),
+            // "Launch monitor" is the ordinary name for a golf ball-flight sensor, so
+            // "Rapsodo Golf MLM1 Launch Monitor" hands the column to the diagnostics
+            // company Launch unless the real maker is on the table. Knowing the maker
+            // is what settles it; the entry earns its place on that name alone.
+            brand("Rapsodo"),
             brand("Casio"),
             brand("Seiko"),
             brand("Citizen").nearHeadOnly(),
@@ -567,33 +610,125 @@ public class ProductBrandResolver {
         }
         int headStart = headStart(words);
 
-        BrandDef bestDef = null;
-        int bestIndex = Integer.MAX_VALUE;
-        int bestLength = 0;
-
+        List<Candidate> candidates = new ArrayList<>();
         for (BrandDef def : BRANDS) {
             for (String[] alias : def.aliases) {
                 int at = firstAcceptedMatch(def, alias, words, headStart);
-                if (at < 0) {
-                    continue;
-                }
-                // Earliest wins: a name introduces its product before it lists what the
-                // product fits. At equal position the longer alias wins, so "Western
-                // Digital" beats a hypothetical single-word entry starting on the same
-                // token.
-                if (at < bestIndex || (at == bestIndex && alias.length > bestLength)) {
-                    bestDef = def;
-                    bestIndex = at;
-                    bestLength = alias.length;
+                if (at >= 0) {
+                    candidates.add(new Candidate(def, alias, at));
                 }
             }
         }
-        if (bestDef == null) {
+        if (candidates.isEmpty()) {
             // Every candidate sat behind a compatibility marker. Before the product is
             // left with an empty brand column, give the suggestive markers a second look.
             return rescueMatch(name, words, headStart);
         }
-        return new Match(bestDef.display, bestIndex);
+
+        Candidate best = null;
+        for (Candidate c : candidates) {
+            if (yieldsTo(c, candidates, words)) {
+                continue;
+            }
+            // Earliest wins: a name introduces its product before it lists what the
+            // product fits. At equal position the longer alias wins, so "Western
+            // Digital" beats a hypothetical single-word entry starting on the same
+            // token.
+            if (best == null
+                    || c.at < best.at
+                    || (c.at == best.at && c.alias.length > best.alias.length)) {
+                best = c;
+            }
+        }
+        if (best == null) {
+            // Every survivor yielded to another. That can only happen when the name
+            // holds nothing but deferring entries pointing at each other, so fall back
+            // to plain position rather than returning an empty brand.
+            for (Candidate c : candidates) {
+                if (best == null
+                        || c.at < best.at
+                        || (c.at == best.at && c.alias.length > best.alias.length)) {
+                    best = c;
+                }
+            }
+        }
+        return new Match(parentOf(best, candidates, words).def.display, best.at);
+    }
+
+    /** One accepted alias occurrence, kept so the candidates can be compared to each other. */
+    private static final class Candidate {
+
+        private final BrandDef def;
+        private final String[] alias;
+        private final int at;
+
+        private Candidate(BrandDef def, String[] alias, int at) {
+            this.def = def;
+            this.alias = alias;
+            this.at = at;
+        }
+
+        private int end() {
+            return at + alias.length;
+        }
+    }
+
+    /**
+     * Whether a deferring entry stands aside for another manufacturer in the same name.
+     *
+     * <p>Two shapes trigger the yield, and only these two.</p>
+     *
+     * <ol>
+     *   <li><b>The alias is repeated.</b> "Smart <i>Ring</i> SAMSUNG Galaxy <i>Ring</i>"
+     *       says "ring" twice and "Samsung" once. A maker is named once; a category is
+     *       restated. The repetition is what separates this name from "Ring Video
+     *       Doorbell Plus", where the single occurrence is the company.</li>
+     *   <li><b>Another maker begins on the very next word.</b> "Smart <i>Ring</i>
+     *       <i>SAMSUNG</i> Galaxy" puts the two adjacent, which is what a category noun
+     *       followed by its manufacturer looks like. Adjacency is required rather than
+     *       mere proximity, because "Televizor <i>Sharp</i> 55GP6260E 4K <i>Google</i>
+     *       TV" is a Sharp television with Google's operating system and must not
+     *       change hands.</li>
+     * </ol>
+     *
+     * <p>In both shapes the yield is conditional on a second manufacturer actually being
+     * present. A deferring entry alone in a name always wins it.</p>
+     */
+    private boolean yieldsTo(Candidate candidate, List<Candidate> all, List<String> words) {
+        if (!candidate.def.deferring) {
+            return false;
+        }
+        boolean repeated = matchAt(words, candidate.alias, candidate.at + 1) >= 0;
+        for (Candidate other : all) {
+            if (other.def == candidate.def) {
+                continue;
+            }
+            if (repeated || other.at == candidate.end()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * The company behind a product line, when the name spells the relationship out.
+     *
+     * <p>"Trotineta electrica <i>Ninebot by Segway</i> KickScooter" names both; the
+     * catalogue files it under Segway, because that is the company and the word "by"
+     * says so. Without the link word the earlier name stands, which is why this reads
+     * one specific token rather than guessing at corporate structure.</p>
+     */
+    private Candidate parentOf(Candidate candidate, List<Candidate> all, List<String> words) {
+        int link = candidate.end();
+        if (link >= words.size() || !PARENT_LINK.equals(words.get(link))) {
+            return candidate;
+        }
+        for (Candidate other : all) {
+            if (other.def != candidate.def && other.at == link + 1) {
+                return other;
+            }
+        }
+        return candidate;
     }
 
     /**

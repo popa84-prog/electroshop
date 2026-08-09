@@ -33,5 +33,43 @@ public enum Permission {
     SUPPLIERS_MANAGE,
     PURCHASES_MANAGE,
     ACCOUNTING_VIEW,
-    OFFERS_MANAGE
+    OFFERS_MANAGE,
+    /**
+     * Reads the business metrics the dashboard is built on: stock value, potential
+     * profit, profit breakdown, financial overview, inventory health, order
+     * efficiency, customer insights and product performance.
+     *
+     * <p>Deliberately separate from {@link #DASHBOARD_VIEW}. That permission opens
+     * the page; this one exposes purchase prices, margins and per-customer buying
+     * patterns. An Editor who may look at order counts has no business reading what
+     * the company pays its suppliers, and before this permission existed the two
+     * were the same decision.</p>
+     */
+    METRICS_VIEW,
+    /**
+     * Reads infrastructure state: API latency and error counters, cron job results,
+     * persisted operational logs, and the backup section.
+     *
+     * <p>Admin only. Operational logs carry endpoint paths, stack traces and driver
+     * messages — the exact material an attacker uses to map a system — so the
+     * audience for them is the smallest one that can still fix an outage.</p>
+     */
+    SYSTEM_MONITOR,
+    /**
+     * Reads campaign performance: impressions, clicks, conversions and cost per
+     * acquisition.
+     *
+     * <p>Distinct from {@link #OFFERS_MANAGE}, which creates and edits offers.
+     * Judging a campaign and running one are different jobs, and the first does not
+     * require the ability to change what is on the storefront.</p>
+     */
+    MARKETING_VIEW,
+    /**
+     * Uses the personal productivity tools: notes, reminders and internal tasks.
+     *
+     * <p>Every row these create is owned by, and visible only to, the administrator
+     * who wrote it, so the permission grants access to one's own workspace and never
+     * to anyone else's.</p>
+     */
+    TOOLS_USE
 }

@@ -34,14 +34,23 @@ public final class RolePermissions {
                 Permission.ORDERS_VIEW, Permission.ORDERS_MANAGE,
                 Permission.AUDIT_VIEW, Permission.AUDIT_EXPORT,
                 Permission.SUPPLIERS_MANAGE, Permission.PURCHASES_MANAGE,
-                Permission.OFFERS_MANAGE
+                Permission.OFFERS_MANAGE,
+                // A Manager runs the commercial side of the business, so the metrics
+                // that describe it — margin, inventory health, order efficiency,
+                // campaign results — are part of the job. SYSTEM_MONITOR is not:
+                // infrastructure logs stay with Admin.
+                Permission.METRICS_VIEW, Permission.MARKETING_VIEW, Permission.TOOLS_USE
         ));
 
         MATRIX.put(RoleName.ROLE_EDITOR, EnumSet.of(
                 Permission.DASHBOARD_VIEW,
                 Permission.PRODUCTS_VIEW, Permission.PRODUCTS_MANAGE,
                 Permission.ORDERS_VIEW,
-                Permission.AUDIT_VIEW
+                Permission.AUDIT_VIEW,
+                // Notes and reminders are the Editor's own workspace and expose no
+                // business data. METRICS_VIEW is withheld: an Editor writes product
+                // content and has no need to see purchase prices or margins.
+                Permission.TOOLS_USE
         ));
 
         MATRIX.put(RoleName.ROLE_USER, Collections.emptySet());

@@ -33,4 +33,24 @@ public interface UserRepository extends JpaRepository<User, Long> {
             ORDER BY d
             """, nativeQuery = true)
     List<Object[]> countSignupsByDay();
+
+    /**
+     * Global search over email and full name.
+     *
+     * <p>The term is bound as a parameter and the wildcards are added by the query, so a
+     * value containing a percent sign searches for that character rather than matching
+     * every account.</p>
+     *
+     * <p>Enabled accounts come first: an operator searching a person almost always means
+     * the account currently in use, and a disabled duplicate at the top of the list is a
+     * plausible-looking wrong answer.</p>
+     */
+    @Query("""
+            SELECT u FROM User u
+            WHERE LOWER(u.email) LIKE LOWER(CONCAT('%', :q, '%'))
+               OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :q, '%'))
+            ORDER BY u.enabled DESC, u.email ASC
+            """)
+    List<User> searchForGlobal(@org.springframework.data.repository.query.Param("q") String q,
+                               Pageable pageable);
 }

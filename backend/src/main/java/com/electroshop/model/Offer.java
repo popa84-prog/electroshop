@@ -115,6 +115,20 @@ public class Offer {
     @Column(nullable = false)
     private Integer sortOrder = 0;
 
+    /**
+     * Cât a costat rularea campaniei.
+     *
+     * <p>Costul pe achiziție are nevoie de un cost. Tabela de oferte reține ce spune
+     * o campanie și când rulează, niciodată cât costă, deci coloana se adaugă aici.</p>
+     *
+     * <p>{@code null} înseamnă „necunoscut", nu „gratuit". Panoul de marketing
+     * raportează costul pe achiziție ca fiind indisponibil pentru astfel de campanii,
+     * nu ca fiind zero: o campanie fără cost înregistrat și una care chiar nu a costat
+     * nimic duc la concluzii complet diferite despre repetarea ei.</p>
+     */
+    @Column(precision = 12, scale = 2)
+    private java.math.BigDecimal campaignCost;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 

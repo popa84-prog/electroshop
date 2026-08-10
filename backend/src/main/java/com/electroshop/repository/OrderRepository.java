@@ -197,9 +197,25 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             """)
     List<Object[]> firstOrderDates(@org.springframework.data.repository.query.Param("userIds") List<Long> userIds);
 
-    /** Orders in a window, newest first, for the efficiency detail table. */
+    /**
+     * Orders in a window, newest first, for the efficiency detail table.
+     *
+     * <p><b>The customer is fetched with the order, deliberately.</b> {@code Order.user}
+     * is mapped {@code LAZY}, and the detail table prints the customer's e-mail on every
+     * row. Without the join the rows come back holding uninitialised proxies; the
+     * service then reads them after the repository call has already closed its session
+     * and the panel fails outright with <em>could not initialize proxy — no Session</em>.
+     * Even inside an open session the plain query would be wrong in a quieter way: fifty
+     * rows would issue fifty extra selects, one per customer.</p>
+     *
+     * <p>A {@code LEFT} join rather than an inner one. The column is {@code NOT NULL} in
+     * the mapping, but an inner join would silently drop any row where that invariant is
+     * not met in the data, and a detail table that omits orders without saying so is
+     * worse than one that prints a dash.</p>
+     */
     @Query("""
             SELECT o FROM Order o
+            LEFT JOIN FETCH o.user
             WHERE o.createdAt >= :from AND o.createdAt < :to
             ORDER BY o.createdAt DESC
             """)

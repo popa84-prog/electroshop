@@ -10,6 +10,7 @@ import com.electroshop.repository.OrderRepository;
 import com.electroshop.repository.OrderStatusEventRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -79,7 +80,20 @@ public class OrderEfficiencyService {
         this.eventRepository = eventRepository;
     }
 
-    /** The whole panel for a window. */
+    /**
+     * The whole panel for a window.
+     *
+     * <p><b>Read-only transactional on purpose.</b> The method issues around a dozen
+     * queries and presents their results as one consistent picture; without a
+     * surrounding transaction each repository call runs in its own session, so the
+     * counts, the series and the detail table can each observe a different state of the
+     * order table. The flag also keeps the persistence context from taking dirty-check
+     * snapshots of every order it loads, which for a fifty-row detail table is pure
+     * waste, and it pairs with the fetch join on {@code findPlacedBetween} so the
+     * customer e-mail printed in that table is read from an initialised association
+     * rather than a detached proxy.</p>
+     */
+    @Transactional(readOnly = true)
     public OrderEfficiencyDto efficiency(MetricRange range) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime from = range.from(now);

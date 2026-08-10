@@ -26,6 +26,7 @@ import AdminSuppliers from './pages/admin/AdminSuppliers';
 import AdminOffers from './pages/admin/AdminOffers';
 import AdminPurchases from './pages/admin/AdminPurchases';
 import AdminAccounting from './pages/admin/AdminAccounting';
+import AdminInvoices from './pages/admin/AdminInvoices';
 import AdminAuditLog from './pages/admin/AdminAuditLog';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminLoginEvents from './pages/admin/AdminLoginEvents';
@@ -97,6 +98,7 @@ export default function App() {
           <Route path="offers" element={<AdminOffers />} />
           <Route path="purchases" element={<AdminPurchases />} />
           <Route path="accounting" element={<AdminAccounting />} />
+          <Route path="invoices" element={<AdminInvoices />} />
           <Route path="audit" element={<AdminAuditLog />} />
           <Route path="settings" element={<AdminSettings />} />
           <Route path="login-events" element={<AdminLoginEvents />} />

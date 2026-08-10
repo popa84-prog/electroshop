@@ -73,6 +73,20 @@ public class CompanySettings {
     @Column(nullable = false)
     private Integer invoiceNextNumber = 1;         // Următorul număr de factură
 
+    // ---- Nota de intrare-recepție ----
+    //
+    // Contor complet separat de cel al facturilor emise. Sunt documente
+    // diferite, cu destinatari diferiți: factura pleacă spre client, NIR-ul
+    // rămâne în magazin, atașat la factura furnizorului. O serie comună ar face
+    // ambele registre ilizibile și ar produce goluri aparente în fiecare dintre
+    // ele, pentru că numerele lipsă ar fi de fapt documente de celălalt tip.
+
+    @Column(name = "reception_series", length = 12)
+    private String receptionSeries = "NIR";        // Seria notei de intrare
+
+    @Column(name = "reception_next_number", nullable = false)
+    private Integer receptionNextNumber = 1;       // Următorul număr de NIR
+
     // ---- Extra ----
     @Column(length = 500)
     private String logoUrl;                         // Logo opțional pe factură

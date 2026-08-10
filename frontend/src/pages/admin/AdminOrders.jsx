@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import adminService from '../../api/adminService';
+import invoiceService from '../../api/invoiceService';
 import AdminNav from '../../components/AdminNav';
 import Modal from '../../components/Modal';
 import Pagination from '../../components/Pagination';
@@ -108,8 +109,34 @@ export default function AdminOrders() {
     }
   };
 
+  /**
+   * Descarcă factura comenzii, emițând-o întâi dacă nu există.
+   *
+   * Emiterea este acum o acțiune separată pe server, iar ruta de descărcare
+   * refuză o comandă nefacturată în loc să îi aloce un număr pe tăcute. Motivul
+   * este că alocarea se făcea înainte chiar în interiorul unui `GET`, deci un
+   * clic curios pe o comandă neplătită consuma definitiv un număr fiscal; dacă
+   * respectiva comandă era apoi ștearsă, numărul rămânea o gaură în serie
+   * pentru care nu exista niciun document.
+   *
+   * Aici, în schimb, operatorul chiar a cerut factura, deci emiterea este
+   * intenția lui — dar i se cere confirmarea, pentru că numărul se consumă
+   * definitiv. Odată emisă, orice descărcare ulterioară trece direct la
+   * tipărire.
+   */
   const downloadInvoice = async (order) => {
     try {
+      if (!order.invoiceNumber) {
+        const confirmed = window.confirm(
+          `Comanda #${order.id} nu are factură emisă.\n\n` +
+            'Emiterea alocă definitiv un număr fiscal din serie. Continui?'
+        );
+        if (!confirmed) return;
+        await invoiceService.issue(order.id);
+        invalidateListCache(LIST_CACHE_NS);
+        load();
+      }
+
       const blob = await adminService.downloadInvoice(order.id);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

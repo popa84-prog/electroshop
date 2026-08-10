@@ -105,6 +105,17 @@ const ICONS = {
       <path d="M9.5 19a2.5 2.5 0 0 0 5 0" />
     </svg>
   ),
+  // Bonul cu marginea de jos zimțată: silueta pe care o recunoaște oricine
+  // caută facturi. Fără el, intrarea nouă ar cădea pe rezerva generică `box` și
+  // ar arăta identic cu Produse — fallback-ul există ca o greșeală de scriere
+  // să nu strice pagina, nu ca substitut pentru o pictogramă lipsă.
+  receipt: (props) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M5 3.5h14v17l-2.3-1.6-2.4 1.6-2.3-1.6-2.4 1.6L7.3 19 5 20.5z" />
+      <path d="M8.5 8h7" />
+      <path d="M8.5 12h7" />
+    </svg>
+  ),
 };
 
 /** Renders one of the icons above by name; falls back to a generic box so a typo never crashes the page. */
@@ -158,7 +169,13 @@ export const adminGroups = [
     key: 'financial',
     label: 'Financiar',
     icon: 'banknote',
-    items: [{ to: '/admin/accounting', label: 'Contabilitate', icon: 'coins', permission: 'ACCOUNTING_VIEW' }],
+    items: [
+      { to: '/admin/accounting', label: 'Contabilitate', icon: 'coins', permission: 'ACCOUNTING_VIEW' },
+      // Registrul de facturi are permisiunea lui, separată de contabilitate: el
+      // adună la un loc identificatorii fiscali ai tuturor clienților, iar
+      // stornarea de acolo corectează cifre deja raportate.
+      { to: '/admin/invoices', label: 'Facturi', icon: 'receipt', permission: 'INVOICE_VIEW' },
+    ],
   },
   {
     key: 'system',

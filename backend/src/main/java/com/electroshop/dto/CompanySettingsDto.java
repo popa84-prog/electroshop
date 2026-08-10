@@ -28,6 +28,8 @@ public record CompanySettingsDto(
         BigDecimal vatRate,
         String invoiceSeries,
         Integer invoiceNextNumber,
+        String receptionSeries,
+        Integer receptionNextNumber,
         String logoUrl,
         String invoiceNotes
 ) {
@@ -51,6 +53,8 @@ public record CompanySettingsDto(
                 c.getVatRate(),
                 c.getInvoiceSeries(),
                 c.getInvoiceNextNumber(),
+                c.getReceptionSeries(),
+                c.getReceptionNextNumber(),
                 c.getLogoUrl(),
                 c.getInvoiceNotes()
         );

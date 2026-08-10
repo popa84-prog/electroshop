@@ -33,16 +33,24 @@ public class OrderService {
     private final OrderExportService orderExportService;
     private final AuditService auditService;
     private final NotificationService notificationService;
+    /**
+     * Records every status transition, so the order-efficiency report can measure how
+     * long each stage took. Without it the order carries only a creation and a
+     * last-touched timestamp, from which no stage duration is derivable.
+     */
+    private final OrderStatusRecorder statusRecorder;
 
     public OrderService(OrderRepository orderRepository, ProductRepository productRepository,
                         UserRepository userRepository, OrderExportService orderExportService,
-                        AuditService auditService, NotificationService notificationService) {
+                        AuditService auditService, NotificationService notificationService,
+                        OrderStatusRecorder statusRecorder) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
         this.userRepository = userRepository;
         this.orderExportService = orderExportService;
         this.auditService = auditService;
         this.notificationService = notificationService;
+        this.statusRecorder = statusRecorder;
     }
 
     @Transactional(readOnly = true)
@@ -97,6 +105,9 @@ public class OrderService {
 
         order.recalculateTotal();
         Order saved = orderRepository.save(order);
+        // The first event of the order's life: nothing to its opening status.
+        // Recorded after the save because the row needs the generated id.
+        statusRecorder.recordCreation(saved);
         auditService.log("ORDER_CREATED", "Order", saved.getId(),
                 "client " + user.getEmail() + " · total " + saved.getTotalAmount());
         // Feature #8 — "comenzi noi" notification, feeds the admin notification center.
@@ -147,6 +158,9 @@ public class OrderService {
         order.recalculateTotal();
 
         Order saved = orderRepository.save(order);
+        // The first event of the order's life: nothing to its opening status.
+        // Recorded after the save because the row needs the generated id.
+        statusRecorder.recordCreation(saved);
 
         auditService.log("PRODUCT_SOLD", "Product", product.getId(),
                 "Vândut " + req.quantity() + " bucăți din " + product.getName()
@@ -216,6 +230,9 @@ public class OrderService {
         }
         order.recalculateTotal();
         Order saved = orderRepository.save(order);
+        // The first event of the order's life: nothing to its opening status.
+        // Recorded after the save because the row needs the generated id.
+        statusRecorder.recordCreation(saved);
 
         // Apply the stock decrements and per-product audit trail now that the order
         // (and its id, used in each entry's details) exists.
@@ -293,6 +310,9 @@ public class OrderService {
     public OrderDto updateStatus(Long orderId, String status) {
         Order order = findEntity(orderId);
         OrderStatus newStatus = parseStatus(status);
+        // Read before the write: after setStatus the old value is gone, and the whole
+        // point of the history row is which status the order left.
+        OrderStatus previousStatus = order.getStatus();
 
         // Restock if an order is cancelled
         if (newStatus == OrderStatus.CANCELLED && order.getStatus() != OrderStatus.CANCELLED) {
@@ -309,6 +329,7 @@ public class OrderService {
         }
         order.setStatus(newStatus);
         OrderDto dto = OrderDto.from(orderRepository.save(order));
+        statusRecorder.record(order, previousStatus, newStatus, null);
         auditService.log("ORDER_STATUS_CHANGED", "Order", orderId, "→ " + newStatus.name());
         return dto;
     }

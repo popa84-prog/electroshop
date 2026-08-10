@@ -346,6 +346,88 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.ok("Order deleted", null));
     }
 
+    // ---------- Operații în masă asupra comenzilor ----------
+
+    /**
+     * Identificatorii tuturor comenzilor care corespund filtrului.
+     *
+     * <p>{@code GET /api/admin/orders/ids?status=…}</p>
+     *
+     * <p>Există pentru butonul „selectează toate cele N". Bifa din antetul
+     * tabelului ia pagina curentă, iar extinderea la întregul set filtrat are
+     * nevoie de identificatorii de pe paginile nevăzute. Se întorc doar numere,
+     * nu comenzi întregi: pentru câteva sute de rânduri diferența dintre o listă
+     * de numere și o listă de obiecte cu client, adresă și poziții este ordinul
+     * de mărime al răspunsului, pentru o informație pe care interfața nu o
+     * afișează oricum.</p>
+     */
+    @GetMapping("/orders/ids")
+    @PreAuthorize("@permissionService.has('ORDERS_VIEW')")
+    public ResponseEntity<ApiResponse<java.util.List<Long>>> orderIds(
+            @RequestParam(required = false) String status) {
+        return ResponseEntity.ok(ApiResponse.ok(orderService.idsMatching(status)));
+    }
+
+    /**
+     * Câte bucăți s-ar întoarce în stoc dacă lotul selectat ar fi anulat.
+     *
+     * <p>{@code POST /api/admin/orders/bulk-cancel-preview}</p>
+     *
+     * <p>Alimentează confirmarea din interfață. Anularea mișcă marfă reală, iar
+     * o confirmare care întreabă doar „ești sigur?" nu îi dă operatorului
+     * informația pe baza căreia să răspundă.</p>
+     */
+    @PostMapping("/orders/bulk-cancel-preview")
+    @PreAuthorize("@permissionService.has('ORDERS_MANAGE')")
+    public ResponseEntity<ApiResponse<java.util.Map<String, Object>>> bulkCancelPreview(
+            @Valid @RequestBody BulkIdsRequest request) {
+        int units = orderService.previewRestockForCancel(request.getIds());
+        java.util.Map<String, Object> body = new java.util.LinkedHashMap<>();
+        body.put("orders", request.getIds().size());
+        body.put("units", units);
+        return ResponseEntity.ok(ApiResponse.ok(body));
+    }
+
+    /**
+     * Trece un lot de comenzi într-un status.
+     *
+     * <p>{@code POST /api/admin/orders/bulk-status}</p>
+     */
+    @PostMapping("/orders/bulk-status")
+    @PreAuthorize("@permissionService.has('ORDERS_MANAGE')")
+    public ResponseEntity<ApiResponse<OrderBulkResultDto>> bulkStatus(
+            @Valid @RequestBody BulkStatusRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                orderService.bulkUpdateStatus(request.ids(), request.status())));
+    }
+
+    /**
+     * Șterge un lot de comenzi.
+     *
+     * <p>{@code POST /api/admin/orders/bulk-delete}</p>
+     */
+    @PostMapping("/orders/bulk-delete")
+    @PreAuthorize("@permissionService.has('ORDERS_MANAGE')")
+    public ResponseEntity<ApiResponse<OrderBulkResultDto>> bulkDeleteOrders(
+            @Valid @RequestBody BulkIdsRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(orderService.bulkDelete(request.getIds())));
+    }
+
+    /**
+     * Corpul cererii de schimbare a statusului în masă.
+     *
+     * @param ids    comenzile vizate
+     * @param status statusul țintă
+     */
+    public record BulkStatusRequest(
+            @jakarta.validation.constraints.NotEmpty(message = "Nu ai selectat nicio comandă.")
+            @jakarta.validation.constraints.Size(max = BulkIdsRequest.MAX_IDS,
+                    message = "Poți trimite cel mult 500 de comenzi într-o singură cerere.")
+            java.util.List<Long> ids,
+            @jakarta.validation.constraints.NotBlank(message = "Lipsește statusul.")
+            String status) {
+    }
+
     /**
      * Export the product catalogue as a stock list: produs / achiziție /
      * preț vânzare / stoc. Respects the table's search box, so the operator can

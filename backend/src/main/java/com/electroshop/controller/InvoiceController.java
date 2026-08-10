@@ -47,6 +47,15 @@ public class InvoiceController {
     /** Cât de mare poate fi o pagină cerută de client. */
     private static final int MAX_PAGE_SIZE = 100;
 
+    /**
+     * Câte comenzi pot fi facturate într-o singură cerere.
+     *
+     * <p>Fiecare consumă un număr fiscal, iar o cerere care ar emite mii de
+     * documente dintr-un clic greșit nu se poate anula decât storando fiecare
+     * document în parte.</p>
+     */
+    private static final int MAX_BULK_ORDERS = 200;
+
     private final InvoiceRepository invoiceRepository;
     private final InvoiceIssueService issueService;
     private final InvoiceCancellationService cancellationService;
@@ -176,6 +185,63 @@ public class InvoiceController {
         Invoice issued = issueService.issueForOrder(request.orderId(), request.notes());
         return ResponseEntity.ok(ApiResponse.ok(InvoiceDto.full(issued)));
     }
+
+    /**
+     * Emite facturile pentru mai multe comenzi deodată.
+     *
+     * <p>{@code POST /api/admin/invoices/bulk}</p>
+     *
+     * <p>Comenzile care au deja factură sunt <b>sărite</b>, nu produc eroare. O
+     * selecție de câteva zeci conține aproape sigur una facturată deja, iar dacă
+     * aceea ar face să eșueze tot lotul, operatorul ar trebui să ghicească pe
+     * care să o deselecteze — și la a doua încercare ar descoperi următoarea.
+     * Răspunsul spune exact câte au fost emise și de ce au fost sărite
+     * celelalte.</p>
+     *
+     * <p>Fiecare emitere reușită consumă definitiv un număr fiscal, deci
+     * interfața cere o confirmare care spune câte urmează să fie consumate.</p>
+     */
+    @PostMapping("/bulk")
+    @PreAuthorize("@permissionService.has('INVOICE_ISSUE')")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> issueBulk(
+            @RequestBody BulkIssueRequest request) {
+
+        if (request == null || request.orderIds() == null || request.orderIds().isEmpty()) {
+            throw new com.electroshop.exception.BadRequestException("Nu ai selectat nicio comandă.");
+        }
+        if (request.orderIds().size() > MAX_BULK_ORDERS) {
+            throw new com.electroshop.exception.BadRequestException(
+                    "Poți factura cel mult " + MAX_BULK_ORDERS + " comenzi într-o singură cerere.");
+        }
+
+        List<InvoiceDto> issued = new ArrayList<>();
+        List<Map<String, Object>> skipped = new ArrayList<>();
+
+        for (Long orderId : request.orderIds()) {
+            if (orderId == null) {
+                continue;
+            }
+            try {
+                issued.add(InvoiceDto.summary(issueService.issueForOrder(orderId, request.notes())));
+            } catch (RuntimeException e) {
+                Map<String, Object> entry = new LinkedHashMap<>();
+                entry.put("orderId", orderId);
+                entry.put("reason", e.getMessage());
+                skipped.add(entry);
+            }
+        }
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("requested", request.orderIds().size());
+        body.put("issued", issued);
+        body.put("skipped", skipped);
+        body.put("message", issued.size() + " din " + request.orderIds().size() + " facturate"
+                + (skipped.isEmpty() ? "" : " · " + skipped.size() + " sărite"));
+        return ResponseEntity.ok(ApiResponse.ok(body));
+    }
+
+    /** Corpul cererii de emitere în masă. */
+    public record BulkIssueRequest(List<Long> orderIds, String notes) {}
 
     /**
      * Stornează o factură, integral sau pe cantităţi selectate.

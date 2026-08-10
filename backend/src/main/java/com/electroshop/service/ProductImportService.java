@@ -63,6 +63,211 @@ public class ProductImportService {
             throw new BadRequestException("Fișierul este gol.");
         }
 
+        // Parsarea este acum o metoda separata, pentru ca receptia de marfa
+        // citeste exact acelasi fisier cu exact aceleasi reguli. O a doua
+        // implementare a citirii ar diverge la prima coloana adaugata, iar
+        // diferenta s-ar manifesta ca un import care accepta un fisier pe care
+        // celalalt il refuza.
+        ParsedSheet parsed = parse(file);
+        List<RowError> errors = parsed.errors();
+        List<String> warnings = parsed.warnings();
+        List<PreparedRow> prepared = parsed.rows();
+        int totalRows = parsed.totalRows();
+
+        int created = 0;
+        int updated = 0;
+        int restocked = 0;
+        for (PreparedRow pr : prepared) {
+            Product p = null;
+            if (pr.sku != null) {
+                p = productRepository.findFirstBySku(pr.sku).orElse(null);
+            }
+            if (p == null) {
+                p = productRepository.findFirstByNameIgnoreCase(pr.name).orElse(null);
+            }
+            boolean isNew = (p == null);
+
+            if (isNew) {
+                // Brand-new product — created in full in every mode.
+                if (!dryRun) {
+                    Product np = new Product();
+                    np.setName(pr.name);
+                    np.setCategory(pr.category);
+                    np.setSubcategory(pr.subcategory);
+                    np.setBrand(pr.brand);
+                    np.setDescription(pr.description);
+                    np.setSku(pr.sku);
+                    np.setStockQuantity(pr.stock);
+                    np.setPurchasePrice(pr.purchase);
+                    np.setPrice(pr.sell);
+                    productRepository.save(np);
+                }
+                created++;
+            } else if (restock) {
+                // Intrare marfă: adaugă la stoc + medie ponderată a prețului de achiziție.
+                int existingStock = p.getStockQuantity() != null ? p.getStockQuantity() : 0;
+                int incoming = pr.stock != null ? pr.stock : 0;
+                int totalStock = existingStock + incoming;
+                BigDecimal newPurchase = p.getPurchasePrice();
+                if (pr.purchase != null) {
+                    BigDecimal existingPurchase = p.getPurchasePrice();
+                    if (existingPurchase == null || existingStock <= 0) {
+                        // Nimic de mediat — folosește prețul nou.
+                        newPurchase = pr.purchase;
+                    } else if (incoming > 0) {
+                        newPurchase = existingPurchase.multiply(BigDecimal.valueOf(existingStock))
+                                .add(pr.purchase.multiply(BigDecimal.valueOf(incoming)))
+                                .divide(BigDecimal.valueOf(totalStock), 2, RoundingMode.HALF_UP);
+                    }
+                }
+                if (!dryRun) {
+                    p.setStockQuantity(totalStock);
+                    p.setPurchasePrice(newPurchase);
+                    // Preț de vânzare, categorie, brand etc. rămân neschimbate.
+                    productRepository.save(p);
+                }
+                restocked++;
+                updated++;
+            } else {
+                // Import normal: suprascrie câmpurile existente cu valorile din Excel.
+                if (!dryRun) {
+                    p.setName(pr.name);
+                    p.setCategory(pr.category);
+                    p.setSubcategory(pr.subcategory);
+                    p.setBrand(pr.brand);
+                    p.setDescription(pr.description);
+                    p.setSku(pr.sku);
+                    p.setStockQuantity(pr.stock);
+                    p.setPurchasePrice(pr.purchase);
+                    p.setPrice(pr.sell);
+                    productRepository.save(p);
+                }
+                updated++;
+            }
+        }
+        if (restock) {
+            warnings.add(0, "Mod intrare marfă: " + restocked + " produse existente au primit cantitatea adăugată la stoc și prețul de achiziție recalculat ca medie ponderată; "
+                    + created + " produse noi au fost adăugate. Prețul de vânzare și categoriile produselor existente nu au fost modificate.");
+        }
+
+        return new ProductImportResult(dryRun, totalRows, prepared.size(), created, updated, errors, warnings);
+    }
+
+    /**
+     * SAFE, surgical sync: reads the same .xlsx and updates ONLY the acquisition
+     * price (purchase_price) of products that already exist, matched by name.
+     * It never creates products, never deletes, and never touches stock, selling
+     * price, category or any other field. Products in the file that are not found
+     * in the shop are reported (as warnings) and left untouched — so deleted
+     * products are not resurrected. Rows without a purchase price are skipped.
+     */
+    @Transactional
+    public ProductImportResult syncPurchasePrices(MultipartFile file, boolean dryRun) {
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("Fișierul este gol.");
+        }
+        List<RowError> errors = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
+        List<String> missingNames = new ArrayList<>();
+        int totalRows = 0;
+        int withPrice = 0;
+        int updated = 0;
+        int notFound = 0;
+
+        try (Workbook wb = WorkbookFactory.create(file.getInputStream())) {
+            Sheet sheet = wb.getSheetAt(0);
+            if (sheet == null) {
+                throw new BadRequestException("Fișierul nu conține nicio foaie de calcul.");
+            }
+            int headerIdx = sheet.getFirstRowNum();
+            Row header = sheet.getRow(headerIdx);
+            if (header == null) {
+                throw new BadRequestException("Lipsește rândul de antet (prima linie).");
+            }
+            Map<Field, Integer> col = mapColumns(header);
+            if (!col.containsKey(Field.NAME)) {
+                throw new BadRequestException("Lipsește coloana 'Nume produs'.");
+            }
+            if (!col.containsKey(Field.PURCHASE_PRICE)) {
+                throw new BadRequestException("Lipsește coloana cu prețul de achiziție.");
+            }
+
+            for (int r = headerIdx + 1; r <= sheet.getLastRowNum(); r++) {
+                Row row = sheet.getRow(r);
+                if (row == null || isRowBlank(row)) continue;
+                totalRows++;
+                int humanRow = r + 1;
+
+                String name = str(row, col.get(Field.NAME));
+                if (name.isBlank()) continue;
+
+                BigDecimal purchase;
+                try {
+                    purchase = decVal(row, col.get(Field.PURCHASE_PRICE));
+                } catch (Exception e) {
+                    errors.add(new RowError(humanRow, "'Preț achiziție' nu este un număr valid"));
+                    continue;
+                }
+                if (purchase == null) continue;           // nothing to sync for this row
+                if (purchase.signum() < 0) {
+                    errors.add(new RowError(humanRow, "'Preț achiziție' nu poate fi negativ"));
+                    continue;
+                }
+                withPrice++;
+
+                Product p = productRepository.findFirstByNameIgnoreCase(name).orElse(null);
+                if (p == null) {
+                    notFound++;
+                    missingNames.add(name);
+                    continue;
+                }
+                if (!dryRun) {
+                    p.setPurchasePrice(purchase);
+                    productRepository.save(p);
+                }
+                updated++;
+            }
+        } catch (BadRequestException e) {
+            throw e;
+        } catch (IOException e) {
+            throw new BadRequestException("Nu am putut citi fișierul Excel: " + e.getMessage());
+        } catch (Exception e) {
+            throw new BadRequestException("Fișier Excel invalid sau format neacceptat (folosește .xlsx).");
+        }
+
+        if (notFound > 0) {
+            warnings.add(notFound + " produse din Excel nu au fost găsite în magazin — au fost ignorate (nimic nu s-a creat sau șters).");
+            int shown = 0;
+            for (String n : missingNames) {
+                if (shown >= 25) {
+                    warnings.add("... și încă " + (notFound - 25) + " neregăsite.");
+                    break;
+                }
+                warnings.add("Negăsit: " + n);
+                shown++;
+            }
+        }
+        // updatedCount = câte produse au primit pretul de achizitie (matched).
+        return new ProductImportResult(dryRun, totalRows, withPrice, 0, updated, errors, warnings);
+    }
+
+    // ---------------------------------------------------------------- helpers
+
+
+    /**
+     * Citeste si valideaza fisierul, fara sa scrie nimic.
+     *
+     * <p>Extrasa din {@link #importFromExcel} ca sa poata fi folosita si de
+     * receptia de marfa. Cele doua trebuie sa accepte exact aceleasi fisiere:
+     * daca ar avea fiecare propria citire, ar diverge la prima coloana
+     * adaugata, iar utilizatorul ar descoperi ca acelasi fisier trece pe o cale
+     * si pica pe cealalta.</p>
+     */
+    public ParsedSheet parse(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("Fișierul este gol.");
+        }
+
         List<RowError> errors = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
         List<PreparedRow> prepared = new ArrayList<>();
@@ -268,186 +473,18 @@ public class ProductImportService {
             throw new BadRequestException("Fișier Excel invalid sau format neacceptat (folosește .xlsx).");
         }
 
-        int created = 0;
-        int updated = 0;
-        int restocked = 0;
-        for (PreparedRow pr : prepared) {
-            Product p = null;
-            if (pr.sku != null) {
-                p = productRepository.findFirstBySku(pr.sku).orElse(null);
-            }
-            if (p == null) {
-                p = productRepository.findFirstByNameIgnoreCase(pr.name).orElse(null);
-            }
-            boolean isNew = (p == null);
-
-            if (isNew) {
-                // Brand-new product — created in full in every mode.
-                if (!dryRun) {
-                    Product np = new Product();
-                    np.setName(pr.name);
-                    np.setCategory(pr.category);
-                    np.setSubcategory(pr.subcategory);
-                    np.setBrand(pr.brand);
-                    np.setDescription(pr.description);
-                    np.setSku(pr.sku);
-                    np.setStockQuantity(pr.stock);
-                    np.setPurchasePrice(pr.purchase);
-                    np.setPrice(pr.sell);
-                    productRepository.save(np);
-                }
-                created++;
-            } else if (restock) {
-                // Intrare marfă: adaugă la stoc + medie ponderată a prețului de achiziție.
-                int existingStock = p.getStockQuantity() != null ? p.getStockQuantity() : 0;
-                int incoming = pr.stock != null ? pr.stock : 0;
-                int totalStock = existingStock + incoming;
-                BigDecimal newPurchase = p.getPurchasePrice();
-                if (pr.purchase != null) {
-                    BigDecimal existingPurchase = p.getPurchasePrice();
-                    if (existingPurchase == null || existingStock <= 0) {
-                        // Nimic de mediat — folosește prețul nou.
-                        newPurchase = pr.purchase;
-                    } else if (incoming > 0) {
-                        newPurchase = existingPurchase.multiply(BigDecimal.valueOf(existingStock))
-                                .add(pr.purchase.multiply(BigDecimal.valueOf(incoming)))
-                                .divide(BigDecimal.valueOf(totalStock), 2, RoundingMode.HALF_UP);
-                    }
-                }
-                if (!dryRun) {
-                    p.setStockQuantity(totalStock);
-                    p.setPurchasePrice(newPurchase);
-                    // Preț de vânzare, categorie, brand etc. rămân neschimbate.
-                    productRepository.save(p);
-                }
-                restocked++;
-                updated++;
-            } else {
-                // Import normal: suprascrie câmpurile existente cu valorile din Excel.
-                if (!dryRun) {
-                    p.setName(pr.name);
-                    p.setCategory(pr.category);
-                    p.setSubcategory(pr.subcategory);
-                    p.setBrand(pr.brand);
-                    p.setDescription(pr.description);
-                    p.setSku(pr.sku);
-                    p.setStockQuantity(pr.stock);
-                    p.setPurchasePrice(pr.purchase);
-                    p.setPrice(pr.sell);
-                    productRepository.save(p);
-                }
-                updated++;
-            }
-        }
-        if (restock) {
-            warnings.add(0, "Mod intrare marfă: " + restocked + " produse existente au primit cantitatea adăugată la stoc și prețul de achiziție recalculat ca medie ponderată; "
-                    + created + " produse noi au fost adăugate. Prețul de vânzare și categoriile produselor existente nu au fost modificate.");
-        }
-
-        return new ProductImportResult(dryRun, totalRows, prepared.size(), created, updated, errors, warnings);
+        return new ParsedSheet(prepared, errors, warnings, totalRows);
     }
 
     /**
-     * SAFE, surgical sync: reads the same .xlsx and updates ONLY the acquisition
-     * price (purchase_price) of products that already exist, matched by name.
-     * It never creates products, never deletes, and never touches stock, selling
-     * price, category or any other field. Products in the file that are not found
-     * in the shop are reported (as warnings) and left untouched — so deleted
-     * products are not resurrected. Rows without a purchase price are skipped.
+     * Rezultatul citirii: randurile valide, erorile pe rand, avertismentele si
+     * cate randuri neblanke a avut fisierul.
      */
-    @Transactional
-    public ProductImportResult syncPurchasePrices(MultipartFile file, boolean dryRun) {
-        if (file == null || file.isEmpty()) {
-            throw new BadRequestException("Fișierul este gol.");
-        }
-        List<RowError> errors = new ArrayList<>();
-        List<String> warnings = new ArrayList<>();
-        List<String> missingNames = new ArrayList<>();
-        int totalRows = 0;
-        int withPrice = 0;
-        int updated = 0;
-        int notFound = 0;
-
-        try (Workbook wb = WorkbookFactory.create(file.getInputStream())) {
-            Sheet sheet = wb.getSheetAt(0);
-            if (sheet == null) {
-                throw new BadRequestException("Fișierul nu conține nicio foaie de calcul.");
-            }
-            int headerIdx = sheet.getFirstRowNum();
-            Row header = sheet.getRow(headerIdx);
-            if (header == null) {
-                throw new BadRequestException("Lipsește rândul de antet (prima linie).");
-            }
-            Map<Field, Integer> col = mapColumns(header);
-            if (!col.containsKey(Field.NAME)) {
-                throw new BadRequestException("Lipsește coloana 'Nume produs'.");
-            }
-            if (!col.containsKey(Field.PURCHASE_PRICE)) {
-                throw new BadRequestException("Lipsește coloana cu prețul de achiziție.");
-            }
-
-            for (int r = headerIdx + 1; r <= sheet.getLastRowNum(); r++) {
-                Row row = sheet.getRow(r);
-                if (row == null || isRowBlank(row)) continue;
-                totalRows++;
-                int humanRow = r + 1;
-
-                String name = str(row, col.get(Field.NAME));
-                if (name.isBlank()) continue;
-
-                BigDecimal purchase;
-                try {
-                    purchase = decVal(row, col.get(Field.PURCHASE_PRICE));
-                } catch (Exception e) {
-                    errors.add(new RowError(humanRow, "'Preț achiziție' nu este un număr valid"));
-                    continue;
-                }
-                if (purchase == null) continue;           // nothing to sync for this row
-                if (purchase.signum() < 0) {
-                    errors.add(new RowError(humanRow, "'Preț achiziție' nu poate fi negativ"));
-                    continue;
-                }
-                withPrice++;
-
-                Product p = productRepository.findFirstByNameIgnoreCase(name).orElse(null);
-                if (p == null) {
-                    notFound++;
-                    missingNames.add(name);
-                    continue;
-                }
-                if (!dryRun) {
-                    p.setPurchasePrice(purchase);
-                    productRepository.save(p);
-                }
-                updated++;
-            }
-        } catch (BadRequestException e) {
-            throw e;
-        } catch (IOException e) {
-            throw new BadRequestException("Nu am putut citi fișierul Excel: " + e.getMessage());
-        } catch (Exception e) {
-            throw new BadRequestException("Fișier Excel invalid sau format neacceptat (folosește .xlsx).");
-        }
-
-        if (notFound > 0) {
-            warnings.add(notFound + " produse din Excel nu au fost găsite în magazin — au fost ignorate (nimic nu s-a creat sau șters).");
-            int shown = 0;
-            for (String n : missingNames) {
-                if (shown >= 25) {
-                    warnings.add("... și încă " + (notFound - 25) + " neregăsite.");
-                    break;
-                }
-                warnings.add("Negăsit: " + n);
-                shown++;
-            }
-        }
-        // updatedCount = câte produse au primit pretul de achizitie (matched).
-        return new ProductImportResult(dryRun, totalRows, withPrice, 0, updated, errors, warnings);
+    public record ParsedSheet(List<PreparedRow> rows, List<RowError> errors,
+                             List<String> warnings, int totalRows) {
     }
 
-    // ---------------------------------------------------------------- helpers
-
-    private static class PreparedRow {
+    public static class PreparedRow {
         String name;
         String category;
         String subcategory;

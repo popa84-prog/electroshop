@@ -34,6 +34,8 @@ public class CompanySettingsService {
             c.setVatRate(new BigDecimal("19.00"));
             c.setInvoiceSeries("ELS");
             c.setInvoiceNextNumber(1);
+            c.setReceptionSeries("NIR");
+            c.setReceptionNextNumber(1);
             return repository.save(c);
         });
     }
@@ -70,6 +72,16 @@ public class CompanySettingsService {
         if (d.invoiceNextNumber() != null && d.invoiceNextNumber() >= 1) {
             c.setInvoiceNextNumber(d.invoiceNextNumber());
         }
+        // Seria si contorul notei de intrare-receptie. Aceeasi aparare ca la
+        // facturi: o valoare goala sau sub 1 este ignorata, nu scrisa. Un contor
+        // dus la zero printr-un camp golit din greseala ar face ca urmatoarea
+        // receptie sa incerce un numar deja folosit.
+        if (d.receptionSeries() != null && !d.receptionSeries().isBlank()) {
+            c.setReceptionSeries(d.receptionSeries().trim());
+        }
+        if (d.receptionNextNumber() != null && d.receptionNextNumber() >= 1) {
+            c.setReceptionNextNumber(d.receptionNextNumber());
+        }
         c.setLogoUrl(trim(d.logoUrl()));
         c.setInvoiceNotes(d.invoiceNotes());
         CompanySettings saved = repository.save(c);
@@ -85,6 +97,8 @@ public class CompanySettingsService {
         c.setVatRate(new BigDecimal("19.00"));
         c.setInvoiceSeries("ELS");
         c.setInvoiceNextNumber(1);
+        c.setReceptionSeries("NIR");
+        c.setReceptionNextNumber(1);
         return c;
     }
 

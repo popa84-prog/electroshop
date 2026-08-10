@@ -21,12 +21,20 @@ public class PurchaseService {
     private final PurchaseRepository purchaseRepository;
     private final SupplierRepository supplierRepository;
     private final ProductRepository productRepository;
+    /**
+     * The one authority that puts goods on the shelf. Recording a purchase here
+     * and importing a delivery from a spreadsheet are two paths to the same
+     * effect; routing both through this service is what keeps a single delivery
+     * from being counted twice.
+     */
+    private final StockIntakeService stockIntakeService;
 
     public PurchaseService(PurchaseRepository purchaseRepository, SupplierRepository supplierRepository,
-                           ProductRepository productRepository) {
+                           ProductRepository productRepository, StockIntakeService stockIntakeService) {
         this.purchaseRepository = purchaseRepository;
         this.supplierRepository = supplierRepository;
         this.productRepository = productRepository;
+        this.stockIntakeService = stockIntakeService;
     }
 
     /**
@@ -46,8 +54,19 @@ public class PurchaseService {
             Product product = productRepository.findById(item.productId())
                     .orElseThrow(() -> new ResourceNotFoundException("Product", item.productId()));
 
-            // Stock intake → increase stock
-            product.setStockQuantity(product.getStockQuantity() + item.quantity());
+            // Stock intake, through the single authority.
+            //
+            // Two things changed here. The obvious one is that stock is no longer
+            // written inline, so a delivery imported from a spreadsheet and a
+            // purchase recorded by hand cannot both apply the same quantity.
+            //
+            // The quieter one is that the product's cost now moves. This method
+            // used to add stock and never touch purchasePrice, so buying at a new
+            // cost through this screen left the product carrying the old one —
+            // margin and potential profit then reported against a cost that no
+            // longer matched the goods on the shelf. The intake service applies
+            // the weighted average, exactly as the spreadsheet import always did.
+            stockIntakeService.intake(product, item.quantity(), item.unitPurchasePrice());
 
             PurchaseItem pi = new PurchaseItem();
             pi.setProduct(product);

@@ -25,6 +25,66 @@ const productService = {
       .then((r) => r.data.data);
   },
 
+  /**
+   * Încarcă același fișier ca **intrare de marfă**.
+   *
+   * Diferența față de `importProducts` nu este de format, ci de consecință.
+   * Acolo se actualizează catalogul; aici marfa intră în stoc, costul mediu se
+   * mută, iar mișcarea primește un document de recepție cu număr propriu.
+   *
+   * `dryRun` implicit adevărat, deliberat: dacă parametrul lipsește dintr-un
+   * apel scris greșit, rezultatul este o previzualizare, nu o recepție reală.
+   * Valoarea implicită a unei operații ireversibile trebuie să fie cea care nu
+   * face nimic.
+   *
+   * @param {File} file fișierul .xlsx
+   * @param {{supplierId: number, supplierInvoiceNumber?: string,
+   *          invoiceDate?: string, receptionDate?: string, notes?: string}} meta
+   * @param {boolean} dryRun
+   */
+  receiveGoods: (file, meta, dryRun = true) => {
+    const form = new FormData();
+    form.append('file', file);
+
+    const params = new URLSearchParams();
+    params.set('supplierId', meta.supplierId);
+    params.set('dryRun', String(dryRun));
+    if (meta.supplierInvoiceNumber) params.set('supplierInvoiceNumber', meta.supplierInvoiceNumber);
+    if (meta.invoiceDate) params.set('invoiceDate', meta.invoiceDate);
+    if (meta.receptionDate) params.set('receptionDate', meta.receptionDate);
+    if (meta.notes) params.set('notes', meta.notes);
+
+    return api
+      .post(`/admin/goods-receipts?${params.toString()}`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data.data);
+  },
+
+  /**
+   * Descarcă nota de intrare-recepție a unei achiziții.
+   *
+   * Numele fișierului vine din antetul `Content-Disposition`: serverul cunoaște
+   * seria și numărul, iar o a doua regulă de denumire în browser s-ar putea
+   * despărți de a lui.
+   */
+  downloadReceptionNote: async (purchaseId) => {
+    const response = await api.get(`/admin/goods-receipts/${purchaseId}/nir`, {
+      responseType: 'blob',
+    });
+    const header = response.headers?.['content-disposition'];
+    const match = header ? /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(header) : null;
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = match ? decodeURIComponent(match[1].trim()) : `NIR-${purchaseId}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
+
   // Sync ONLY the purchase price (pret achizitie) on existing products, by name.
   // Does not create/delete products or change stock, price or categories.
   syncPurchasePrices: (file, dryRun = true) => {

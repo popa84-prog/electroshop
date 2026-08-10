@@ -1,8 +1,5 @@
 package com.electroshop.service;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,12 +21,17 @@ import java.util.List;
  * restate facts it was given, which makes it strictly worse prose and strictly safer
  * output.</p>
  *
- * <p>{@link ConditionalOnMissingBean} means adding a real provider is a matter of
- * defining one bean: this adapter steps aside automatically rather than needing to be
- * removed.</p>
+ * <p><b>This class carries no stereotype annotation on purpose.</b> It is registered by
+ * {@code AiTextGeneratorConfig}, which guards the registration with
+ * {@code @ConditionalOnMissingBean}. That annotation only behaves predictably on a
+ * {@code @Bean} method inside a {@code @Configuration} class; on a component-scanned
+ * {@code @Service} it is evaluated before the rest of the scan has run, so the result
+ * depends on ordering the container does not promise. Putting it here left the
+ * application with no {@code AiTextGenerator} at all and stopped the context from
+ * starting. Keeping the registration in a configuration class preserves the intent —
+ * defining any other {@code AiTextGenerator} bean replaces this adapter — without that
+ * fragility.</p>
  */
-@Service
-@ConditionalOnMissingBean(AiTextGenerator.class)
 public class TemplateAiTextGenerator implements AiTextGenerator {
 
     private static final String NOTE =

@@ -71,5 +71,41 @@ public enum Permission {
      * who wrote it, so the permission grants access to one's own workspace and never
      * to anyone else's.</p>
      */
-    TOOLS_USE
+    TOOLS_USE,
+
+    // ---- Facturare ------------------------------------------------------
+    //
+    // Trei permisiuni distincte, nu una singura, pentru ca sunt trei decizii
+    // diferite. Cine consulta registrul de facturi nu are automat dreptul sa
+    // emita documente fiscale noi, iar cine emite nu are automat dreptul sa le
+    // storneze: stornarea corecteaza o cifra deja raportata si este actiunea cu
+    // cele mai lungi consecinte dintre cele trei. Separarea permite ca un
+    // operator sa lucreze zilnic cu facturile fara sa poata anula nimic.
+
+    /**
+     * Reads the invoice register and downloads the generated documents.
+     *
+     * <p>Deliberately separate from {@code ORDERS_VIEW}. An order tells you what
+     * was sold; the invoice register tells you what was declared, to whom, and
+     * with which fiscal identifiers, which is a narrower circle of people.</p>
+     */
+    INVOICE_VIEW,
+
+    /**
+     * Issues an invoice, which means allocating a fiscal number.
+     *
+     * <p>The number is consumed permanently. A gap in the series has to be
+     * explained, so the act of creating one is a decision rather than a side
+     * effect — which is also why issuing moved out of the download endpoint.</p>
+     */
+    INVOICE_ISSUE,
+
+    /**
+     * Issues a credit note, in full or for selected quantities.
+     *
+     * <p>The strongest of the three: it reverses a figure that has already been
+     * reported and, unless explicitly disabled, moves stock. Granted to the
+     * administrator alone.</p>
+     */
+    INVOICE_CANCEL
 }

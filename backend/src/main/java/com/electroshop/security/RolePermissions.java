@@ -39,7 +39,13 @@ public final class RolePermissions {
                 // that describe it — margin, inventory health, order efficiency,
                 // campaign results — are part of the job. SYSTEM_MONITOR is not:
                 // infrastructure logs stay with Admin.
-                Permission.METRICS_VIEW, Permission.MARKETING_VIEW, Permission.TOOLS_USE
+                Permission.METRICS_VIEW, Permission.MARKETING_VIEW, Permission.TOOLS_USE,
+                // Invoicing follows the same line. Issuing an invoice is part of
+                // running the commercial side, so the Manager does it. Issuing a
+                // credit note reverses a figure that has already been reported,
+                // and unless explicitly disabled it moves stock — that one stays
+                // with Admin.
+                Permission.INVOICE_VIEW, Permission.INVOICE_ISSUE
         ));
 
         MATRIX.put(RoleName.ROLE_EDITOR, EnumSet.of(
@@ -51,6 +57,9 @@ public final class RolePermissions {
                 // business data. METRICS_VIEW is withheld: an Editor writes product
                 // content and has no need to see purchase prices or margins.
                 Permission.TOOLS_USE
+                // No invoicing at all, not even INVOICE_VIEW. The register carries
+                // customer fiscal identifiers and the full billing history, which
+                // is a different circle of trust from product content.
         ));
 
         MATRIX.put(RoleName.ROLE_USER, Collections.emptySet());

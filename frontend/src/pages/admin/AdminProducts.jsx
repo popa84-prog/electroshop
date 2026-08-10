@@ -251,6 +251,19 @@ export default function AdminProducts() {
   // When true, import runs in "intrare marfă" mode: existing products get stock
   // added and a quantity-weighted average purchase price.
   const [restockMode, setRestockMode] = useState(false);
+  // Cand este adevarat, importul devine o INTRARE DE MARFA: pe langa stoc si
+  // costul mediu, mișcarea primeste un document de receptie cu numar propriu.
+  // Bifa este separata de "mod intrare marfa" tocmai pentru ca aceea schimba
+  // doar cifre, iar aceasta emite un document. Un import de corectie a
+  // catalogului care are din intamplare coloana de stoc completata nu trebuie
+  // sa devina o receptie.
+  const [receiptMode, setReceiptMode] = useState(false);
+  const [receiptSupplierId, setReceiptSupplierId] = useState('');
+  const [receiptInvoiceNumber, setReceiptInvoiceNumber] = useState('');
+  const [receiptInvoiceDate, setReceiptInvoiceDate] = useState('');
+  const [receiptNotes, setReceiptNotes] = useState('');
+  const [receiptResult, setReceiptResult] = useState(null);
+  const [suppliers, setSuppliers] = useState([]);
 
   // Recategorize state — repararea categoriilor/subcategoriilor deja salvate în
   // baza de date. Rularea are întotdeauna două faze: o previzualizare care nu
@@ -1034,7 +1047,23 @@ export default function AdminProducts() {
     setImportDone(null);
     setSyncMode(false);
     setRestockMode(false);
+    setReceiptMode(false);
+    setReceiptSupplierId('');
+    setReceiptInvoiceNumber('');
+    setReceiptInvoiceDate('');
+    setReceiptNotes('');
+    setReceiptResult(null);
     setImportOpen(true);
+
+    // Lista de furnizori se incarca o singura data, la deschidere. Ceruta abia
+    // la bifarea receptiei, ar introduce o asteptare exact in momentul in care
+    // operatorul vrea sa aleaga din ea.
+    if (suppliers.length === 0) {
+      adminService
+        .listSuppliers()
+        .then((data) => setSuppliers(Array.isArray(data) ? data : data?.content || []))
+        .catch(() => setSuppliers([]));
+    }
   };
 
   const runImport = async (dryRun) => {
@@ -1045,6 +1074,32 @@ export default function AdminProducts() {
     setImportBusy(true);
     setImportError(null);
     try {
+      if (receiptMode) {
+        if (!receiptSupplierId) {
+          setImportError('Alege furnizorul de la care a venit livrarea.');
+          setImportBusy(false);
+          return;
+        }
+        const receipt = await productService.receiveGoods(
+          importFile,
+          {
+            supplierId: receiptSupplierId,
+            supplierInvoiceNumber: receiptInvoiceNumber,
+            invoiceDate: receiptInvoiceDate,
+            notes: receiptNotes,
+          },
+          dryRun
+        );
+        setReceiptResult(receipt);
+        if (!dryRun) {
+          showToast(`Recepție înregistrată: ${receipt.receptionNumber}.`, 'success');
+          invalidateListCache(LIST_CACHE_NS);
+          load();
+        }
+        setImportBusy(false);
+        return;
+      }
+
       const report = syncMode
         ? await productService.syncPurchasePrices(importFile, dryRun)
         : await productService.importProducts(importFile, dryRun, restockMode);
@@ -2313,6 +2368,99 @@ export default function AdminProducts() {
           </span>
         </label>
 
+        <label className="mb-3 flex cursor-pointer items-start gap-2.5 rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] px-3 py-2.5 text-sm xx-ink-muted transition-all duration-xx ease-xx hover:border-[rgba(13,148,136,0.5)]">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 cursor-pointer rounded accent-[#0d9488]"
+            checked={receiptMode}
+            onChange={(e) => {
+              setReceiptMode(e.target.checked);
+              if (e.target.checked) {
+                setSyncMode(false);
+                setRestockMode(false);
+              }
+              setImportReport(null);
+              setImportDone(null);
+              setImportError(null);
+              setReceiptResult(null);
+            }}
+          />
+          <span>
+            <span className="font-semibold text-[color:var(--xx-ink)]">Intrare de marfă (recepție)</span> — marfa intră în stoc,
+            costul mediu se recalculează, iar mișcarea primește o notă de intrare-recepție cu număr
+            propriu. Factura furnizorului se atașează prin număr; documentul acela îl emite el, nu noi.
+          </span>
+        </label>
+
+        {receiptMode && (
+          <div className="mb-3 space-y-3 rounded-xl border border-[rgba(13,148,136,0.35)] bg-[rgba(13,148,136,0.07)] p-3">
+            <label className="block text-sm">
+              <span className="mb-1 block font-semibold text-[color:var(--xx-ink)]">Furnizor</span>
+              <select
+                className="input w-full"
+                value={receiptSupplierId}
+                onChange={(e) => setReceiptSupplierId(e.target.value)}
+              >
+                <option value="">Alege furnizorul…</option>
+                {suppliers.map((sup) => (
+                  <option key={sup.id} value={sup.id}>
+                    {sup.name}
+                  </option>
+                ))}
+              </select>
+              {suppliers.length === 0 && (
+                <span className="mt-1 block text-xs xx-ink-dim">
+                  Nu există furnizori. Adaugă unul din secțiunea Furnizori înainte de recepție.
+                </span>
+              )}
+            </label>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="block text-sm">
+                <span className="mb-1 block font-semibold text-[color:var(--xx-ink)]">
+                  Nr. factură furnizor
+                </span>
+                <input
+                  type="text"
+                  className="input w-full"
+                  value={receiptInvoiceNumber}
+                  onChange={(e) => setReceiptInvoiceNumber(e.target.value)}
+                  placeholder="ex. FF 10234"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="mb-1 block font-semibold text-[color:var(--xx-ink)]">
+                  Data facturii
+                </span>
+                <input
+                  type="date"
+                  className="input w-full"
+                  value={receiptInvoiceDate}
+                  onChange={(e) => setReceiptInvoiceDate(e.target.value)}
+                />
+              </label>
+            </div>
+
+            <label className="block text-sm">
+              <span className="mb-1 block font-semibold text-[color:var(--xx-ink)]">
+                Mențiuni (opțional)
+              </span>
+              <input
+                type="text"
+                className="input w-full"
+                value={receiptNotes}
+                onChange={(e) => setReceiptNotes(e.target.value)}
+                placeholder="ex. livrare parțială, restul săptămâna viitoare"
+              />
+            </label>
+
+            <p className="text-xs xx-ink-dim">
+              Fiecare rând trebuie să aibă preț de achiziție și cantitate pozitivă. Un fișier deja
+              importat este respins, ca stocul să nu se dubleze.
+            </p>
+          </div>
+        )}
+
         <HoloInput
           type="file"
           accept=".xlsx,.xls"
@@ -2325,6 +2473,71 @@ export default function AdminProducts() {
             setImportError(null);
           }}
         />
+
+        {receiptResult && (
+          <div className="mb-4 rounded-xl border border-[rgba(13,148,136,0.4)] bg-[rgba(13,148,136,0.08)] p-4">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <span className="font-display text-base text-[color:var(--xx-ink)]">
+                {receiptResult.dryRun ? 'Previzualizare recepție' : 'Recepție înregistrată'}
+                {' · '}
+                {receiptResult.receptionNumber}
+              </span>
+              <span className="text-sm xx-ink-muted">{receiptResult.supplierName}</span>
+            </div>
+
+            <div className="mb-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+              <ReceiptStat label="Produse noi" value={receiptResult.productsCreated} />
+              <ReceiptStat label="Completate" value={receiptResult.productsRestocked} />
+              <ReceiptStat label="Bucăți" value={receiptResult.unitsReceived} />
+              <ReceiptStat
+                label="Valoare"
+                value={`${Number(receiptResult.totalValue).toLocaleString('ro-RO', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })} RON`}
+              />
+            </div>
+
+            {receiptResult.dryRun && (
+              <p className="mb-3 text-xs xx-ink-dim">
+                Nimic nu a fost scris și niciun număr nu a fost consumat. Apasă „Aplică” pentru a
+                înregistra recepția.
+              </p>
+            )}
+
+            <div className="max-h-64 overflow-auto rounded-lg border border-[rgba(255,255,255,0.1)]">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-left xx-ink-dim">
+                    <th className="px-2 py-1.5 font-medium">Produs</th>
+                    <th className="px-2 py-1.5 text-center font-medium">Cant.</th>
+                    <th className="px-2 py-1.5 text-right font-medium">Cost unitar</th>
+                    <th className="px-2 py-1.5 text-center font-medium">Stoc</th>
+                    <th className="px-2 py-1.5 text-center font-medium">Cost mediu</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {receiptResult.lines.map((ln, i) => (
+                    <tr key={`${ln.productName}-${i}`} className="border-t border-[rgba(255,255,255,0.07)]">
+                      <td className="px-2 py-1.5 text-[color:var(--xx-ink)]">
+                        {ln.productName}
+                        {ln.isNew && <span className="ml-1 text-[10px] uppercase xx-ink-dim">nou</span>}
+                      </td>
+                      <td className="px-2 py-1.5 text-center">{ln.quantity}</td>
+                      <td className="px-2 py-1.5 text-right">{fmt(ln.unitCost)}</td>
+                      <td className="px-2 py-1.5 text-center xx-ink-muted">
+                        {ln.stockBefore} → {ln.stockAfter}
+                      </td>
+                      <td className="px-2 py-1.5 text-center xx-ink-muted">
+                        {ln.costBefore == null ? '—' : fmt(ln.costBefore)} → {fmt(ln.costAfter)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {importReport && (
           <div className="mt-4 space-y-3">
@@ -2407,11 +2620,25 @@ export default function AdminProducts() {
             {importBusy ? 'Se verifică…' : 'Verifică fișierul'}
           </NeonButton>
           <NeonButton
-            disabled={importBusy || !importReport || importReport.validCount === 0 || !!importDone}
+            disabled={
+              importBusy ||
+              (receiptMode
+                ? // Aplicarea receptiei cere o previzualizare reusita si un
+                  // furnizor ales. Butonul ramane blocat pana atunci, ca
+                  // operatorul sa nu afle ce lipseste abia dupa ce apasa.
+                  !receiptResult || !receiptResult.dryRun || !receiptSupplierId
+                : !importReport || importReport.validCount === 0 || !!importDone)
+            }
             onClick={() => runImport(false)}
             icon={<GeoIcon name="layers" className="h-4 w-4" accent="currentColor" />}
           >
-            {importDone
+            {receiptMode
+              ? receiptResult && !receiptResult.dryRun
+                ? `Recepționat ✓ ${receiptResult.receptionNumber}`
+                : `Înregistrează recepția${
+                    receiptResult ? ` (${receiptResult.unitsReceived} buc.)` : ''
+                  }`
+              : importDone
               ? syncMode
                 ? 'Sincronizat ✓'
                 : restockMode
@@ -3111,4 +3338,26 @@ function ProductTile({
       </div>
     </TiltCard>
   );
+}
+
+/** O cifra din rezumatul receptiei. */
+function ReceiptStat({ label, value }) {
+  return (
+    <div className="rounded-lg border border-[rgba(255,255,255,0.1)] px-2.5 py-2">
+      <div className="text-[10px] uppercase tracking-wide xx-ink-dim">{label}</div>
+      <div className="font-display text-sm text-[color:var(--xx-ink)]">{value}</div>
+    </div>
+  );
+}
+
+/**
+ * Doua zecimale, format romanesc.
+ *
+ * Costul mediu este exact cifra pe care operatorul nu o poate verifica din cap,
+ * deci merita afisata la aceeasi precizie la care este stocata.
+ */
+function fmt(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '—';
+  return n.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import adminService from '../../api/adminService';
+import productService from '../../api/productService';
 import AdminNav from '../../components/AdminNav';
 import Modal from '../../components/Modal';
 import Pagination from '../../components/Pagination';
@@ -194,6 +195,7 @@ export default function AdminPurchases() {
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">#</th>
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Data</th>
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Furnizor</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">NIR</th>
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Factură</th>
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Produse</th>
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Total</th>
@@ -210,6 +212,12 @@ export default function AdminPurchases() {
                     </td>
                     <td className="px-4 py-3 text-xs xx-ink-muted">{p.purchaseDate}</td>
                     <td className="px-4 py-3 font-medium text-[color:var(--xx-ink)]">{p.supplierName}</td>
+                    {/* Doua numere care nu trebuie confundate: NIR-ul este al
+                        magazinului, factura este a furnizorului. Coloane
+                        separate, pentru ca puse impreuna ar parea acelasi lucru. */}
+                    <td className="px-4 py-3 font-mono text-xs text-[color:var(--xx-ink)]">
+                      {p.receptionNumber || '—'}
+                    </td>
                     <td className="px-4 py-3 font-mono text-xs xx-ink-dim">{p.invoiceNumber || '—'}</td>
                     <td className="px-4 py-3 tabular-nums xx-ink-muted">{p.items.length}</td>
                     <td className="px-4 py-3 font-semibold tabular-nums text-[color:var(--xx-ink)]">
@@ -217,6 +225,17 @@ export default function AdminPurchases() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1.5">
+                        {p.receptionNumber && (
+                          <button
+                            type="button"
+                            onClick={() => productService.downloadReceptionNote(p.id)}
+                            title={`Descarcă ${p.receptionNumber}`}
+                            aria-label={`Descarcă nota de intrare-recepție ${p.receptionNumber}`}
+                            className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(13,148,136,0.6)] hover:text-[#5eead4]"
+                          >
+                            <GeoIcon name="document" className="h-4 w-4" accent="currentColor" />
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => setDetail(p)}

@@ -18,8 +18,8 @@ import { useDebounce } from '../../hooks/useDebounce';
  *
  * Până acum nu exista deloc: singura cale către o factură era butonul de
  * descărcare de pe fiecare comandă, deci nu se putea răspunde la întrebări
- * simple precum „ce am facturat luna trecută" sau „unde este factura clientului
- * care tocmai a sunat" fără să cauți comanda întâi.
+ * simple precum „ce am facturat luna trecută” sau „unde este factura clientului
+ * care tocmai a sunat” fără să cauți comanda întâi.
  *
  * Totalurile din partea de sus vin din același răspuns ca lista, calculate pe
  * server peste tot setul filtrat. Adunarea rândurilor din pagina curentă ar
@@ -37,7 +37,7 @@ const STATUS_LABELS = {
 };
 
 // Tonurile disponibile în NeonBadge sunt neutral, neon, aqua, magenta, good,
-// warning și critical. O valoare inventată ar cădea tăcut pe „neutral", adică
+// warning și critical. O valoare inventată ar cădea tăcut pe „neutral”, adică
 // toate cele trei stări ar arăta identic.
 const STATUS_TONES = {
   ISSUED: 'good',
@@ -92,7 +92,7 @@ export default function AdminInvoices() {
 
   // Orice schimbare de filtru readuce la prima pagină. Fără asta, restrângerea
   // rezultatelor de la trei pagini la una, în timp ce operatorul este pe pagina
-  // a treia, ar afișa o listă goală care arată exact ca „nu există nimic".
+  // a treia, ar afișa o listă goală care arată exact ca „nu există nimic”.
   const changeFilter = (key, value) => {
     setPage(0);
     setFilters((f) => ({ ...f, [key]: value }));

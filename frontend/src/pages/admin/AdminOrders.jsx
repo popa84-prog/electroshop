@@ -51,6 +51,15 @@ export default function AdminOrders() {
   const [detail, setDetail] = useState(null);
   const [savingStatus, setSavingStatus] = useState(false);
 
+  // Selecția multiplă. Bifa din antet ia pagina curentă; extinderea la întregul
+  // set filtrat este o a doua acțiune, explicită, pentru că o operație în masă
+  // peste comenzi de pe pagini nevăzute este exact ce nimeni nu vrea din greșeală.
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [totalMatching, setTotalMatching] = useState(0);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkStatus, setBulkStatus] = useState('');
+  const [bulkReport, setBulkReport] = useState(null);
+
   const [expOpen, setExpOpen] = useState(false);
   const [expFrom, setExpFrom] = useState('');
   const [expTo, setExpTo] = useState('');
@@ -79,6 +88,15 @@ export default function AdminOrders() {
     }
   };
 
+  /** Notificare scurtă; cade pe alert dacă gazda de toast nu este montată. */
+  const showToastSafe = (message) => {
+    try {
+      window.dispatchEvent(new CustomEvent('xx-toast', { detail: { message, tone: 'success' } }));
+    } catch {
+      /* fără toast, mesajul rămâne în raportul de sub tabel */
+    }
+  };
+
   const load = () => {
     setLoading(true);
     const params = { page, size: 10, status: statusFilter };
@@ -88,12 +106,185 @@ export default function AdminOrders() {
       .then((data) => {
         setOrders(data.content);
         setTotalPages(data.totalPages);
+        setTotalMatching(data.totalElements ?? data.content.length);
       })
       .catch(() => setOrders([]))
       .finally(() => setLoading(false));
   };
 
   useEffect(load, [page, statusFilter]);
+
+  // Schimbarea filtrului goleşte selecţia. Păstrată, ar însemna ca operatorul să
+  // aplice o acţiune peste comenzi care nu mai sunt pe ecran şi pe care nu şi le
+  // mai aminteşte.
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setBulkReport(null);
+  }, [statusFilter]);
+
+  const allOnPageSelected = orders.length > 0 && orders.every((o) => selectedIds.has(o.id));
+  const someOnPageSelected = orders.some((o) => selectedIds.has(o.id));
+  const selectedCount = selectedIds.size;
+
+  const toggleOne = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    setBulkReport(null);
+  };
+
+  const toggleAllOnPage = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allOnPageSelected) orders.forEach((o) => next.delete(o.id));
+      else orders.forEach((o) => next.add(o.id));
+      return next;
+    });
+    setBulkReport(null);
+  };
+
+  /** Extinde selecţia la toate comenzile care corespund filtrului curent. */
+  const selectAllMatching = async () => {
+    setBulkBusy(true);
+    try {
+      const ids = await adminService.orderIdsMatching(statusFilter || undefined);
+      setSelectedIds(new Set(ids));
+    } catch (err) {
+      alert(err.response?.data?.message || 'Nu am putut extinde selecția.');
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+    setBulkReport(null);
+  };
+
+  // ---- Operaţii în masă ----
+
+  const runBulkStatus = async () => {
+    if (!bulkStatus || selectedCount === 0) return;
+    const ids = [...selectedIds];
+
+    // Anularea mişcă marfă reală. Confirmarea spune câte bucăţi se întorc,
+    // pentru că „eşti sigur?” nu îi dă operatorului informaţia pe baza căreia
+    // să răspundă.
+    if (bulkStatus === 'CANCELLED') {
+      let units = null;
+      try {
+        const preview = await adminService.previewBulkCancel(ids);
+        units = preview.units;
+      } catch {
+        units = null;
+      }
+      const line =
+        units === null
+          ? ''
+          : `\n\nSe vor întoarce în stoc ${units} bucăți.`;
+      if (
+        !window.confirm(
+          `Anulezi ${ids.length} comenzi?${line}\n\nComenzile anulate ies din cifra de vânzări.`
+        )
+      ) {
+        return;
+      }
+    }
+
+    setBulkBusy(true);
+    try {
+      const report = await adminService.bulkOrderStatus(ids, bulkStatus);
+      setBulkReport(report);
+      showToastSafe(report.message);
+      invalidateListCache(LIST_CACHE_NS);
+      setSelectedIds(new Set());
+      load();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Operația a eșuat.');
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const runBulkInvoice = async () => {
+    if (selectedCount === 0) return;
+    const ids = [...selectedIds];
+    const withoutInvoice = orders.filter((o) => selectedIds.has(o.id) && !o.invoiceNumber).length;
+
+    if (
+      !window.confirm(
+        `Emiți facturile pentru ${ids.length} comenzi?\n\n` +
+          `Fiecare emitere consumă definitiv un număr fiscal din serie. ` +
+          `Comenzile care au deja factură sunt sărite.` +
+          (withoutInvoice ? `\n\nPe pagina curentă, ${withoutInvoice} nu au încă factură.` : '')
+      )
+    ) {
+      return;
+    }
+
+    setBulkBusy(true);
+    try {
+      const report = await invoiceService.issueBulk(ids);
+      setBulkReport({
+        requested: report.requested,
+        succeeded: report.issued.length,
+        skipped: report.skipped.map((s) => ({ orderId: s.orderId, reason: s.reason })),
+        message: report.message,
+      });
+      showToastSafe(report.message);
+      invalidateListCache(LIST_CACHE_NS);
+      setSelectedIds(new Set());
+      load();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Emiterea a eșuat.');
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const runBulkDelete = async () => {
+    if (selectedCount === 0) return;
+    const ids = [...selectedIds];
+    if (!window.confirm(`Ștergi ${ids.length} comenzi? Operația nu poate fi anulată.`)) return;
+    if (!window.confirm(`Confirmi încă o dată ștergerea a ${ids.length} comenzi?`)) return;
+
+    setBulkBusy(true);
+    try {
+      const report = await adminService.bulkDeleteOrders(ids);
+      setBulkReport(report);
+      showToastSafe(report.message);
+      invalidateListCache(LIST_CACHE_NS);
+      setSelectedIds(new Set());
+      load();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Ștergerea a eșuat.');
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  /** Emiterea facturii pentru o singură comandă, ca acţiune explicită. */
+  const issueInvoice = async (order) => {
+    if (
+      !window.confirm(
+        `Emiți factura pentru comanda #${order.id}?\n\n` +
+          'Se alocă definitiv un număr fiscal din serie.'
+      )
+    ) {
+      return;
+    }
+    try {
+      const invoice = await invoiceService.issue(order.id);
+      showToastSafe(`Factura ${invoice.documentNumber} emisă.`);
+      invalidateListCache(LIST_CACHE_NS);
+      load();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Emiterea a eșuat.');
+    }
+  };
 
   const changeStatus = async (order, status) => {
     setSavingStatus(true);
@@ -110,33 +301,16 @@ export default function AdminOrders() {
   };
 
   /**
-   * Descarcă factura comenzii, emițând-o întâi dacă nu există.
+   * Descarcă factura deja emisă a comenzii.
    *
-   * Emiterea este acum o acțiune separată pe server, iar ruta de descărcare
-   * refuză o comandă nefacturată în loc să îi aloce un număr pe tăcute. Motivul
-   * este că alocarea se făcea înainte chiar în interiorul unui `GET`, deci un
-   * clic curios pe o comandă neplătită consuma definitiv un număr fiscal; dacă
-   * respectiva comandă era apoi ștearsă, numărul rămânea o gaură în serie
-   * pentru care nu exista niciun document.
-   *
-   * Aici, în schimb, operatorul chiar a cerut factura, deci emiterea este
-   * intenția lui — dar i se cere confirmarea, pentru că numărul se consumă
-   * definitiv. Odată emisă, orice descărcare ulterioară trece direct la
-   * tipărire.
+   * **Nu mai emite nimic.** Butonul acesta obişnuia să emită factura pe loc
+   * dacă lipsea, după o confirmare — ceea ce însemna că o descărcare şi o
+   * decizie fiscală stăteau sub acelaşi clic. Un operator care voia doar să
+   * vadă documentul consuma un număr din serie. Emiterea este acum o acţiune
+   * separată, cu buton propriu, iar aici rămâne strict descărcarea.
    */
   const downloadInvoice = async (order) => {
     try {
-      if (!order.invoiceNumber) {
-        const confirmed = window.confirm(
-          `Comanda #${order.id} nu are factură emisă.\n\n` +
-            'Emiterea alocă definitiv un număr fiscal din serie. Continui?'
-        );
-        if (!confirmed) return;
-        await invoiceService.issue(order.id);
-        invalidateListCache(LIST_CACHE_NS);
-        load();
-      }
-
       const blob = await adminService.downloadInvoice(order.id);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -147,7 +321,7 @@ export default function AdminOrders() {
       a.remove();
       URL.revokeObjectURL(url);
     } catch (err) {
-      alert(err.response?.data?.message || 'Generarea facturii a eșuat.');
+      alert(err.response?.data?.message || 'Descărcarea a eșuat.');
     }
   };
 
@@ -280,10 +454,125 @@ export default function AdminOrders() {
           <p className="text-sm xx-ink-muted">Nu există comenzi pentru filtrul selectat.</p>
         </div>
       ) : (
+        <>
+        {selectedCount > 0 && (
+          <div className="card mb-3 border-[rgba(34,232,245,0.35)] p-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm font-semibold text-[color:var(--xx-ink)]">
+                {selectedCount} {selectedCount === 1 ? 'comandă selectată' : 'comenzi selectate'}
+              </span>
+
+              {/* Extinderea la tot setul filtrat este o a doua apăsare, nu un
+                  efect al bifei din antet: o operație peste comenzi de pe pagini
+                  nevăzute trebuie cerută explicit. */}
+              {allOnPageSelected && selectedCount < totalMatching && (
+                <button
+                  type="button"
+                  onClick={selectAllMatching}
+                  disabled={bulkBusy}
+                  className="text-sm font-semibold text-[color:var(--xx-cyan)] underline underline-offset-2"
+                >
+                  Selectează toate cele {totalMatching}
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="text-sm xx-ink-muted underline underline-offset-2"
+              >
+                Renunță la selecție
+              </button>
+
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                <select
+                  className="input h-9 w-44 text-sm"
+                  value={bulkStatus}
+                  onChange={(e) => setBulkStatus(e.target.value)}
+                  aria-label="Status pentru comenzile selectate"
+                >
+                  <option value="">Schimbă statusul…</option>
+                  {STATUSES.map((st) => (
+                    <option key={st} value={st}>
+                      {statusLabel(st)}
+                    </option>
+                  ))}
+                </select>
+                <NeonButton
+                  variant="secondary"
+                  size="sm"
+                  disabled={bulkBusy || !bulkStatus}
+                  charging={bulkBusy}
+                  onClick={runBulkStatus}
+                >
+                  Aplică
+                </NeonButton>
+
+                <NeonButton
+                  variant="secondary"
+                  size="sm"
+                  disabled={bulkBusy}
+                  onClick={runBulkInvoice}
+                  icon={<GeoIcon name="document" className="h-4 w-4" accent="currentColor" />}
+                >
+                  Emite facturi
+                </NeonButton>
+
+                <NeonButton
+                  variant="danger"
+                  size="sm"
+                  disabled={bulkBusy}
+                  onClick={runBulkDelete}
+                  icon={<GeoIcon name="trash" className="h-4 w-4" accent="currentColor" />}
+                >
+                  Șterge
+                </NeonButton>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {bulkReport && (
+          <div className="card mb-3 p-3 text-sm">
+            <div className="flex items-start justify-between gap-3">
+              <span className="text-[color:var(--xx-ink)]">{bulkReport.message}</span>
+              <button type="button" onClick={() => setBulkReport(null)} aria-label="Închide raportul">
+                ×
+              </button>
+            </div>
+            {bulkReport.skipped && bulkReport.skipped.length > 0 && (
+              <ul className="mt-2 space-y-0.5 text-xs xx-ink-dim">
+                {bulkReport.skipped.slice(0, 10).map((sk) => (
+                  <li key={sk.orderId}>
+                    #{sk.orderId} — {sk.reason}
+                  </li>
+                ))}
+                {bulkReport.skipped.length > 10 && (
+                  <li>și încă {bulkReport.skipped.length - 10}.</li>
+                )}
+              </ul>
+            )}
+          </div>
+        )}
+
         <div className="card overflow-x-auto">
           <table className="min-w-full divide-y divide-[rgba(255,255,255,0.08)] text-sm">
               <thead className="text-left">
                 <tr className="bg-[rgba(255,255,255,0.03)]">
+                  <th className="w-10 px-3 py-3">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 cursor-pointer rounded accent-[#22e8f5]"
+                      checked={allOnPageSelected}
+                      ref={(el) => {
+                        // Starea intermediară spune „unele, nu toate” — fără ea,
+                        // o pagină parțial selectată arată identic cu una goală.
+                        if (el) el.indeterminate = !allOnPageSelected && someOnPageSelected;
+                      }}
+                      onChange={toggleAllOnPage}
+                      aria-label="Selectează comenzile de pe această pagină"
+                    />
+                  </th>
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">#</th>
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Client</th>
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Data</th>
@@ -296,9 +585,23 @@ export default function AdminOrders() {
               </thead>
               <tbody className="divide-y divide-[rgba(255,255,255,0.07)]">
                 {orders.map((o) => (
-                  <tr key={o.id}>
+                  <tr key={o.id} className={selectedIds.has(o.id) ? 'bg-[rgba(34,232,245,0.06)]' : ''}>
+                    <td className="w-10 px-3 py-3">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 cursor-pointer rounded accent-[#22e8f5]"
+                        checked={selectedIds.has(o.id)}
+                        onChange={() => toggleOne(o.id)}
+                        aria-label={`Selectează comanda #${o.id}`}
+                      />
+                    </td>
                     <td className="px-4 py-3 font-mono text-xs font-semibold text-[color:var(--xx-cyan)]">
                       #{o.id}
+                      {o.invoiceNumber && (
+                        <span className="mt-0.5 block font-sans text-[10px] font-normal xx-ink-dim">
+                          {o.invoiceSeries} {o.invoiceNumber}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-[color:var(--xx-ink)]">{o.userFullName}</p>
@@ -309,17 +612,26 @@ export default function AdminOrders() {
                       {formatPrice(o.totalAmount)}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
+                      {/* Badge-ul si selectorul stateau unul langa altul, iar
+                          selectorul, desi ingustat la 8 unitati, isi desena mai
+                          departe textul optiunii alese — de unde „Livrata” urmat
+                          de un „Livrat…” taiat, in aceeasi celula. Acum selectorul
+                          este transparent si acopera badge-ul: se vede o singura
+                          eticheta, iar apasarea pe ea deschide lista. */}
+                      <div className="relative inline-flex items-center">
                         <span
-                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${statusColor(
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 pr-6 text-xs font-semibold ${statusColor(
                             o.status
                           )}`}
                         >
                           <span aria-hidden="true">{statusGlyph(o.status)}</span>
                           {statusLabel(o.status)}
+                          <span aria-hidden="true" className="absolute right-2 text-[9px] opacity-70">
+                            ▾
+                          </span>
                         </span>
                         <select
-                          className="input h-8 w-8 cursor-pointer appearance-none bg-center p-0 text-center text-xs"
+                          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                           value={o.status}
                           disabled={savingStatus}
                           aria-label={`Schimbă statusul comenzii #${o.id}`}
@@ -335,15 +647,32 @@ export default function AdminOrders() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => downloadInvoice(o)}
-                          title="Descarcă factura PDF"
-                          aria-label={`Descarcă factura comenzii #${o.id}`}
-                          className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.5)] hover:text-[color:var(--xx-cyan)]"
-                        >
-                          <GeoIcon name="document" className="h-4 w-4" accent="currentColor" />
-                        </button>
+                        {/* Doua butoane, nu unul. Descarcarea si emiterea sunt
+                            decizii de greutate diferita: prima se poate apasa de
+                            zece ori fara consecinte, a doua consuma definitiv un
+                            numar fiscal. Sub acelasi buton, un operator care voia
+                            sa vada documentul il crea. */}
+                        {o.invoiceNumber ? (
+                          <button
+                            type="button"
+                            onClick={() => downloadInvoice(o)}
+                            title={`Descarcă factura ${o.invoiceSeries} ${o.invoiceNumber}`}
+                            aria-label={`Descarcă factura comenzii #${o.id}`}
+                            className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.5)] hover:text-[color:var(--xx-cyan)]"
+                          >
+                            <GeoIcon name="document" className="h-4 w-4" accent="currentColor" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => issueInvoice(o)}
+                            title="Emite factura (consumă un număr fiscal)"
+                            aria-label={`Emite factura pentru comanda #${o.id}`}
+                            className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(110,247,168,0.55)] hover:text-[#6ef7a8]"
+                          >
+                            <GeoIcon name="check" className="h-4 w-4" accent="currentColor" />
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => setDetail(o)}
@@ -369,6 +698,7 @@ export default function AdminOrders() {
               </tbody>
           </table>
         </div>
+        </>
       )}
 
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />

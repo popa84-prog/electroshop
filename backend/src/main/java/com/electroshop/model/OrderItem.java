@@ -66,6 +66,38 @@ public class OrderItem {
     @Column(name = "cost_price", precision = 12, scale = 2)
     private BigDecimal costPrice;
 
+    /**
+     * Câte bucăți din această linie s-au întors deja în stoc.
+     *
+     * <p><b>Acest contor este singurul lucru care împiedică dubla restituire.</b>
+     * Marfa se poate întoarce pe două căi independente — anularea comenzii, care
+     * a existat dintotdeauna în {@code OrderService.updateStatus}, și stornarea
+     * facturii, adăugată odată cu modulul de facturare. Un operator care
+     * storneaza factura și apoi trece comanda pe anulată face o secvență
+     * absolut firească, iar fără contorul acesta ar adăuga cantitățile de două
+     * ori. Stocul ar crește cu marfă care nu există fizic, iar valoarea de
+     * inventar, profitul potențial și indicatorul de stoc critic ar deveni
+     * false toate deodată, fără niciun mesaj de eroare.</p>
+     *
+     * <p>Soluția nu este să se interzică una dintre căi, ci ca fiecare
+     * restituire să treacă prin {@code OrderRestockService}, care pentru fiecare
+     * linie adaugă cel mult {@code quantity - restockedQuantity} bucăți și
+     * incrementează contorul cu exact cât a adăugat. Ordinea operațiilor
+     * încetează să conteze, iar suma restituită nu poate depăși niciodată
+     * cantitatea vândută.</p>
+     */
+    @Column(name = "restocked_quantity", nullable = false)
+    private Integer restockedQuantity = 0;
+
+    /**
+     * Câte bucăți din linie mai pot fi restituite în stoc.
+     */
+    public int remainingToRestock() {
+        int q = quantity == null ? 0 : quantity;
+        int r = restockedQuantity == null ? 0 : restockedQuantity;
+        return Math.max(q - r, 0);
+    }
+
     public BigDecimal getSubtotal() {
         if (unitPrice == null || quantity == null) {
             return BigDecimal.ZERO;

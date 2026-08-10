@@ -228,8 +228,20 @@ public class InvoiceService {
 
         doc.add(spacer(12));
 
+        // Un document cu TVA zero trebuie sa spuna de ce este zero. Fara mentiune,
+        // cumparatorul vede o coloana goala si nu poate deosebi un furnizor
+        // neplatitor de o factura careia i s-a uitat cota.
+        //
+        // Cele doua cazuri sunt diferite si nu se pot exprima prin acelasi text.
+        // Neplatitorul nu colecteaza TVA deloc, prin statutul firmei. Un platitor
+        // cu cota zero pe document face o operatiune anume fara TVA - scutita sau
+        // cu taxare inversa - iar a-l numi neplatitor ar fi o afirmatie falsa
+        // despre firma, tiparita pe un document fiscal.
         if (!inv.isVatPayer()) {
             doc.add(new Paragraph("Neplatitor de TVA.", small));
+            doc.add(spacer(6));
+        } else if (inv.getVatRate() == null || inv.getVatRate().compareTo(BigDecimal.ZERO) == 0) {
+            doc.add(new Paragraph("Operatiune fara TVA.", small));
             doc.add(spacer(6));
         }
 

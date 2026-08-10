@@ -134,6 +134,23 @@ public class AdminController {
 
     // ---------- PDF invoice for an order (feature #9) ----------
 
+    /**
+     * Downloads the invoice already issued for an order.
+     *
+     * <p><b>This route no longer issues anything.</b> It used to allocate the
+     * fiscal number on the way through, which meant a GET — the one verb every
+     * browser, proxy and prefetcher assumes is free of consequences — permanently
+     * consumed a number from the series. If the order was later deleted, that
+     * number stayed as a gap nobody could account for. Issuing now lives at
+     * {@code POST /admin/invoices}, and this endpoint returns 400 with an
+     * explanation when no invoice exists yet.</p>
+     *
+     * <p>The permission stays {@code ORDERS_VIEW} rather than moving to
+     * {@code INVOICE_VIEW}: this is the order screen's own download button, and
+     * whoever may read the order may read the document that was issued for it.
+     * The invoice register itself, which lists every customer's fiscal
+     * identifiers together, is the narrower grant.</p>
+     */
     @GetMapping("/orders/{id}/invoice")
     @PreAuthorize("@permissionService.has('ORDERS_VIEW')")
     public ResponseEntity<byte[]> orderInvoice(@PathVariable Long id) {

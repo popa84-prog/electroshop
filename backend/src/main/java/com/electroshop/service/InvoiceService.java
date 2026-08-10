@@ -1,11 +1,14 @@
 package com.electroshop.service;
 
+import com.electroshop.exception.BadRequestException;
 import com.electroshop.exception.ResourceNotFoundException;
-import com.electroshop.model.CompanySettings;
+import com.electroshop.model.Invoice;
+import com.electroshop.model.InvoiceLine;
+import com.electroshop.model.InvoiceStatus;
+import com.electroshop.model.InvoiceType;
 import com.electroshop.model.Order;
-import com.electroshop.model.OrderItem;
 import com.electroshop.model.OrderStatus;
-import com.electroshop.repository.OrderRepository;
+import com.electroshop.repository.InvoiceRepository;
 import com.lowagie.text.Document;
 import com.lowagie.text.Element;
 import com.lowagie.text.Font;
@@ -24,228 +27,258 @@ import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.Normalizer;
-import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 /**
- * Generates a PDF invoice (factura) for an order (feature #9).
+ * Tipărirea documentelor fiscale.
  *
- * <p>The seller block is filled from {@link CompanySettings} (editable in the
- * Admin panel), the buyer block from the order's user + shipping address, and
- * the lines from the order items. VAT is derived assuming product prices are
- * VAT-inclusive: base = gross / (1 + rate), vat = gross - base.</p>
+ * <h2>Ce s-a schimbat</h2>
  *
- * <p>Text is transliterated to ASCII so it always renders correctly with the
- * standard PDF fonts (no missing glyphs for Romanian diacritics).</p>
+ * <p>Versiunea anterioară construia PDF-ul din comanda vie și, în plus, aloca
+ * numărul de factură chiar la prima descărcare. Ambele au dispărut.</p>
+ *
+ * <p><b>Datele vin exclusiv din {@link Invoice}.</b> Denumirea produsului,
+ * prețul unitar, datele firmei, cele ale cumpărătorului și cota de TVA sunt
+ * copiile făcute la emitere. Înainte, o redenumire de produs sau o schimbare a
+ * sediului firmei modifica retroactiv facturi vechi de luni de zile, iar
+ * exemplarul clientului înceta să coincidă cu al magazinului. Acum nimic din ce
+ * se tipărește nu mai depinde de starea curentă a bazei.</p>
+ *
+ * <p><b>Descărcarea nu mai alocă numere.</b> Numerotarea aparține în întregime
+ * lui {@link InvoiceIssueService}, la o cerere explicită. O cerere {@code GET}
+ * nu mai modifică starea fiscală.</p>
+ *
+ * <h2>Stornările</h2>
+ *
+ * <p>Același format tipărește și documentele de tip {@link InvoiceType#STORNO},
+ * cu trei diferențe: titlul, rândul care indică factura corectată și motivul, și
+ * faptul că valorile sunt negative — nu ca artificiu de afișare, ci pentru că
+ * așa sunt stocate, astfel încât însumarea tuturor documentelor unei comenzi să
+ * dea direct soldul facturat.</p>
+ *
+ * <p>Textul este transliterat în ASCII, ca fonturile standard PDF să nu producă
+ * pătrate goale în locul diacriticelor.</p>
  */
 @Service
 public class InvoiceService {
 
+    private static final Color BRAND = new Color(37, 99, 235);
+    private static final Color STORNO_COLOR = new Color(190, 24, 60);
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd.MM.yyyy");
-    private static final Color BRAND = new Color(29, 78, 216);
-    private static final Color LIGHT = new Color(241, 245, 249);
 
-    private final OrderRepository orderRepository;
-    private final CompanySettingsService companySettingsService;
+    private final InvoiceRepository invoiceRepository;
 
-    public InvoiceService(OrderRepository orderRepository,
-                          CompanySettingsService companySettingsService) {
-        this.orderRepository = orderRepository;
-        this.companySettingsService = companySettingsService;
+    public InvoiceService(InvoiceRepository invoiceRepository) {
+        this.invoiceRepository = invoiceRepository;
     }
 
-    @Transactional
+    /**
+     * Tipărește documentul cu identificatorul dat.
+     */
+    @Transactional(readOnly = true)
+    public InvoiceFile generate(Long invoiceId) {
+        Invoice invoice = invoiceRepository.findWithLines(invoiceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice", invoiceId));
+        return render(invoice);
+    }
+
+    /**
+     * Tipărește factura emisă pentru o comandă.
+     *
+     * <p>Păstrată pentru ruta veche {@code GET /admin/orders/{id}/invoice}, pe
+     * care interfața o folosea deja. Diferența de comportament este esențială:
+     * dacă nu există factură, metoda refuză, în loc să emită una pe tăcute. O
+     * cerere de descărcare nu are voie să consume un număr fiscal.</p>
+     */
+    @Transactional(readOnly = true)
     public InvoiceFile generateForOrder(Long orderId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
-        CompanySettings cs = companySettingsService.getEntity();
+        List<Invoice> docs = invoiceRepository.findByOrderIdWithLines(orderId);
+        Invoice invoice = docs.stream()
+                .filter(i -> i.getType() == InvoiceType.INVOICE)
+                .findFirst()
+                .orElseThrow(() -> new BadRequestException(
+                        "Comanda #" + orderId + " nu are factură emisă. "
+                                + "Emite factura întâi, apoi o poți descărca."));
+        return render(invoice);
+    }
 
-        // Assign a stable series+number once; reuse on every later download.
-        if (order.getInvoiceNumber() == null) {
-            String series = (cs.getInvoiceSeries() != null && !cs.getInvoiceSeries().isBlank())
-                    ? cs.getInvoiceSeries() : "ELS";
-            int next = cs.getInvoiceNextNumber() != null ? cs.getInvoiceNextNumber() : 1;
-            order.setInvoiceSeries(series);
-            order.setInvoiceNumber(next);
-            order.setInvoiceIssuedAt(LocalDate.now());
-            cs.setInvoiceNextNumber(next + 1);   // managed entities → flushed on commit
-        }
-
-        byte[] pdf = buildPdf(order, cs);
-        String filename = "Factura_" + safe(order.getInvoiceSeries()) + "_"
-                + order.getInvoiceNumber() + ".pdf";
+    private InvoiceFile render(Invoice invoice) {
+        byte[] pdf = buildPdf(invoice);
+        String prefix = invoice.getType() == InvoiceType.STORNO ? "Storno" : "Factura";
+        String filename = prefix + "_" + safe(invoice.getSeries()) + "_"
+                + invoice.getNumber() + ".pdf";
         return new InvoiceFile(filename, pdf);
     }
 
     // ---------------------------------------------------------------
 
-    private byte[] buildPdf(Order o, CompanySettings cs) {
+    private byte[] buildPdf(Invoice inv) {
       try {
+        boolean storno = inv.getType() == InvoiceType.STORNO;
+
         Document doc = new Document(PageSize.A4, 40, 40, 40, 40);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         PdfWriter.getInstance(doc, baos);
         doc.open();
 
-        Font h1 = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 20, BRAND);
+        Color accent = storno ? STORNO_COLOR : BRAND;
+        Font h1 = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 20, accent);
         Font h2 = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, Color.DARK_GRAY);
         Font normal = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.BLACK);
         Font small = FontFactory.getFont(FontFactory.HELVETICA, 9, Color.DARK_GRAY);
         Font bold = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.BLACK);
         Font white = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.WHITE);
+        Font stornoNote = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, STORNO_COLOR);
 
-        // ---- Header: title + invoice meta ----
+        // ---- Antet ----
         PdfPTable header = new PdfPTable(2);
         header.setWidthPercentage(100);
         header.setWidths(new int[]{6, 4});
 
         PdfPCell title = new PdfPCell();
         title.setBorder(0);
-        title.addElement(new Paragraph("FACTURA", h1));
-        String companyName = notBlank(cs.getLegalName()) ? ascii(cs.getLegalName()) : "ElectroShop";
-        title.addElement(new Paragraph(companyName, h2));
+        title.addElement(new Paragraph(storno ? "FACTURA STORNO" : "FACTURA", h1));
+        title.addElement(new Paragraph(ascii(safe(inv.getSellerName())), h2));
         header.addCell(title);
 
         PdfPCell meta = new PdfPCell();
         meta.setBorder(0);
         meta.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        String issued = o.getInvoiceIssuedAt() != null ? o.getInvoiceIssuedAt().format(DATE_FMT)
-                : LocalDate.now().format(DATE_FMT);
         Paragraph pm = new Paragraph();
         pm.setAlignment(Element.ALIGN_RIGHT);
-        pm.add(new Phrase("Seria " + safe(o.getInvoiceSeries()) + " Nr. " + o.getInvoiceNumber() + "\n", bold));
-        pm.add(new Phrase("Data: " + issued + "\n", normal));
-        pm.add(new Phrase("Comanda: #" + o.getId() + "\n", small));
+        pm.add(new Phrase("Seria " + safe(inv.getSeries()) + " Nr. " + inv.getNumber() + "\n", bold));
+        pm.add(new Phrase("Data: " + inv.getIssuedAt().format(DATE_FMT) + "\n", normal));
+        if (inv.getOrder() != null) {
+            pm.add(new Phrase("Comanda: #" + inv.getOrder().getId() + "\n", small));
+        }
         meta.addElement(pm);
         header.addCell(meta);
         doc.add(header);
 
+        // ---- Trimiterea la documentul corectat ----
+        //
+        // Un storno fără referință la original este o hârtie cu sume negative pe
+        // care nimeni nu o poate lega de nimic. Rândul acesta este ce face
+        // documentul verificabil.
+        if (storno && inv.getOriginalInvoice() != null) {
+            doc.add(spacer(8));
+            Paragraph ref = new Paragraph();
+            ref.add(new Phrase("Storneaza factura ", stornoNote));
+            ref.add(new Phrase(safe(inv.getOriginalInvoice().getSeries()) + " nr. "
+                    + inv.getOriginalInvoice().getNumber(), stornoNote));
+            if (inv.getOriginalInvoice().getIssuedAt() != null) {
+                ref.add(new Phrase(" din " + inv.getOriginalInvoice().getIssuedAt().format(DATE_FMT),
+                        stornoNote));
+            }
+            doc.add(ref);
+            if (notBlank(inv.getCancelReason())) {
+                doc.add(new Paragraph("Motiv: " + ascii(inv.getCancelReason()), small));
+            }
+        }
+
         doc.add(spacer(10));
 
-        // ---- Seller + Buyer ----
+        // ---- Părți ----
         PdfPTable parties = new PdfPTable(2);
         parties.setWidthPercentage(100);
         parties.setWidths(new int[]{1, 1});
-        parties.addCell(partyCell("FURNIZOR", sellerLines(cs), h2, normal));
-        parties.addCell(partyCell("CUMPARATOR", buyerLines(o), h2, normal));
+        parties.addCell(partyCell("FURNIZOR", sellerLines(inv), h2, normal));
+        parties.addCell(partyCell("CUMPARATOR", buyerLines(inv), h2, normal));
         doc.add(parties);
 
         doc.add(spacer(14));
 
-        // ---- Items table ----
+        // ---- Poziții ----
         PdfPTable items = new PdfPTable(new float[]{0.6f, 5f, 1.2f, 1.8f, 1.8f});
         items.setWidthPercentage(100);
-        addHeaderCell(items, "#", white);
-        addHeaderCell(items, "Produs", white);
-        addHeaderCell(items, "Cant.", white);
-        addHeaderCell(items, "Pret unitar", white);
-        addHeaderCell(items, "Valoare", white);
+        addHeaderCell(items, "#", white, accent);
+        addHeaderCell(items, "Produs", white, accent);
+        addHeaderCell(items, "Cant.", white, accent);
+        addHeaderCell(items, "Pret unitar", white, accent);
+        addHeaderCell(items, "Valoare", white, accent);
 
         int idx = 1;
-        for (OrderItem it : o.getItems()) {
-            BigDecimal lineValue = it.getUnitPrice().multiply(BigDecimal.valueOf(it.getQuantity()));
-            // Prefers the live product's current name; falls back to the sale-time
-            // snapshot (OrderItem.productName) once the product has been permanently
-            // removed from the catalogue — see ProductService#forceDeleteWithHistory.
-            // A past invoice must keep reprinting identically no matter what happens
-            // to the catalogue afterwards.
-            String productLabel = it.getProduct() != null
-                    ? it.getProduct().getName()
-                    : (it.getProductName() != null ? it.getProductName() : "Produs șters din catalog");
+        for (InvoiceLine line : inv.getLines()) {
             addBodyCell(items, String.valueOf(idx++), normal, Element.ALIGN_CENTER);
-            addBodyCell(items, ascii(productLabel), normal, Element.ALIGN_LEFT);
-            addBodyCell(items, String.valueOf(it.getQuantity()), normal, Element.ALIGN_CENTER);
-            addBodyCell(items, money(it.getUnitPrice()), normal, Element.ALIGN_RIGHT);
-            addBodyCell(items, money(lineValue), normal, Element.ALIGN_RIGHT);
+            addBodyCell(items, ascii(safe(line.getProductName())), normal, Element.ALIGN_LEFT);
+            addBodyCell(items, String.valueOf(line.getQuantity()), normal, Element.ALIGN_CENTER);
+            addBodyCell(items, money(line.getUnitPrice(), inv.getCurrency()), normal, Element.ALIGN_RIGHT);
+            addBodyCell(items, money(line.getLineGross(), inv.getCurrency()), normal, Element.ALIGN_RIGHT);
         }
         doc.add(items);
 
         doc.add(spacer(10));
 
-        // ---- Totals (assume prices are VAT-inclusive) ----
-        BigDecimal gross = o.getTotalAmount() != null ? o.getTotalAmount() : BigDecimal.ZERO;
-        boolean vatPayer = cs.isVatPayer() && cs.getVatRate() != null
-                && cs.getVatRate().compareTo(BigDecimal.ZERO) > 0;
-        BigDecimal rate = vatPayer ? cs.getVatRate() : BigDecimal.ZERO;
-        BigDecimal base, vat;
-        if (vatPayer) {
-            BigDecimal divisor = BigDecimal.ONE.add(rate.movePointLeft(2));
-            base = gross.divide(divisor, 2, RoundingMode.HALF_UP);
-            vat = gross.subtract(base);
-        } else {
-            base = gross;
-            vat = BigDecimal.ZERO;
-        }
-
+        // ---- Totaluri ----
+        //
+        // Citite din document, nu recalculate. Sunt sumele liniilor de mai sus,
+        // fiecare rotunjită la emitere, deci cine adună coloana de pe hârtie
+        // obține exact cifra de aici.
         PdfPTable totals = new PdfPTable(2);
         totals.setWidthPercentage(45);
         totals.setHorizontalAlignment(Element.ALIGN_RIGHT);
         totals.setWidths(new int[]{3, 2});
-        totalRow(totals, "Valoare fara TVA", money(base), normal, normal);
-        totalRow(totals, "TVA (" + stripZeros(rate) + "%)", money(vat), normal, normal);
-        totalRow(totals, "TOTAL DE PLATA", money(gross), bold, bold);
+        totalRow(totals, "Valoare fara TVA", money(inv.getTotalNet(), inv.getCurrency()), normal, normal);
+        totalRow(totals, "TVA (" + stripZeros(inv.getVatRate()) + "%)",
+                money(inv.getTotalVat(), inv.getCurrency()), normal, normal);
+        totalRow(totals, storno ? "TOTAL DE RESTITUIT" : "TOTAL DE PLATA",
+                money(inv.getTotalGross(), inv.getCurrency()), bold, bold);
         doc.add(totals);
 
         doc.add(spacer(12));
 
-        // ---- Payment status ----
+        if (!inv.isVatPayer()) {
+            doc.add(new Paragraph("Neplatitor de TVA.", small));
+            doc.add(spacer(6));
+        }
+
+        // ---- Starea ----
         Paragraph status = new Paragraph();
-        status.add(new Phrase("Stare plata: ", bold));
-        status.add(new Phrase(paymentStatus(o.getStatus()), normal));
+        if (storno) {
+            status.add(new Phrase("Document de stornare. ", bold));
+            status.add(new Phrase("Sumele de mai sus se scad din factura corectata.", normal));
+        } else {
+            status.add(new Phrase("Stare plata: ", bold));
+            status.add(new Phrase(paymentStatus(inv), normal));
+        }
         doc.add(status);
 
-        // ---- Notes ----
-        if (notBlank(cs.getInvoiceNotes())) {
+        if (notBlank(inv.getNotes()) && !storno) {
             doc.add(spacer(8));
-            doc.add(new Paragraph(ascii(cs.getInvoiceNotes()), small));
+            doc.add(new Paragraph(ascii(inv.getNotes()), small));
         }
+
         doc.add(spacer(16));
         doc.add(new Paragraph(
-                "Factura generata electronic, valabila fara semnatura si stampila.", small));
+                "Document generat electronic, valabil fara semnatura si stampila.", small));
 
         doc.close();
         return baos.toByteArray();
       } catch (Exception e) {
-        throw new IllegalStateException("Generarea facturii PDF a esuat: " + e.getMessage(), e);
+        throw new IllegalStateException("Generarea documentului PDF a esuat: " + e.getMessage(), e);
       }
     }
 
-    // ---- content helpers ----
+    // ---- conținut ----
 
-    private String[] sellerLines(CompanySettings cs) {
+    private String[] sellerLines(Invoice inv) {
         return new String[]{
-                notBlank(cs.getCui()) ? "CUI: " + ascii(cs.getCui()) : null,
-                notBlank(cs.getRegCom()) ? "Reg. Com.: " + ascii(cs.getRegCom()) : null,
-                addressLine(cs),
-                notBlank(cs.getIban()) ? "IBAN: " + ascii(cs.getIban()) : null,
-                notBlank(cs.getBankName()) ? "Banca: " + ascii(cs.getBankName()) : null,
-                notBlank(cs.getPhone()) ? "Tel: " + ascii(cs.getPhone()) : null,
-                notBlank(cs.getEmail()) ? "Email: " + ascii(cs.getEmail()) : null
+                notBlank(inv.getSellerCui()) ? "CUI: " + ascii(inv.getSellerCui()) : null,
+                notBlank(inv.getSellerRegCom()) ? "Reg. Com.: " + ascii(inv.getSellerRegCom()) : null,
+                notBlank(inv.getSellerAddress()) ? ascii(inv.getSellerAddress()) : null,
+                notBlank(inv.getSellerIban()) ? "IBAN: " + ascii(inv.getSellerIban()) : null,
+                notBlank(inv.getSellerBank()) ? "Banca: " + ascii(inv.getSellerBank()) : null
         };
     }
 
-    private String addressLine(CompanySettings cs) {
-        StringBuilder sb = new StringBuilder();
-        appendPart(sb, cs.getAddress());
-        appendPart(sb, cs.getCity());
-        appendPart(sb, cs.getCounty());
-        appendPart(sb, cs.getCountry());
-        return sb.length() == 0 ? null : ascii(sb.toString());
-    }
-
-    private void appendPart(StringBuilder sb, String part) {
-        if (notBlank(part)) {
-            if (sb.length() > 0) sb.append(", ");
-            sb.append(part.trim());
-        }
-    }
-
-    private String[] buyerLines(Order o) {
-        String name = o.getUser() != null ? o.getUser().getFullName() : null;
-        String email = o.getUser() != null ? o.getUser().getEmail() : null;
+    private String[] buyerLines(Invoice inv) {
         return new String[]{
-                notBlank(name) ? ascii(name) : "Client",
-                notBlank(email) ? "Email: " + ascii(email) : null,
-                notBlank(o.getShippingAddress()) ? "Adresa: " + ascii(o.getShippingAddress()) : null
+                notBlank(inv.getBuyerName()) ? ascii(inv.getBuyerName()) : "Client",
+                notBlank(inv.getBuyerCui()) ? "CUI: " + ascii(inv.getBuyerCui()) : null,
+                notBlank(inv.getBuyerRegCom()) ? "Reg. Com.: " + ascii(inv.getBuyerRegCom()) : null,
+                notBlank(inv.getBuyerEmail()) ? "Email: " + ascii(inv.getBuyerEmail()) : null,
+                notBlank(inv.getBuyerAddress()) ? "Adresa: " + ascii(inv.getBuyerAddress()) : null
         };
     }
 
@@ -262,9 +295,9 @@ public class InvoiceService {
         return cell;
     }
 
-    private void addHeaderCell(PdfPTable t, String text, Font font) {
+    private void addHeaderCell(PdfPTable t, String text, Font font, Color background) {
         PdfPCell c = new PdfPCell(new Phrase(ascii(text), font));
-        c.setBackgroundColor(BRAND);
+        c.setBackgroundColor(background);
         c.setPadding(6);
         c.setHorizontalAlignment(Element.ALIGN_CENTER);
         t.addCell(c);
@@ -295,21 +328,42 @@ public class InvoiceService {
         return p;
     }
 
-    private String paymentStatus(OrderStatus s) {
-        if (s == null) return "Neplatita";
+    /**
+     * Starea plății, citită din comandă.
+     *
+     * <p>Singurul lucru de pe document care se citește din starea curentă, și pe
+     * bună dreptate: dacă factura a fost achitată este un fapt al zilei de azi,
+     * nu unul înghețat la emitere. Restul documentului rămâne instantaneu.</p>
+     */
+    private String paymentStatus(Invoice inv) {
+        if (inv.getStatus() == InvoiceStatus.CANCELLED) {
+            return "STORNATA INTEGRAL";
+        }
+        if (inv.getStatus() == InvoiceStatus.PARTIALLY_STORNOED) {
+            return "STORNATA PARTIAL";
+        }
+        Order o = inv.getOrder();
+        OrderStatus s = o == null ? null : o.getStatus();
+        if (s == null) {
+            return "Neplatita";
+        }
         switch (s) {
             case PAID: return "PLATITA";
             case SHIPPED: return "PLATITA (expediata)";
             case DELIVERED: return "PLATITA (livrata)";
             case CANCELLED: return "ANULATA";
+            case RETURNED: return "RETURNATA";
             case PENDING:
             default: return "NEPLATITA";
         }
     }
 
-    private String money(BigDecimal v) {
-        if (v == null) v = BigDecimal.ZERO;
-        return v.setScale(2, RoundingMode.HALF_UP).toPlainString() + " RON";
+    private String money(BigDecimal v, String currency) {
+        if (v == null) {
+            v = BigDecimal.ZERO;
+        }
+        String cur = (currency == null || currency.isBlank()) ? "RON" : currency;
+        return v.setScale(2, RoundingMode.HALF_UP).toPlainString() + " " + cur;
     }
 
     private String stripZeros(BigDecimal v) {

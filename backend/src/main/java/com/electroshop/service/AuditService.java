@@ -46,6 +46,20 @@ public class AuditService {
         }
     }
 
+    /**
+     * Cine execută acțiunea curentă, ca text.
+     *
+     * <p>Expus public pentru documentele fiscale, care trebuie să rețină în
+     * propriile coloane cine a cerut o stornare — jurnalul de audit se poate
+     * arhiva sau curăța, iar documentul trebuie să rămână lizibil singur.
+     * Alternativa ar fi fost ca fiecare serviciu să citească din nou contextul
+     * de securitate, adică mai multe locuri în care numele actorului se poate
+     * determina altfel decât în jurnal.</p>
+     */
+    public String currentActorName() {
+        return currentActor();
+    }
+
     private String currentActor() {
         try {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();

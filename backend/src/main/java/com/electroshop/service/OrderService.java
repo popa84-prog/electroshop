@@ -39,11 +39,17 @@ public class OrderService {
      * last-touched timestamp, from which no stage duration is derivable.
      */
     private final OrderStatusRecorder statusRecorder;
+    /**
+     * The one authority that puts goods back on the shelf. Cancelling an order
+     * and issuing a credit note are two legitimate paths to the same effect, and
+     * only a shared per-line counter keeps them from stacking.
+     */
+    private final OrderRestockService restockService;
 
     public OrderService(OrderRepository orderRepository, ProductRepository productRepository,
                         UserRepository userRepository, OrderExportService orderExportService,
                         AuditService auditService, NotificationService notificationService,
-                        OrderStatusRecorder statusRecorder) {
+                        OrderStatusRecorder statusRecorder, OrderRestockService restockService) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
         this.userRepository = userRepository;
@@ -51,6 +57,7 @@ public class OrderService {
         this.auditService = auditService;
         this.notificationService = notificationService;
         this.statusRecorder = statusRecorder;
+        this.restockService = restockService;
     }
 
     @Transactional(readOnly = true)
@@ -314,18 +321,17 @@ public class OrderService {
         // point of the history row is which status the order left.
         OrderStatus previousStatus = order.getStatus();
 
-        // Restock if an order is cancelled
+        // Restock if an order is cancelled.
+        //
+        // Delegated to OrderRestockService rather than done inline. Since the
+        // invoicing module landed, stock can also come back through a credit
+        // note, and an operator who issues the storno first and cancels the
+        // order afterwards would otherwise add every quantity twice — silently,
+        // producing stock for goods that do not physically exist. The service
+        // keeps a per-line counter of what has already been returned and adds
+        // only the remainder, so the two paths compose in any order.
         if (newStatus == OrderStatus.CANCELLED && order.getStatus() != OrderStatus.CANCELLED) {
-            for (OrderItem item : order.getItems()) {
-                Product p = item.getProduct();
-                // A force-deleted product (see ProductService#forceDeleteWithHistory)
-                // has no live row left to restock — the line itself is kept intact
-                // for accounting, but there is nothing in the catalogue to add back.
-                if (p == null) {
-                    continue;
-                }
-                p.setStockQuantity(p.getStockQuantity() + item.getQuantity());
-            }
+            restockService.restockAll(order, "Anulare comandă #" + order.getId());
         }
         order.setStatus(newStatus);
         OrderDto dto = OrderDto.from(orderRepository.save(order));

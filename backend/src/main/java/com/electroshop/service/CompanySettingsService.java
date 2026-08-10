@@ -85,11 +85,24 @@ public class CompanySettingsService {
         return changed ? repository.save(c) : c;
     }
 
-    @Transactional(readOnly = true)
+    /**
+     * The settings, as the admin screen reads them.
+     *
+     * <p>Deliberately routed through {@link #getEntity()} rather than reading
+     * the row directly. Reading it directly is what left this endpoint
+     * reporting a reception series of {@code null} and a counter of {@code 0}
+     * after those columns were added to an existing table: the normalisation
+     * lived in {@code getEntity()}, and this path never called it. Two readers
+     * of the same row that disagree about its contents is a defect on its own,
+     * independent of which one is right.</p>
+     *
+     * <p>Not {@code readOnly} for the same reason — the first read after a
+     * schema change repairs the row, and a read-only transaction would refuse
+     * the write. The repair is conditional, so it happens exactly once.</p>
+     */
+    @Transactional
     public CompanySettingsDto get() {
-        return repository.findAll().stream().findFirst()
-                .map(CompanySettingsDto::from)
-                .orElseGet(() -> CompanySettingsDto.from(defaultTransient()));
+        return CompanySettingsDto.from(getEntity());
     }
 
     public CompanySettingsDto update(CompanySettingsDto d) {
@@ -133,18 +146,6 @@ public class CompanySettingsService {
         auditService.log("COMPANY_SETTINGS_UPDATED", "CompanySettings", saved.getId(),
                 saved.getLegalName() != null ? saved.getLegalName() : "date firmă");
         return CompanySettingsDto.from(saved);
-    }
-
-    private CompanySettings defaultTransient() {
-        CompanySettings c = new CompanySettings();
-        c.setCountry("România");
-        c.setVatPayer(true);
-        c.setVatRate(new BigDecimal("19.00"));
-        c.setInvoiceSeries("ELS");
-        c.setInvoiceNextNumber(1);
-        c.setReceptionSeries("NIR");
-        c.setReceptionNextNumber(1);
-        return c;
     }
 
     private String trim(String s) {

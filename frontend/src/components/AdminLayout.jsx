@@ -2,8 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { AdminChromeContext, Icon, adminGroups, filterNavForRoles } from './AdminNav';
 import { useAuth } from '../context/AuthContext';
+import AdminSidebar from './AdminSidebar';
 import ErrorBoundary from './ErrorBoundary';
 import NotificationBell from './NotificationBell';
+import { Breadcrumbs } from './xxii';
+import useBreadcrumbs from '../hooks/useBreadcrumbs';
 
 /**
  * Chrome shared by every admin screen.
@@ -61,6 +64,9 @@ export default function AdminLayout() {
   const { user, hasPermission } = useAuth();
   // Feature #6: Manager/Editor only see the sections their permissions allow.
   const { dashboardItem, groups, tabs } = filterNavForRoles(user?.roles, hasPermission);
+  // TASK 3 — the trail is derived from the route, so every admin page gets one
+  // without having to declare it.
+  const crumbs = useBreadcrumbs();
 
   const toggleGroup = (key) => {
     setOpenGroups((prev) => {
@@ -143,16 +149,10 @@ export default function AdminLayout() {
     };
   }, [location.pathname]);
 
-  // XXII — the active section is marked by a neon accent bar plus a faint
-  // gradient wash. The bar carries the state; the wash only reinforces it, so
-  // the marker survives forced-colors mode where the wash is dropped.
-  const linkClass = ({ isActive }) =>
-    `flex items-center gap-2.5 rounded-lg border-l-2 py-2 pl-2.5 pr-3 text-sm font-medium transition-all duration-xx ease-xx ${
-      isActive
-        ? 'border-[color:var(--xx-cyan)] bg-[rgba(34,232,245,0.1)] text-[color:var(--xx-ink)] shadow-[inset_0_0_24px_-10px_rgba(34,232,245,0.65)]'
-        : 'border-transparent text-[color:var(--xx-ink-muted)] hover:border-[rgba(122,60,255,0.55)] hover:bg-[rgba(255,255,255,0.05)] hover:text-[color:var(--xx-ink)]'
-    }`;
-
+  // The desktop rail's link styling moved into AdminSidebar together with the
+  // rail itself. The mobile strip keeps its own, because a horizontally
+  // scrolling chip and a vertical rail row are different shapes and sharing one
+  // class string between them was already a compromise.
   const mobileLinkClass = ({ isActive }) =>
     `flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 py-2 text-sm font-medium transition-all duration-xx ease-xx ${
       isActive
@@ -170,80 +170,28 @@ export default function AdminLayout() {
           {/* Feature #7: a crash rendering one admin page must not blank the
               whole panel — the rail stays usable and the operator can navigate
               away. Keyed by pathname so switching pages clears a stale error. */}
+          {/* Above the page, not inside it: every admin screen gets the trail
+              without each one having to render it, and the position stays
+              identical from page to page — which is the only reason a
+              breadcrumb is useful at all. */}
+          {crumbs.length > 1 ? <Breadcrumbs items={crumbs} className="mb-3" /> : null}
           <ErrorBoundary key={location.pathname}>
             <Outlet />
           </ErrorBoundary>
         </div>
 
-        {/* Persistent side rail — large screens, left-hand column */}
-        <aside
-          className="order-1 hidden lg:order-1 lg:block lg:w-56 lg:shrink-0"
-          style={railOffset ? { marginTop: `${railOffset}px` } : undefined}
-        >
-          <nav
-            aria-label="Secțiuni administrare"
-            className="sticky top-20 rounded-[1.25rem] border border-[rgba(255,255,255,0.12)] bg-[rgba(9,10,26,0.72)] p-2 shadow-[0_28px_70px_-32px_rgba(0,0,0,0.95),0_0_48px_-18px_rgba(122,60,255,0.55)] backdrop-blur-glass-lg"
-          >
-            <div className="flex items-center justify-between px-3 pb-2 pt-1">
-              <p className="xx-eyebrow mb-0">Control Center</p>
-              {/* Feature #8 — notification bell lives here since the panel has no top header bar. */}
-              <NotificationBell />
-            </div>
-            <div className="max-h-[calc(100vh-8rem)] space-y-1 overflow-y-auto pb-1">
-              {dashboardItem && (
-                <>
-                  <NavLink to={dashboardItem.to} end={dashboardItem.end} className={linkClass}>
-                    <Icon name={dashboardItem.icon} className="h-4 w-4 shrink-0" />
-                    <span>{dashboardItem.label}</span>
-                  </NavLink>
-                  <div className="my-1 border-t border-[rgba(255,255,255,0.1)]" />
-                </>
-              )}
-
-              {groups.map((g) => {
-                const open = openGroups[g.key] !== false;
-                const panelId = `admin-group-${g.key}`;
-                return (
-                  <div key={g.key}>
-                    <button
-                      type="button"
-                      onClick={() => toggleGroup(g.key)}
-                      aria-expanded={open}
-                      aria-controls={panelId}
-                      className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--xx-ink-dim)] transition-colors duration-xx hover:bg-[rgba(255,255,255,0.05)] hover:text-[color:var(--xx-ink)]"
-                    >
-                      <Icon name={g.icon} className="h-4 w-4 shrink-0 text-[color:var(--xx-purple)]" />
-                      <span className="flex-1 text-left">{g.label}</span>
-                      <Icon
-                        name="chevron"
-                        className={`h-3.5 w-3.5 shrink-0 transition-transform duration-xx ease-xx ${
-                          open ? 'rotate-90' : ''
-                        }`}
-                      />
-                    </button>
-                    <div
-                      id={panelId}
-                      className={`grid transition-all duration-xxslow ease-xx ${
-                        open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
-                      }`}
-                    >
-                      <div className="overflow-hidden">
-                        <div className="space-y-0.5 py-0.5 pl-1">
-                          {g.items.map((t) => (
-                            <NavLink key={t.to} to={t.to} end={t.end} className={linkClass}>
-                              <Icon name={t.icon} className="h-4 w-4 shrink-0" />
-                              <span>{t.label}</span>
-                            </NavLink>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </nav>
-        </aside>
+        {/* Persistent side rail — large screens, left-hand column.
+            TASK 3: collapsible to icons, with favourites and global search. The
+            markup moved into its own component because the rail now carries
+            four concerns and the layout file was already doing measurement,
+            group state and mobile navigation. */}
+        <AdminSidebar
+          dashboardItem={dashboardItem}
+          groups={groups}
+          openGroups={openGroups}
+          onToggleGroup={toggleGroup}
+          railOffset={railOffset}
+        />
 
         {/* Scrollable strip — small screens */}
         <nav

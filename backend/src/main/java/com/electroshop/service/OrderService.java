@@ -1,5 +1,6 @@
 package com.electroshop.service;
 
+import com.electroshop.dto.OrderBulkResultDto;
 import com.electroshop.dto.OrderDto;
 import com.electroshop.dto.OrderRequest;
 import com.electroshop.dto.SellBatchRequest;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -344,6 +346,115 @@ public class OrderService {
         Order order = findEntity(orderId);
         orderRepository.delete(order);
         auditService.log("ORDER_DELETED", "Order", orderId, null);
+    }
+
+    // ---- Operații în masă -----------------------------------------------
+    //
+    // Fiecare comandă este tratată separat, iar cele care nu pot primi acțiunea
+    // sunt raportate cu motivul în loc să oprească lotul. O selecție de câteva
+    // zeci conține aproape sigur una deja anulată sau ștearsă între momentul
+    // selecției și cel al apăsării; dacă aceea ar face să eșueze tot, operatorul
+    // ar trebui să ghicească pe care să o scoată și să reia — iar la a doua
+    // încercare ar descoperi următoarea.
+
+    /**
+     * Identificatorii tuturor comenzilor care corespund filtrului de status.
+     *
+     * <p>Sortare descrescătoare după dată, identică cu cea a listei, ca setul
+     * extins să fie exact ce ar vedea operatorul dacă ar parcurge paginile.</p>
+     */
+    @Transactional(readOnly = true)
+    public List<Long> idsMatching(String status) {
+        Pageable all = org.springframework.data.domain.PageRequest.of(0, 5000,
+                org.springframework.data.domain.Sort.by("createdAt").descending());
+        Page<Order> page = (status != null && !status.isBlank())
+                ? orderRepository.findByStatus(parseStatus(status), all)
+                : orderRepository.findAll(all);
+        return page.getContent().stream().map(Order::getId).toList();
+    }
+
+    /**
+     * Câte bucăți s-ar întoarce în stoc dacă lotul ar fi anulat acum.
+     *
+     * <p>Există pentru confirmarea din interfață. Anularea mișcă marfă, iar o
+     * confirmare care spune doar „ești sigur?" nu dă operatorului informația de
+     * care are nevoie ca să răspundă. Nu scrie nimic.</p>
+     */
+    @Transactional(readOnly = true)
+    public int previewRestockForCancel(List<Long> orderIds) {
+        if (orderIds == null || orderIds.isEmpty()) {
+            return 0;
+        }
+        int units = 0;
+        for (Long id : orderIds) {
+            Order order = orderRepository.findById(id).orElse(null);
+            if (order == null || order.getStatus() == OrderStatus.CANCELLED) {
+                continue;
+            }
+            units += restockService.previewRemaining(order);
+        }
+        return units;
+    }
+
+    /**
+     * Trece un lot de comenzi într-un status.
+     */
+    public OrderBulkResultDto bulkUpdateStatus(List<Long> orderIds, String status) {
+        OrderStatus target = parseStatus(status);
+        OrderBulkResultDto.Builder result = OrderBulkResultDto.builder(orderIds.size());
+
+        for (Long id : orderIds) {
+            Order order = orderRepository.findById(id).orElse(null);
+            if (order == null) {
+                result.skip(id, "comanda nu mai există");
+                continue;
+            }
+            if (order.getStatus() == target) {
+                result.skip(id, "era deja " + target.name());
+                continue;
+            }
+
+            OrderStatus previous = order.getStatus();
+            if (target == OrderStatus.CANCELLED) {
+                result.restocked(restockService.restockAll(order, "Anulare în masă, comanda #" + id));
+            }
+            order.setStatus(target);
+            orderRepository.save(order);
+            statusRecorder.record(order, previous, target, null);
+            result.ok();
+        }
+
+        auditService.log("ORDERS_BULK_STATUS", "Order", null,
+                orderIds.size() + " comenzi → " + target.name());
+        return result.build("actualizate");
+    }
+
+    /**
+     * Șterge un lot de comenzi.
+     */
+    public OrderBulkResultDto bulkDelete(List<Long> orderIds) {
+        OrderBulkResultDto.Builder result = OrderBulkResultDto.builder(orderIds.size());
+
+        for (Long id : orderIds) {
+            Order order = orderRepository.findById(id).orElse(null);
+            if (order == null) {
+                result.skip(id, "comanda nu mai există");
+                continue;
+            }
+            try {
+                orderRepository.delete(order);
+                result.ok();
+            } catch (RuntimeException e) {
+                // O comandă la care încă trimit alte rânduri — un document
+                // fiscal, de pildă — nu poate dispărea. Motivul tehnic nu ajută
+                // pe nimeni; ce contează este că restul lotului merge mai departe.
+                result.skip(id, "nu poate fi ștearsă: are documente legate");
+            }
+        }
+
+        auditService.log("ORDERS_BULK_DELETED", "Order", null,
+                result.build("șterse").message());
+        return result.build("șterse");
     }
 
     private Order findEntity(Long orderId) {

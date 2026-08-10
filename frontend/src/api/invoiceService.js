@@ -44,6 +44,16 @@ const invoiceService = {
       .then((r) => r.data.data),
 
   /**
+   * Emite facturile pentru mai multe comenzi deodată.
+   *
+   * Comenzile care au deja factură sunt sărite, nu produc eroare. Fiecare
+   * emitere reușită consumă definitiv un număr fiscal, motiv pentru care
+   * interfața cere o confirmare care spune câte.
+   */
+  issueBulk: (orderIds) =>
+    api.post('/admin/invoices/bulk', { orderIds }).then((r) => r.data.data),
+
+  /**
    * Emite un storno.
    *
    * `lines` gol înseamnă stornare totală. Altfel se trimit perechi

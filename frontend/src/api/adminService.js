@@ -45,6 +45,28 @@ const adminService = {
     api.get(`/admin/orders/${id}/invoice`, { responseType: 'blob' }).then((r) => r.data),
 
   // Suppliers (furnizori)
+  // ---- Operații în masă asupra comenzilor ----
+  //
+  // Fiecare întoarce un raport, nu doar succes sau eșec: o selecție de câteva
+  // zeci de comenzi conține aproape sigur una care nu poate primi acțiunea, iar
+  // aceea nu are voie să oprească restul lotului.
+
+  /** Identificatorii tuturor comenzilor care corespund filtrului curent. */
+  orderIdsMatching: (status) =>
+    api
+      .get('/admin/orders/ids', { params: status ? { status } : {} })
+      .then((r) => r.data.data),
+
+  /** Câte bucăți s-ar întoarce în stoc dacă lotul ar fi anulat. Nu scrie nimic. */
+  previewBulkCancel: (ids) =>
+    api.post('/admin/orders/bulk-cancel-preview', { ids }).then((r) => r.data.data),
+
+  bulkOrderStatus: (ids, status) =>
+    api.post('/admin/orders/bulk-status', { ids, status }).then((r) => r.data.data),
+
+  bulkDeleteOrders: (ids) =>
+    api.post('/admin/orders/bulk-delete', { ids }).then((r) => r.data.data),
+
   listSuppliers: (params = {}) => api.get('/admin/suppliers', { params }).then((r) => r.data.data),
   createSupplier: (payload) => api.post('/admin/suppliers', payload).then((r) => r.data.data),
   updateSupplier: (id, payload) => api.put(`/admin/suppliers/${id}`, payload).then((r) => r.data.data),

@@ -292,7 +292,13 @@ public class GoodsReceiptService {
      * Următorul număr, fără să îl consume. Folosit doar în previzualizare.
      */
     private int peekNextNumber(CompanySettings cs, String series) {
-        int fromCounter = cs.getReceptionNextNumber() != null ? cs.getReceptionNextNumber() : 1;
+        // Sub 1 înseamnă absent, nu zero. Coloana a fost adăugată în tabelă după
+        // ce rândul de setări exista deja, iar actualizarea automată a schemei
+        // umple o coloană întreagă nouă cu 0, nu cu valoarea implicită scrisă pe
+        // câmpul Java — aceea se aplică doar obiectelor construite de aplicație.
+        // Fără verificarea aceasta, prima recepție ar fi primit numărul zero.
+        Integer counter = cs.getReceptionNextNumber();
+        int fromCounter = (counter != null && counter >= 1) ? counter : 1;
         Integer maxUsed = purchaseRepository.maxReceptionNumber(series);
         return (maxUsed != null && maxUsed >= fromCounter) ? maxUsed + 1 : fromCounter;
     }

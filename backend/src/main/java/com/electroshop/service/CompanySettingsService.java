@@ -25,19 +25,64 @@ public class CompanySettingsService {
         this.auditService = auditService;
     }
 
-    /** Returns the settings entity, creating a default one on first use. */
+    /**
+     * Returns the settings entity, creating a default one on first use.
+     *
+     * <p><b>Existing rows are normalised on the way out.</b> The reception
+     * series and counter were added to this table after the row already
+     * existed, and {@code ddl-auto=update} fills a new {@code NOT NULL} integer
+     * column with 0, not with the default written on the Java field — that
+     * default only applies to objects the application constructs. The row
+     * therefore came back carrying series {@code null} and counter {@code 0},
+     * and the first goods receipt would have been numbered zero.</p>
+     *
+     * <p>Repairing it here rather than in each caller means the fix applies to
+     * the settings screen, to the numbering and to any future reader at once.
+     * The write is conditional, so it happens exactly once.</p>
+     */
     public CompanySettings getEntity() {
-        return repository.findAll().stream().findFirst().orElseGet(() -> {
-            CompanySettings c = new CompanySettings();
-            c.setCountry("România");
-            c.setVatPayer(true);
-            c.setVatRate(new BigDecimal("19.00"));
-            c.setInvoiceSeries("ELS");
-            c.setInvoiceNextNumber(1);
+        CompanySettings existing = repository.findAll().stream().findFirst().orElse(null);
+        if (existing != null) {
+            return normalise(existing);
+        }
+        CompanySettings c = new CompanySettings();
+        c.setCountry("România");
+        c.setVatPayer(true);
+        c.setVatRate(new BigDecimal("19.00"));
+        c.setInvoiceSeries("ELS");
+        c.setInvoiceNextNumber(1);
+        c.setReceptionSeries("NIR");
+        c.setReceptionNextNumber(1);
+        return repository.save(c);
+    }
+
+    /**
+     * Fills in values that a schema migration could not.
+     *
+     * <p>A counter below 1 is treated as absent rather than respected. Document
+     * numbering starts at one; zero is not a document number anybody would
+     * write on paper, and a series that begins at zero makes every later
+     * reference look off by one.</p>
+     */
+    private CompanySettings normalise(CompanySettings c) {
+        boolean changed = false;
+        if (c.getReceptionSeries() == null || c.getReceptionSeries().isBlank()) {
             c.setReceptionSeries("NIR");
+            changed = true;
+        }
+        if (c.getReceptionNextNumber() == null || c.getReceptionNextNumber() < 1) {
             c.setReceptionNextNumber(1);
-            return repository.save(c);
-        });
+            changed = true;
+        }
+        if (c.getInvoiceSeries() == null || c.getInvoiceSeries().isBlank()) {
+            c.setInvoiceSeries("ELS");
+            changed = true;
+        }
+        if (c.getInvoiceNextNumber() == null || c.getInvoiceNextNumber() < 1) {
+            c.setInvoiceNextNumber(1);
+            changed = true;
+        }
+        return changed ? repository.save(c) : c;
     }
 
     @Transactional(readOnly = true)

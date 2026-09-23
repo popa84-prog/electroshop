@@ -115,11 +115,11 @@ export default function StornoDialog({ open, invoice, onClose, onConfirm }) {
 
         {/* ---- Liniile ---- */}
         {lines.length === 0 ? (
-          <p className="rounded-lg border border-[rgba(255,255,255,0.1)] p-4 text-sm text-[color:var(--xx-ink-dim)]">
+          <p className="rounded-lg border border-[rgba(var(--xx-veil),0.1)] p-4 text-sm text-[color:var(--xx-ink-dim)]">
             Factura este deja stornată integral. Nu mai există nimic de corectat.
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-[rgba(255,255,255,0.1)]">
+          <div className="overflow-x-auto rounded-lg border border-[rgba(var(--xx-veil),0.1)]">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[color:var(--xx-ink-dim)]">
@@ -131,7 +131,7 @@ export default function StornoDialog({ open, invoice, onClose, onConfirm }) {
               </thead>
               <tbody>
                 {lines.map((line) => (
-                  <tr key={line.id} className="border-t border-[rgba(255,255,255,0.07)]">
+                  <tr key={line.id} className="border-t border-[rgba(var(--xx-veil),0.07)]">
                     <td className="px-3 py-2 text-[color:var(--xx-ink)]">{line.productName}</td>
                     <td className="px-3 py-2 text-center text-[color:var(--xx-ink-dim)]">
                       {line.quantity}
@@ -149,7 +149,7 @@ export default function StornoDialog({ open, invoice, onClose, onConfirm }) {
                           max={line.remainingToStorno}
                           value={quantities[line.id] ?? 0}
                           onChange={(e) => handleQuantity(line, e.target.value)}
-                          className="w-20 rounded-md border border-[rgba(255,255,255,0.15)] bg-transparent px-2 py-1 text-center text-[color:var(--xx-ink)]"
+                          className="w-20 rounded-md border border-[rgba(var(--xx-veil),0.15)] bg-transparent px-2 py-1 text-center text-[color:var(--xx-ink)]"
                           aria-label={`Cantitate de stornat pentru ${line.productName}`}
                         />
                       )}
@@ -167,7 +167,7 @@ export default function StornoDialog({ open, invoice, onClose, onConfirm }) {
             htmlFor="storno-reason"
             className="mb-1 block text-sm font-medium text-[color:var(--xx-ink)]"
           >
-            Motivul stornării <span className="text-[color:var(--xx-danger,#f43f5e)]">*</span>
+            Motivul stornării <span className="text-[color:var(--xx-danger-6)]">*</span>
           </label>
           <textarea
             id="storno-reason"
@@ -176,7 +176,7 @@ export default function StornoDialog({ open, invoice, onClose, onConfirm }) {
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Ex: retur integral solicitat de client, produs neconform"
-            className="w-full rounded-lg border border-[rgba(255,255,255,0.15)] bg-transparent px-3 py-2 text-sm text-[color:var(--xx-ink)]"
+            className="w-full rounded-lg border border-[rgba(var(--xx-veil),0.15)] bg-transparent px-3 py-2 text-sm text-[color:var(--xx-ink)]"
           />
           <p className="mt-1 text-xs text-[color:var(--xx-ink-dim)]">
             Se tipărește pe documentul de stornare și intră în jurnalul de audit. O stornare fără
@@ -185,7 +185,7 @@ export default function StornoDialog({ open, invoice, onClose, onConfirm }) {
         </div>
 
         {/* ---- Stocul ---- */}
-        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[rgba(255,255,255,0.1)] p-3">
+        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[rgba(var(--xx-veil),0.1)] p-3">
           <input
             type="checkbox"
             checked={restock}
@@ -237,7 +237,7 @@ function ModeButton({ active, onClick, children }) {
       className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
         active
           ? 'border-[color:var(--xx-cyan)] text-[color:var(--xx-ink)]'
-          : 'border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-dim)]'
+          : 'border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-dim)]'
       }`}
       aria-pressed={active}
     >

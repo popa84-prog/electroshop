@@ -52,6 +52,26 @@ public class Product {
     @Column(length = 60)
     private String sku;
 
+    /**
+     * Codul de produs al fabricantului.
+     *
+     * <p>Separat de {@code sku}, care este codul nostru intern. Icecat caută
+     * după marcă plus acest cod, iar confundarea celor două ar însemna să
+     * interogăm catalogul mondial cu o numerotare care există doar la noi.</p>
+     */
+    @Column(length = 80)
+    private String mpn;
+
+    /**
+     * Codul de bare, 8–14 cifre.
+     *
+     * <p>Păstrat ca text, nu ca număr: un GTIN poate începe cu zero, iar zeroul
+     * acela este semnificativ. Stocat ca întreg, „05702016889772" ar deveni
+     * „5702016889772" și nu ar mai identifica produsul.</p>
+     */
+    @Column(length = 14)
+    private String gtin;
+
     /** Cover image — mirrors the {@link ProductImage} flagged primary. */
     @Column(length = 500)
     private String imageUrl;

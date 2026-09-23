@@ -54,6 +54,47 @@ public class ProductImage {
     /** Original file size in bytes, as reported by Cloudinary. Null for pre-existing images. */
     private Long bytes;
 
+    // ---- Proveniență ----
+    //
+    // Cine ne-a dat voie să folosim imaginea aceasta. Nu este birocrație: o
+    // marcă își poate retrage permisiunea din Icecat oricând, iar atunci
+    // trebuie să pot șterge exact pozele ei, cu o interogare, nu să caut prin
+    // trei sute de rânduri. Coloanele există de la început tocmai pentru că
+    // adăugarea lor după ingestie ar lăsa pozele deja urcate fără răspuns la
+    // întrebarea „de unde vine asta".
+
+    /**
+     * Sursa: {@code OWN} (fotografie proprie), {@code ICECAT}, {@code SUPPLIER}
+     * (feed de distribuitor) sau {@code PLACEHOLDER}. Null pentru imaginile
+     * urcate înainte ca aceste coloane să existe — deliberat, ca să se vadă
+     * care sunt și să poată fi completate.
+     */
+    @Column(name = "source", length = 30)
+    private String source;
+
+    /** Marca ale cărei drepturi acoperă imaginea, așa cum a fost interogată. */
+    @Column(name = "source_brand", length = 80)
+    private String sourceBrand;
+
+    /** Identificatorul la sursă: id-ul Icecat, codul din feed, ce se aplică. */
+    @Column(name = "source_ref", length = 120)
+    private String sourceRef;
+
+    /** Adresa originală, înainte de urcarea pe Cloudinary. */
+    @Column(name = "source_url", length = 500)
+    private String sourceUrl;
+
+    /**
+     * Temeiul folosirii: nivelul Icecat ({@code openicecat} / {@code fullicecat})
+     * sau referința înțelegerii cu distribuitorul.
+     *
+     * <p>Distincția dintre cele două niveluri Icecat contează juridic. La
+     * nivelul deschis, marca a plătit ca pozele să ajungă la revânzători. La
+     * nivelul complet, Icecat dă datele, nu drepturile asupra imaginilor.</p>
+     */
+    @Column(name = "licence_ref", length = 120)
+    private String licenceRef;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 

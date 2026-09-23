@@ -11,8 +11,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 /**
  * Propune fotografii pentru produsele care nu au niciuna, din catalogul Icecat.
@@ -86,6 +87,13 @@ public class ProductImageSourcingService {
         List<String> marciCunoscute = productRepository.findAllBrands();
 
         List<Propunere> propuneri = new ArrayList<>();
+        // De ce nu s-a găsit, pe categorii. Fără defalcarea asta, o rundă cu o
+        // singură potrivire din 37 de interogări arată identic indiferent dacă
+        // produsele lipsesc din Icecat, dacă mărcile lor nu sunt în nivelul
+        // gratuit sau dacă jetonul a fost refuzat — trei cauze cu trei remedii
+        // diferite. Prima rulare reală a fost exact acest caz.
+        Map<IcecatClient.Motiv, Integer> motive = new EnumMap<>(IcecatClient.Motiv.class);
+        List<String> exempleEsec = new ArrayList<>();
         int examinate = 0;
         int faraMarca = 0;
         int faraCod = 0;
@@ -114,22 +122,52 @@ public class ProductImageSourcingService {
                 continue;
             }
 
+            IcecatClient.Raspuns ultimul = null;
             for (int i = 0; i < Math.min(CANDIDATI_INCERCATI, candidati.size()); i++) {
                 MpnExtractor.Candidat c = candidati.get(i);
-                Optional<IcecatClient.Rezultat> r = icecat.cauta(marca, c.cod());
-                if (r.isPresent()) {
+                ultimul = icecat.interogheaza(marca, c.cod());
+                IcecatClient.Rezultat r = ultimul.rezultat();
+                if (r != null) {
                     propuneri.add(new Propunere(
                             p.getId(), p.getName(), p.getBrand(), marca, c.cod(), c.scor(),
-                            r.get().icecatId(), r.get().titlu(), r.get().codMarca(), r.get().gtin(),
-                            List.copyOf(r.get().imaginiDistincte()),
+                            r.icecatId(), r.titlu(), r.codMarca(), r.gtin(),
+                            List.copyOf(r.imaginiDistincte()),
                             marcaBruta != null && !marcaBruta.equals(p.getBrand())));
                     break;
+                }
+                // Un jeton refuzat sau o cotă depășită se vor repeta identic la
+                // fiecare candidat. Oprim seria în loc să ardem interogări.
+                if (ultimul.motiv() == IcecatClient.Motiv.NEAUTORIZAT
+                        || ultimul.motiv() == IcecatClient.Motiv.COTA_DEPASITA) {
+                    break;
+                }
+            }
+            if (ultimul != null && ultimul.rezultat() == null) {
+                motive.merge(ultimul.motiv(), 1, Integer::sum);
+                if (exempleEsec.size() < 8) {
+                    exempleEsec.add(marca + " " + candidati.get(0).cod()
+                            + " → " + ultimul.motiv()
+                            + (ultimul.detaliu() == null ? "" : ": " + scurt(ultimul.detaliu())));
                 }
             }
         }
 
+        Map<String, Integer> motiveText = new java.util.LinkedHashMap<>();
+        motive.forEach((k, v) -> motiveText.put(k.name(), v));
+
         return new Raport(faraImagine.size(), examinate, propuneri.size(), faraMarca, faraCod,
-                List.copyOf(propuneri));
+                List.copyOf(propuneri), Map.copyOf(motiveText), List.copyOf(exempleEsec));
+    }
+
+    /** Interogare unică, pentru diagnostic. Nu schimbă nimic. */
+    public IcecatClient.Raspuns diagnostic(String marca, String cod) {
+        return icecat.interogheaza(BrandNormalizer.pentruIcecat(marca), cod);
+    }
+
+    /** Taie textul de eroare la o lungime citibilă într-un tabel. */
+    private static String scurt(String text) {
+        String t = text.replaceAll("\\s+", " ").trim();
+        return t.length() <= 120 ? t : t.substring(0, 117) + "…";
     }
 
     /**
@@ -238,8 +276,13 @@ public class ProductImageSourcingService {
      * @param sariteFaraMarca  câte nu au marcă nici în coloană, nici în denumire
      * @param sariteFaraCod    câte au marcă, dar nimic care să semene a cod
      * @param propuneri        potrivirile, de confirmat una câte una
+     * @param motive           de ce au eșuat celelalte, numărate pe categorii
+     * @param exempleEsec      câteva eșecuri cu textul brut de la Icecat,
+     *                         pentru că un număr spune că ceva nu merge, iar
+     *                         mesajul spune ce anume
      */
     public record Raport(int totalFaraImagine, int examinate, int gasite,
-                         int sariteFaraMarca, int sariteFaraCod, List<Propunere> propuneri) {
+                         int sariteFaraMarca, int sariteFaraCod, List<Propunere> propuneri,
+                         Map<String, Integer> motive, List<String> exempleEsec) {
     }
 }

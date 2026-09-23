@@ -75,6 +75,7 @@ public class IcecatClient {
     private final String apiToken;
     private final String contentToken;
     private final String limba;
+    private final String limbaRezerva;
     private final HttpClient http;
     private final ObjectMapper json = new ObjectMapper();
 
@@ -82,11 +83,13 @@ public class IcecatClient {
             @Value("${app.icecat.shopname:}") String shopname,
             @Value("${app.icecat.api-token:}") String apiToken,
             @Value("${app.icecat.content-token:}") String contentToken,
-            @Value("${app.icecat.lang:ro}") String limba) {
+            @Value("${app.icecat.lang:ro}") String limba,
+            @Value("${app.icecat.lang-fallback:en}") String limbaRezerva) {
         this.shopname = shopname == null ? "" : shopname.trim();
         this.apiToken = apiToken == null ? "" : apiToken.trim();
         this.contentToken = contentToken == null ? "" : contentToken.trim();
         this.limba = (limba == null || limba.isBlank()) ? "ro" : limba.trim();
+        this.limbaRezerva = (limbaRezerva == null || limbaRezerva.isBlank()) ? "en" : limbaRezerva.trim();
         this.http = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .followRedirects(HttpClient.Redirect.NORMAL)
@@ -107,15 +110,48 @@ public class IcecatClient {
      *         pentru apelant toate înseamnă „nu am o poză de propus".
      */
     public Optional<Rezultat> cauta(String marca, String cod) {
+        Raspuns r = interogheaza(marca, cod);
+        return Optional.ofNullable(r.rezultat());
+    }
+
+    /**
+     * Ca {@link #cauta}, dar spune și <em>de ce</em> nu a găsit.
+     *
+     * <p>Prima versiune întorcea doar {@code Optional.empty()} pentru orice
+     * eșec. A fost o greșeală de proiectare, descoperită la prima rulare reală:
+     * din 37 de produse interogabile a potrivit unul singur, și nu exista nicio
+     * cale de a afla dacă restul lipsesc din Icecat, dacă marca nu este în
+     * nivelul gratuit, dacă jetonul a fost refuzat sau dacă s-a depășit cota.
+     * Patru cauze cu remedii complet diferite, toate arătând identic.</p>
+     *
+     * <p>Se încearcă întâi limba configurată, apoi cea de rezervă. Icecat nu
+     * întoarce automat fișa în engleză când nu există una în română; ea trebuie
+     * cerută explicit, iar conținutul românesc acoperă o mică parte din
+     * catalog.</p>
+     */
+    public Raspuns interogheaza(String marca, String cod) {
         if (!esteConfigurat()) {
-            return Optional.empty();
+            return Raspuns.esec(Motiv.NECONFIGURAT, "Lipsesc acreditările Icecat.");
         }
         if (marca == null || marca.isBlank() || cod == null || cod.isBlank()) {
-            return Optional.empty();
+            return Raspuns.esec(Motiv.DATE_INSUFICIENTE, "Marca sau codul lipsesc.");
         }
 
+        Raspuns intai = unaSingura(marca, cod, limba);
+        if (intai.rezultat() != null || !intai.meritaReincercat()) {
+            return intai;
+        }
+        Raspuns aDoua = unaSingura(marca, cod, limbaRezerva);
+        // Dacă nici în limba de rezervă nu există, raportăm al doilea răspuns:
+        // el reflectă întrebarea cu cele mai mari șanse, deci motivul lui este
+        // cel care descrie corect situația.
+        return aDoua;
+    }
+
+    private Raspuns unaSingura(String marca, String cod, String limbaCeruta) {
+
         String url = BAZA
-                + "?lang=" + enc(limba)
+                + "?lang=" + enc(limbaCeruta)
                 + "&shopname=" + enc(shopname)
                 + "&Brand=" + enc(marca)
                 // Icecat cere codurile cu majuscule, iar „#" trebuie codificat
@@ -138,26 +174,28 @@ public class IcecatClient {
             if (raspuns.statusCode() == 401 || raspuns.statusCode() == 403) {
                 log.warn("Icecat a refuzat acreditările (HTTP {}). Verifică ICECAT_API_TOKEN.",
                         raspuns.statusCode());
-                return Optional.empty();
+                return Raspuns.esec(Motiv.NEAUTORIZAT,
+                        "Icecat a refuzat acreditările, HTTP " + raspuns.statusCode() + ".");
+            }
+            if (raspuns.statusCode() == 429) {
+                return Raspuns.esec(Motiv.COTA_DEPASITA, "Cota de interogări Icecat este depășită.");
             }
             if (raspuns.statusCode() != 200) {
-                log.warn("Icecat a răspuns HTTP {} pentru {} {}", raspuns.statusCode(), marca, cod);
-                return Optional.empty();
+                return Raspuns.esec(Motiv.EROARE,
+                        "Icecat a răspuns HTTP " + raspuns.statusCode() + ".");
             }
-            return citeste(raspuns.body(), marca, cod);
+            return citeste(raspuns.body(), marca, cod, limbaCeruta);
 
         } catch (java.io.InterruptedIOException e) {
             Thread.currentThread().interrupt();
-            log.warn("Interogarea Icecat pentru {} {} a fost întreruptă", marca, cod);
-            return Optional.empty();
+            return Raspuns.esec(Motiv.EROARE, "Interogarea a fost întreruptă.");
         } catch (Exception e) {
-            log.warn("Interogarea Icecat pentru {} {} a eșuat: {}", marca, cod, e.toString());
-            return Optional.empty();
+            return Raspuns.esec(Motiv.EROARE, e.getClass().getSimpleName() + ": " + e.getMessage());
         }
     }
 
     /** Desface răspunsul JSON. Structura este cea din manualul Icecat. */
-    private Optional<Rezultat> citeste(String corp, String marca, String cod) throws Exception {
+    private Raspuns citeste(String corp, String marca, String cod, String limbaCeruta) throws Exception {
         JsonNode radacina = json.readTree(corp);
         JsonNode date = radacina.path("data");
 
@@ -165,13 +203,22 @@ public class IcecatClient {
         // eroare în interiorul datelor, nu cu un cod de stare. Fără verificarea
         // asta, un produs negăsit ar arăta ca un rezultat gol și valid.
         JsonNode erori = date.path("ContentErrors");
-        if (!erori.isMissingNode() && !erori.isNull()) {
-            String text = erori.toString();
-            if (text.contains("\"" + EROARE_NEGASIT + "\"") || text.toLowerCase().contains("not present")) {
-                return Optional.empty();
+        if (!erori.isMissingNode() && !erori.isNull() && !erori.asText("").isBlank()) {
+            String text = erori.isTextual() ? erori.asText() : erori.toString();
+            String jos = text.toLowerCase(java.util.Locale.ROOT);
+            log.debug("Icecat ContentErrors pentru {} {} ({}): {}", marca, cod, limbaCeruta, text);
+            if (jos.contains("not present") || text.contains("\"" + EROARE_NEGASIT + "\"")) {
+                return Raspuns.esec(Motiv.INEXISTENT, text);
             }
-            log.debug("Icecat ContentErrors pentru {} {}: {}", marca, cod, text);
-            return Optional.empty();
+            if (jos.contains("authoriz") || jos.contains("permission") || jos.contains("access")) {
+                // Marca există în Icecat, dar nu în nivelul la care avem acces.
+                // Este cazul mărcilor care nu sponsorizează Open Icecat.
+                return Raspuns.esec(Motiv.MARCA_INDISPONIBILA, text);
+            }
+            if (jos.contains("limit") || jos.contains("quota")) {
+                return Raspuns.esec(Motiv.COTA_DEPASITA, text);
+            }
+            return Raspuns.esec(Motiv.EROARE, text);
         }
 
         JsonNode general = date.path("GeneralInfo");
@@ -186,15 +233,65 @@ public class IcecatClient {
         }
         if (poze.isEmpty()) {
             // Fișă fără nicio fotografie. Există în Icecat, dar nu ne ajută.
-            return Optional.empty();
+            return Raspuns.esec(Motiv.FARA_IMAGINI, "Fișa există, dar nu are nicio fotografie.");
         }
 
-        return Optional.of(new Rezultat(
+        return Raspuns.gasit(new Rezultat(
                 general.path("IcecatId").asText(null),
                 titlu(general),
                 general.path("BrandPartCode").asText(null),
                 gtin(general),
                 List.copyOf(poze)));
+    }
+
+    /** De ce nu s-a găsit. Fiecare motiv are alt remediu. */
+    public enum Motiv {
+        GASIT,
+        /** Produsul nu există în baza Icecat sub marca și codul cerute. */
+        INEXISTENT,
+        /** Există, dar marca nu este în nivelul nostru de acces (Open Icecat). */
+        MARCA_INDISPONIBILA,
+        /** Fișa există, fără fotografii. */
+        FARA_IMAGINI,
+        /** Jetonul a fost refuzat. */
+        NEAUTORIZAT,
+        /** S-a depășit cota lunară. */
+        COTA_DEPASITA,
+        /** Nu avem marcă sau cod de trimis. */
+        DATE_INSUFICIENTE,
+        /** Integrarea nu are acreditări. */
+        NECONFIGURAT,
+        /** Rețea, format neașteptat, altceva. */
+        EROARE
+    }
+
+    /**
+     * Răspunsul unei interogări: ce s-a găsit, sau de ce nu.
+     *
+     * @param rezultat fișa, sau {@code null}
+     * @param motiv    clasificarea
+     * @param detaliu  textul brut de la Icecat, pentru diagnostic
+     */
+    public record Raspuns(Rezultat rezultat, Motiv motiv, String detaliu) {
+
+        static Raspuns gasit(Rezultat r) {
+            return new Raspuns(r, Motiv.GASIT, null);
+        }
+
+        static Raspuns esec(Motiv motiv, String detaliu) {
+            return new Raspuns(null, motiv, detaliu);
+        }
+
+        /**
+         * Dacă are rost să reîncercăm în altă limbă.
+         *
+         * <p>Doar pentru „inexistent": o fișă poate exista în engleză și nu în
+         * română. Un jeton refuzat sau o cotă depășită vor fi refuzate identic
+         * în orice limbă, iar reîncercarea ar consuma o interogare degeaba.</p>
+         */
+        public boolean meritaReincercat() {
+            return motiv == Motiv.INEXISTENT;
+        }
     }
 
     /** Titlul local dacă există, altfel cel internațional. */

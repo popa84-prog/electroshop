@@ -1,13 +1,40 @@
 <!DOCTYPE html>
-<html lang="ro" class="dark">
+<html lang="ro" class="dark" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="color-scheme" content="dark light" />
     <!-- Matches the XXII deep-space canvas so the mobile browser chrome blends
          into the page instead of framing it with a white bar. -->
     <meta name="theme-color" content="#04050c" />
+
+    <!-- Tema, aplicată înainte de prima pictare.
+         React montează după ce browserul a desenat deja documentul. Dacă tema
+         s-ar aplica abia dintr-un efect, un vizitator care a ales tema deschisă
+         ar vedea la fiecare încărcare un cadru de fundal aproape negru, apoi
+         saltul pe alb — iar cineva care a rămas pe întuneric ar vedea invers,
+         un flash alb, care pe un ecran nocturn doare efectiv.
+         Blocant, sincron și minuscul: se execută înaintea oricărui pixel.
+         Totul în try, pentru că în fereastră privată simpla citire aruncă, iar
+         o excepție aici ar opri parsarea documentului. -->
+    <script>
+      (function () {
+        try {
+          var s = localStorage.getItem('es_theme');
+          var t = (s === 'dark' || s === 'light')
+            ? s
+            : (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+          var r = document.documentElement;
+          r.setAttribute('data-theme', t);
+          r.classList.toggle('dark', t === 'dark');
+          var m = document.querySelector('meta[name="theme-color"]');
+          if (m) m.setAttribute('content', t === 'dark' ? '#04050c' : '#eef1f9');
+        } catch (e) {
+          /* Rămâne tema întunecată din atributele de pe <html>. */
+        }
+      })();
+    </script>
 
     <title>ElectroShop – Magazin de electronice</title>
     <meta

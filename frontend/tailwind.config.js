@@ -155,15 +155,24 @@ export default {
       },
 
       // Edge glow — the brief specifies a 40–60px shadow spread.
+      //
+      // These delegate to the CSS variables instead of restating the values.
+      // The variables are what the light theme redefines — on paper a 44px halo
+      // of light is invisible, so there they become real downward shadows. A
+      // utility that kept its own copy of the value would go on emitting a glow
+      // nobody can see, and `shadow-glow-aqua` would quietly mean something
+      // different from `box-shadow: var(--xx-glow-aqua)` two lines away.
       boxShadow: {
-        'glow-blue': '0 0 40px -8px rgba(46, 123, 255, 0.55)',
-        'glow-purple': '0 0 44px -8px rgba(122, 60, 255, 0.55)',
-        'glow-aqua': '0 0 44px -8px rgba(34, 232, 245, 0.5)',
-        'glow-magenta': '0 0 44px -8px rgba(255, 61, 203, 0.5)',
-        'glow-strong': '0 0 60px -6px rgba(46, 123, 255, 0.75)',
-        glass: '0 8px 32px -8px rgba(4, 5, 12, 0.65), inset 0 1px 0 0 rgba(255,255,255,0.08)',
-        'glass-lg': '0 20px 60px -18px rgba(4, 5, 12, 0.85), inset 0 1px 0 0 rgba(255,255,255,0.10)',
-        float: '0 24px 70px -24px rgba(0, 0, 0, 0.9)',
+        'glow-blue': 'var(--xx-glow-blue)',
+        'glow-purple': 'var(--xx-glow-purple)',
+        'glow-aqua': 'var(--xx-glow-aqua)',
+        'glow-magenta': 'var(--xx-glow-magenta)',
+        'glow-strong': 'var(--xx-glow-strong)',
+        glass:
+          '0 8px 32px -8px rgba(var(--xx-shade),0.65), inset 0 1px 0 0 rgba(var(--xx-veil),0.08)',
+        'glass-lg':
+          '0 20px 60px -18px rgba(var(--xx-shade),0.85), inset 0 1px 0 0 rgba(var(--xx-veil),0.10)',
+        float: '0 24px 70px -24px rgba(var(--xx-shade),0.9)',
       },
 
       backgroundImage: {
@@ -174,7 +183,7 @@ export default {
         'xx-reactor':
           'radial-gradient(1200px 600px at 15% -10%, rgba(122,60,255,0.28), transparent 60%), radial-gradient(1000px 500px at 85% 0%, rgba(46,123,255,0.22), transparent 60%), radial-gradient(900px 700px at 50% 110%, rgba(34,232,245,0.14), transparent 60%)',
         'xx-grid':
-          'linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)',
+          'linear-gradient(rgba(var(--xx-veil),0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(var(--xx-veil),0.035) 1px, transparent 1px)',
       },
 
       backgroundSize: {

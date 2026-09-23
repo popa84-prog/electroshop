@@ -71,6 +71,33 @@ public class ProductImageSourcingController {
                 raport));
     }
 
+    /**
+     * O singură interogare, cu răspunsul brut de la Icecat.
+     *
+     * <p>Există pentru că prima rulare reală a potrivit un produs din 37, iar
+     * raportul agregat nu putea spune de ce. Aici se întreabă punctual o
+     * pereche marcă/cod și se vede exact ce răspunde Icecat — dacă produsul
+     * lipsește, dacă marca nu este în nivelul gratuit sau dacă jetonul este
+     * refuzat.</p>
+     */
+    @GetMapping("/diagnostic")
+    @PreAuthorize("@permissionService.has('PRODUCTS_MANAGE')")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> diagnostic(
+            @RequestParam String marca, @RequestParam String cod) {
+        var r = service.diagnostic(marca, cod);
+        Map<String, Object> date = new java.util.LinkedHashMap<>();
+        date.put("motiv", r.motiv().name());
+        date.put("detaliu", r.detaliu());
+        date.put("gasit", r.rezultat() != null);
+        if (r.rezultat() != null) {
+            date.put("titlu", r.rezultat().titlu());
+            date.put("icecatId", r.rezultat().icecatId());
+            date.put("gtin", r.rezultat().gtin());
+            date.put("numarImagini", r.rezultat().imagini().size());
+        }
+        return ResponseEntity.ok(ApiResponse.ok("Interogare de diagnostic.", date));
+    }
+
     /** Confirmă o potrivire: preia imaginea aleasă și o leagă de produs. */
     @PostMapping("/aplica")
     @PreAuthorize("@permissionService.has('PRODUCTS_MANAGE')")

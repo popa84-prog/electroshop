@@ -135,10 +135,13 @@ public class ProductImageSourcingService {
                             marcaBruta != null && !marcaBruta.equals(p.getBrand())));
                     break;
                 }
-                // Un jeton refuzat sau o cotă depășită se vor repeta identic la
-                // fiecare candidat. Oprim seria în loc să ardem interogări.
+                // Trei motive se vor repeta identic la fiecare candidat, pentru
+                // că nu depind de cod: jetonul refuzat și cota depășită sunt
+                // despre cont, iar marca din afara nivelului gratuit este despre
+                // marcă. Oprim seria în loc să ardem interogări degeaba.
                 if (ultimul.motiv() == IcecatClient.Motiv.NEAUTORIZAT
-                        || ultimul.motiv() == IcecatClient.Motiv.COTA_DEPASITA) {
+                        || ultimul.motiv() == IcecatClient.Motiv.COTA_DEPASITA
+                        || ultimul.motiv() == IcecatClient.Motiv.MARCA_INDISPONIBILA) {
                     break;
                 }
             }

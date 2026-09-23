@@ -171,11 +171,30 @@ public class IcecatClient {
 
             HttpResponse<String> raspuns = http.send(cerere.build(), HttpResponse.BodyHandlers.ofString());
 
-            if (raspuns.statusCode() == 401 || raspuns.statusCode() == 403) {
-                log.warn("Icecat a refuzat acreditările (HTTP {}). Verifică ICECAT_API_TOKEN.",
-                        raspuns.statusCode());
-                return Raspuns.esec(Motiv.NEAUTORIZAT,
-                        "Icecat a refuzat acreditările, HTTP " + raspuns.statusCode() + ".");
+            // 401 și 403 nu înseamnă același lucru, deși amândouă sună a refuz.
+            //
+            // Măsurat pe acest cont: aceeași pereche de jetoane întoarce fișa
+            // completă pentru LG și 403 pentru Sony, EZVIZ și Black & Decker.
+            // Dacă jetonul ar fi greșit, ar fi greșit și pentru LG. Deci 403
+            // este despre CONȚINUT, nu despre identitate: produsul există în
+            // Icecat, dar marca lui nu sponsorizează nivelul gratuit, iar fișa
+            // se vinde doar în abonamentul plătit.
+            //
+            // Distincția decide ce are de făcut operatorul. La 401 își verifică
+            // jetonul. La 403 nu are ce verifica — marca aceea nu va veni
+            // niciodată din Open Icecat, oricât ar reîncerca, și trebuie
+            // rezolvată din feed-ul distribuitorului sau cu fotografie proprie.
+            if (raspuns.statusCode() == 401) {
+                log.warn("Icecat a refuzat acreditările (HTTP 401). Verifică ICECAT_API_TOKEN.");
+                return Raspuns.esec(Motiv.NEAUTORIZAT, "Icecat a refuzat jetonul, HTTP 401.");
+            }
+            if (raspuns.statusCode() == 403) {
+                return Raspuns.esec(Motiv.MARCA_INDISPONIBILA,
+                        "Marca nu este inclusă în nivelul Open Icecat, HTTP 403.");
+            }
+            if (raspuns.statusCode() == 404) {
+                return Raspuns.esec(Motiv.INEXISTENT,
+                        "Nu există fișă pentru această marcă și acest cod, HTTP 404.");
             }
             if (raspuns.statusCode() == 429) {
                 return Raspuns.esec(Motiv.COTA_DEPASITA, "Cota de interogări Icecat este depășită.");

@@ -198,8 +198,9 @@ public class ProductController {
     public ResponseEntity<ApiResponse<Object>> forceDelete(@PathVariable Long id) {
         ProductService.ForceDeleteOutcome outcome = productService.forceDeleteWithHistory(id);
         String message = "Produs șters definitiv din catalog"
-                + (outcome.orderItemsPreserved() + outcome.purchaseItemsPreserved() > 0
-                        ? ". " + outcome.orderItemsPreserved() + " linie(i) de comandă și "
+                + (outcome.totalPreserved() > 0
+                        ? ". " + outcome.orderItemsPreserved() + " linie(i) de comandă, "
+                                + outcome.invoiceLinesPreserved() + " linie(i) de factură și "
                                 + outcome.purchaseItemsPreserved() + " linie(i) de achiziție au fost păstrate "
                                 + "neschimbate, pentru contabilitate și istoricul profitului."
                         : ".");
@@ -211,7 +212,7 @@ public class ProductController {
      * {@link #bulkDelete} response reports products that were deactivated
      * because of sales history, when the operator explicitly chooses to
      * remove them anyway, permanently, from the catalogue. Their historical
-     * order/purchase lines are preserved, not removed — see
+     * order, invoice and purchase lines are preserved, not removed — see
      * {@link ProductService#forceDeleteWithHistory(Long)}.
      */
     @PostMapping("/bulk-force-delete")
@@ -221,8 +222,9 @@ public class ProductController {
         ProductService.BulkForceDeleteResult result = productService.forceDeleteBulk(request.getIds());
         String message = result.deleted()
                 + (result.deleted() == 1 ? " produs șters definitiv din catalog" : " produse șterse definitiv din catalog")
-                + (result.orderItemsPreserved() + result.purchaseItemsPreserved() > 0
-                        ? ". " + result.orderItemsPreserved() + " linii de comandă și "
+                + (result.totalPreserved() > 0
+                        ? ". " + result.orderItemsPreserved() + " linii de comandă, "
+                                + result.invoiceLinesPreserved() + " linii de factură și "
                                 + result.purchaseItemsPreserved() + " linii de achiziție au fost păstrate "
                                 + "neschimbate, pentru contabilitate."
                         : ".");

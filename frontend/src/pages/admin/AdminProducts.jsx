@@ -47,12 +47,26 @@ const DELETE_KEYWORD = 'STERG';
  * force-delete override — deliberately different from {@link DELETE_KEYWORD}
  * so the two confirmations can never be typed on autopilot from muscle
  * memory. This path permanently removes the product itself from the
- * catalogue — its order/purchase history rows are NOT deleted; they are kept
- * exactly as they were (quantity, prices, product name) and only unlinked
- * from the live product, for accounting and profit-history purposes. See the
- * modal copy below for what the operator is actually confirming.
+ * catalogue — its order, invoice and purchase history rows are NOT deleted;
+ * they are kept exactly as they were (quantity, prices, product name) and only
+ * unlinked from the live product, for accounting and profit-history purposes.
+ * See the modal copy below for what the operator is actually confirming.
  */
 const FORCE_DELETE_KEYWORD = 'ISTORIC';
+
+/**
+ * Joins an enumeration the way Romanian writes one: commas between all but the
+ * last pair, "și" before the final item.
+ *
+ * Needed because the force-delete summary grew from two kinds of history line
+ * to three. `join(' și ')` produced "A și B și C", which reads as three
+ * separate statements rather than one list.
+ */
+function joinRo(parts) {
+  if (parts.length === 0) return '';
+  if (parts.length === 1) return parts[0];
+  return `${parts.slice(0, -1).join(', ')} și ${parts[parts.length - 1]}`;
+}
 
 /**
  * Stock/image quick filters (feature: filtre rapide) — genuine checkboxes, so
@@ -978,8 +992,8 @@ export default function AdminProducts() {
 
   /**
    * Runs after the operator types FORCE_DELETE_KEYWORD to confirm removing
-   * `forceCandidates` permanently, including their order/purchase history
-   * rows. Unlike confirmDelete, there is no fallback here: every candidate
+   * `forceCandidates` permanently, including their order, invoice and
+   * purchase history rows. Unlike confirmDelete, there is no fallback here: every candidate
    * offered at this step already has confirmed sales history, so the
    * backend always hard-deletes it — this endpoint never deactivates.
    */
@@ -1006,6 +1020,13 @@ export default function AdminProducts() {
               : `${result.orderItemsPreserved} linii de comandă`
           );
         }
+        if (result.invoiceLinesPreserved > 0) {
+          lineParts.push(
+            result.invoiceLinesPreserved === 1
+              ? '1 linie de factură'
+              : `${result.invoiceLinesPreserved} linii de factură`
+          );
+        }
         if (result.purchaseItemsPreserved > 0) {
           lineParts.push(
             result.purchaseItemsPreserved === 1
@@ -1016,7 +1037,7 @@ export default function AdminProducts() {
         toastMessage =
           `${result.deleted} ${result.deleted === 1 ? 'produs șters definitiv din catalog' : 'produse șterse definitiv din catalog'}` +
           (lineParts.length > 0
-            ? `. ${lineParts.join(' și ')} au fost păstrate neschimbate, pentru contabilitate.`
+            ? `. ${joinRo(lineParts)} au fost păstrate neschimbate, pentru contabilitate.`
             : '.');
       }
       setSelectedIds((prev) => {

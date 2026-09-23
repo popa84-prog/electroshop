@@ -124,7 +124,7 @@ export default function AdminSettings() {
       {error && (
         <div
           role="alert"
-          className="mb-4 flex items-center gap-2 rounded-[0.9rem] border border-[rgba(255,90,122,0.4)] bg-[rgba(255,90,122,0.1)] px-4 py-2.5 text-sm text-[#ff8fa8]"
+          className="mb-4 flex items-center gap-2 rounded-[0.9rem] border border-[rgba(255,90,122,0.4)] bg-[rgba(255,90,122,0.1)] px-4 py-2.5 text-sm text-[var(--xx-danger-3)]"
         >
           <GeoIcon name="alert" className="h-4 w-4 shrink-0" />
           {error}
@@ -133,7 +133,7 @@ export default function AdminSettings() {
       {saved && (
         <div
           role="status"
-          className="mb-4 flex items-center gap-2 rounded-[0.9rem] border border-[rgba(31,172,121,0.4)] bg-[rgba(31,172,121,0.1)] px-4 py-2.5 text-sm text-[#7ee9bd]"
+          className="mb-4 flex items-center gap-2 rounded-[0.9rem] border border-[rgba(31,172,121,0.4)] bg-[rgba(31,172,121,0.1)] px-4 py-2.5 text-sm text-[var(--xx-good-3)]"
         >
           <GeoIcon name="check" className="h-4 w-4 shrink-0" />
           Datele au fost salvate.
@@ -167,13 +167,13 @@ export default function AdminSettings() {
         </Section>
 
         <Section title="TVA & facturare" icon="document" delay={240}>
-          <label className="flex cursor-pointer items-center gap-2.5 rounded-[0.8rem] border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3.5 py-2.5 text-sm text-[#c9d4ff] transition-colors duration-200 hover:border-[rgba(34,232,245,0.4)] sm:col-span-2">
+          <label className="flex cursor-pointer items-center gap-2.5 rounded-[0.8rem] border border-[rgba(var(--xx-veil),0.1)] bg-[rgba(var(--xx-veil),0.04)] px-3.5 py-2.5 text-sm text-[var(--xx-info-3)] transition-colors duration-200 hover:border-[rgba(34,232,245,0.4)] sm:col-span-2">
             <input
               type="checkbox"
               name="vatPayer"
               checked={form.vatPayer}
               onChange={change}
-              className="h-4 w-4 cursor-pointer accent-[#22e8f5]"
+              className="h-4 w-4 cursor-pointer accent-[var(--xx-aqua)]"
             />
             Firmă plătitoare de TVA
           </label>
@@ -371,8 +371,8 @@ function TwoFactorSection() {
             role="alert"
             className={`mb-4 flex items-center gap-2 rounded-[0.9rem] border px-4 py-2.5 text-sm ${
               msg.type === 'error'
-                ? 'border-[rgba(255,90,122,0.4)] bg-[rgba(255,90,122,0.1)] text-[#ff8fa8]'
-                : 'border-[rgba(31,172,121,0.4)] bg-[rgba(31,172,121,0.1)] text-[#7ee9bd]'
+                ? 'border-[rgba(255,90,122,0.4)] bg-[rgba(255,90,122,0.1)] text-[var(--xx-danger-3)]'
+                : 'border-[rgba(31,172,121,0.4)] bg-[rgba(31,172,121,0.1)] text-[var(--xx-good-3)]'
             }`}
           >
             <GeoIcon name={msg.type === 'error' ? 'alert' : 'check'} className="h-4 w-4 shrink-0" />
@@ -384,7 +384,7 @@ function TwoFactorSection() {
           <HoloLoader inline size="sm" label="Se verifică starea 2FA" />
         ) : status?.twoFactorEnabled ? (
           <div className="space-y-3">
-            <p className="flex items-center gap-2 text-sm text-[#7ee9bd]">
+            <p className="flex items-center gap-2 text-sm text-[var(--xx-good-3)]">
               <GeoIcon name="check" className="h-4 w-4 shrink-0" />
               Autentificarea în doi pași este activă pe contul tău.
             </p>
@@ -425,7 +425,7 @@ function TwoFactorSection() {
                 Cheie secretă
               </p>
               <div className="mb-3 flex items-stretch gap-2">
-                <code className="block flex-1 break-all rounded-[0.7rem] border border-[rgba(255,255,255,0.12)] bg-[rgba(9,11,28,0.6)] px-3 py-2 font-mono text-sm text-[#e8ecff]">
+                <code className="block flex-1 break-all rounded-[0.7rem] border border-[rgba(var(--xx-veil),0.12)] bg-[rgba(var(--xx-panel),0.6)] px-3 py-2 font-mono text-sm text-[var(--xx-info-1)]">
                   {setup.secret}
                 </code>
                 <button
@@ -433,7 +433,7 @@ function TwoFactorSection() {
                   onClick={() => copy(setup.secret, 'secret')}
                   title="Copiază cheia secretă"
                   aria-label="Copiază cheia secretă"
-                  className="inline-flex w-10 shrink-0 items-center justify-center rounded-[0.7rem] border border-[rgba(255,255,255,0.12)] text-[#c9d4ff] transition-colors duration-200 hover:border-[rgba(34,232,245,0.5)] hover:text-[#22e8f5]"
+                  className="inline-flex w-10 shrink-0 items-center justify-center rounded-[0.7rem] border border-[rgba(var(--xx-veil),0.12)] text-[var(--xx-info-3)] transition-colors duration-200 hover:border-[rgba(34,232,245,0.5)] hover:text-[var(--xx-aqua)]"
                 >
                   <GeoIcon name={copied === 'secret' ? 'check' : 'layers'} className="h-4 w-4" />
                 </button>
@@ -443,7 +443,7 @@ function TwoFactorSection() {
                 Link otpauth://
               </p>
               <div className="flex items-stretch gap-2">
-                <code className="block flex-1 break-all rounded-[0.7rem] border border-[rgba(255,255,255,0.12)] bg-[rgba(9,11,28,0.6)] px-3 py-2 font-mono text-xs xx-ink-muted">
+                <code className="block flex-1 break-all rounded-[0.7rem] border border-[rgba(var(--xx-veil),0.12)] bg-[rgba(var(--xx-panel),0.6)] px-3 py-2 font-mono text-xs xx-ink-muted">
                   {setup.otpAuthUrl}
                 </code>
                 <button
@@ -451,13 +451,13 @@ function TwoFactorSection() {
                   onClick={() => copy(setup.otpAuthUrl, 'url')}
                   title="Copiază linkul otpauth"
                   aria-label="Copiază linkul otpauth"
-                  className="inline-flex w-10 shrink-0 items-center justify-center rounded-[0.7rem] border border-[rgba(255,255,255,0.12)] text-[#c9d4ff] transition-colors duration-200 hover:border-[rgba(34,232,245,0.5)] hover:text-[#22e8f5]"
+                  className="inline-flex w-10 shrink-0 items-center justify-center rounded-[0.7rem] border border-[rgba(var(--xx-veil),0.12)] text-[var(--xx-info-3)] transition-colors duration-200 hover:border-[rgba(34,232,245,0.5)] hover:text-[var(--xx-aqua)]"
                 >
                   <GeoIcon name={copied === 'url' ? 'check' : 'layers'} className="h-4 w-4" />
                 </button>
               </div>
 
-              <p aria-live="polite" className="mt-2 h-4 text-xs text-[#7ee9bd]">
+              <p aria-live="polite" className="mt-2 h-4 text-xs text-[var(--xx-good-3)]">
                 {copied ? 'Copiat în clipboard.' : ''}
               </p>
             </div>
@@ -512,7 +512,7 @@ function TwoFactorSection() {
           </NeonButton>
         )}
 
-        <div className="mt-5 border-t border-[rgba(255,255,255,0.08)] pt-4">
+        <div className="mt-5 border-t border-[rgba(var(--xx-veil),0.08)] pt-4">
           <p className="mb-2 text-xs xx-ink-muted">
             Ai suspiciunea că un dispozitiv sau o sesiune neautorizată are acces la contul tău?
           </p>
@@ -543,8 +543,8 @@ function TwoFactorSection() {
       >
         <div className="space-y-4">
           <div className="flex items-start gap-3 rounded-[0.9rem] border border-[rgba(255,90,122,0.4)] bg-[rgba(255,90,122,0.1)] p-4">
-            <GeoIcon name="alert" className="mt-0.5 h-5 w-5 shrink-0" accent="#ff8fa8" />
-            <p className="text-sm text-[#ff8fa8]">
+            <GeoIcon name="alert" className="mt-0.5 h-5 w-5 shrink-0" accent="var(--xx-danger-3)" />
+            <p className="text-sm text-[var(--xx-danger-3)]">
               Toate sesiunile active de pe toate dispozitivele vor fi închise, inclusiv aceasta. Vei
               fi redirecționat către pagina de autentificare și va trebui să te conectezi din nou.
             </p>

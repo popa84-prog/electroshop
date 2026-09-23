@@ -556,13 +556,13 @@ export default function AdminOrders() {
         )}
 
         <div className="card overflow-x-auto">
-          <table className="min-w-full divide-y divide-[rgba(255,255,255,0.08)] text-sm">
+          <table className="min-w-full divide-y divide-[rgba(var(--xx-veil),0.08)] text-sm">
               <thead className="text-left">
-                <tr className="bg-[rgba(255,255,255,0.03)]">
+                <tr className="bg-[rgba(var(--xx-veil),0.03)]">
                   <th className="w-10 px-3 py-3">
                     <input
                       type="checkbox"
-                      className="h-4 w-4 cursor-pointer rounded accent-[#22e8f5]"
+                      className="h-4 w-4 cursor-pointer rounded accent-[var(--xx-aqua)]"
                       checked={allOnPageSelected}
                       ref={(el) => {
                         // Starea intermediară spune „unele, nu toate” — fără ea,
@@ -583,13 +583,13 @@ export default function AdminOrders() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[rgba(255,255,255,0.07)]">
+              <tbody className="divide-y divide-[rgba(var(--xx-veil),0.07)]">
                 {orders.map((o) => (
                   <tr key={o.id} className={selectedIds.has(o.id) ? 'bg-[rgba(34,232,245,0.06)]' : ''}>
                     <td className="w-10 px-3 py-3">
                       <input
                         type="checkbox"
-                        className="h-4 w-4 cursor-pointer rounded accent-[#22e8f5]"
+                        className="h-4 w-4 cursor-pointer rounded accent-[var(--xx-aqua)]"
                         checked={selectedIds.has(o.id)}
                         onChange={() => toggleOne(o.id)}
                         aria-label={`Selectează comanda #${o.id}`}
@@ -658,7 +658,7 @@ export default function AdminOrders() {
                             onClick={() => downloadInvoice(o)}
                             title={`Descarcă factura ${o.invoiceSeries} ${o.invoiceNumber}`}
                             aria-label={`Descarcă factura comenzii #${o.id}`}
-                            className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.5)] hover:text-[color:var(--xx-cyan)]"
+                            className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.5)] hover:text-[color:var(--xx-cyan)]"
                           >
                             <GeoIcon name="document" className="h-4 w-4" accent="currentColor" />
                           </button>
@@ -668,7 +668,7 @@ export default function AdminOrders() {
                             onClick={() => issueInvoice(o)}
                             title="Emite factura (consumă un număr fiscal)"
                             aria-label={`Emite factura pentru comanda #${o.id}`}
-                            className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(110,247,168,0.55)] hover:text-[#6ef7a8]"
+                            className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(110,247,168,0.55)] hover:text-[var(--xx-lime)]"
                           >
                             <GeoIcon name="check" className="h-4 w-4" accent="currentColor" />
                           </button>
@@ -678,7 +678,7 @@ export default function AdminOrders() {
                           onClick={() => setDetail(o)}
                           title="Detalii comandă"
                           aria-label={`Detaliile comenzii #${o.id}`}
-                          className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(46,123,255,0.5)] hover:text-[#7fb0ff]"
+                          className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(46,123,255,0.5)] hover:text-[var(--xx-link)]"
                         >
                           <GeoIcon name="zoom" className="h-4 w-4" accent="currentColor" />
                         </button>
@@ -687,7 +687,7 @@ export default function AdminOrders() {
                           onClick={() => handleDelete(o)}
                           title="Șterge comanda"
                           aria-label={`Șterge comanda #${o.id}`}
-                          className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.55)] hover:text-[color:var(--xx-red)]"
+                          className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.55)] hover:text-[color:var(--xx-red)]"
                         >
                           <GeoIcon name="trash" className="h-4 w-4" accent="currentColor" />
                         </button>
@@ -725,7 +725,7 @@ export default function AdminOrders() {
               </span>
             </div>
 
-            <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] p-3 text-sm">
+            <div className="rounded-xl border border-[rgba(var(--xx-veil),0.1)] bg-[rgba(var(--xx-veil),0.04)] p-3 text-sm">
               <p className="text-xs font-semibold uppercase tracking-[0.14em] xx-ink-dim">
                 Adresă de livrare
               </p>
@@ -736,13 +736,13 @@ export default function AdminOrders() {
               {detail.items.map((it) => (
                 <div
                   key={it.id}
-                  className="flex items-center gap-3 rounded-xl border border-[rgba(255,255,255,0.09)] bg-[rgba(255,255,255,0.04)] p-2"
+                  className="flex items-center gap-3 rounded-xl border border-[rgba(var(--xx-veil),0.09)] bg-[rgba(var(--xx-veil),0.04)] p-2"
                 >
                   <img
                     src={resolveImage(it.imageUrl)}
                     alt={it.productName}
                     loading="lazy"
-                    className="h-10 w-10 rounded-lg border border-[rgba(255,255,255,0.1)] object-cover"
+                    className="h-10 w-10 rounded-lg border border-[rgba(var(--xx-veil),0.1)] object-cover"
                   />
                   <div className="flex-1 text-sm">
                     <p className="font-medium text-[color:var(--xx-ink)]">{it.productName}</p>
@@ -757,7 +757,7 @@ export default function AdminOrders() {
               ))}
             </div>
 
-            <div className="flex items-center justify-between border-t border-[rgba(255,255,255,0.12)] pt-3">
+            <div className="flex items-center justify-between border-t border-[rgba(var(--xx-veil),0.12)] pt-3">
               <span className="font-semibold xx-ink-muted">Total</span>
               <span className="font-display text-lg font-bold text-[color:var(--xx-ink)]">
                 {formatPrice(detail.totalAmount)}

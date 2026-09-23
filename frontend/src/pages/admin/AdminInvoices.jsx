@@ -250,7 +250,7 @@ export default function AdminInvoices() {
             }
           />
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-[rgba(255,255,255,0.1)]">
+          <div className="overflow-x-auto rounded-xl border border-[rgba(var(--xx-veil),0.1)]">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[color:var(--xx-ink-dim)]">
@@ -266,7 +266,7 @@ export default function AdminInvoices() {
                 {rows.map((inv) => (
                   <tr
                     key={inv.id}
-                    className="border-t border-[rgba(255,255,255,0.07)] align-top"
+                    className="border-t border-[rgba(var(--xx-veil),0.07)] align-top"
                   >
                     <td className="px-4 py-3">
                       <div className="font-medium text-[color:var(--xx-ink)]">
@@ -344,7 +344,7 @@ export default function AdminInvoices() {
 
 function TotalCard({ label, value, hint }) {
   return (
-    <div className="rounded-xl border border-[rgba(255,255,255,0.1)] p-4">
+    <div className="rounded-xl border border-[rgba(var(--xx-veil),0.1)] p-4">
       <div className="text-xs uppercase tracking-wide text-[color:var(--xx-ink-dim)]">{label}</div>
       <div className="mt-1 font-display text-xl text-[color:var(--xx-ink)]">{value}</div>
       {hint && <div className="mt-1 text-xs text-[color:var(--xx-ink-dim)]">{hint}</div>}
@@ -359,7 +359,7 @@ function FilterSelect({ label, value, onChange, options }) {
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-lg border border-[rgba(255,255,255,0.15)] bg-transparent px-3 py-2 text-sm text-[color:var(--xx-ink)]"
+        className="rounded-lg border border-[rgba(var(--xx-veil),0.15)] bg-transparent px-3 py-2 text-sm text-[color:var(--xx-ink)]"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -379,7 +379,7 @@ function FilterDate({ label, value, onChange }) {
         type="date"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-lg border border-[rgba(255,255,255,0.15)] bg-transparent px-3 py-2 text-sm text-[color:var(--xx-ink)]"
+        className="rounded-lg border border-[rgba(var(--xx-veil),0.15)] bg-transparent px-3 py-2 text-sm text-[color:var(--xx-ink)]"
       />
     </label>
   );

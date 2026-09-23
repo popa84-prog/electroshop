@@ -128,9 +128,9 @@ export default function AdminAuditLog() {
       ) : (
         <Reveal>
           <div className="card overflow-x-auto">
-            <table className="min-w-full divide-y divide-[rgba(255,255,255,0.08)] text-sm">
+            <table className="min-w-full divide-y divide-[rgba(var(--xx-veil),0.08)] text-sm">
               <thead className="text-left">
-                <tr className="bg-[rgba(255,255,255,0.03)]">
+                <tr className="bg-[rgba(var(--xx-veil),0.03)]">
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] xx-ink-muted">
                     Data
                   </th>
@@ -148,13 +148,13 @@ export default function AdminAuditLog() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[rgba(255,255,255,0.06)]">
+              <tbody className="divide-y divide-[rgba(var(--xx-veil),0.06)]">
                 {logs.map((l) => (
                   <tr key={l.id} className="transition-colors duration-200">
                     <td className="whitespace-nowrap px-4 py-3 font-mono text-xs xx-ink-muted">
                       {formatDate(l.createdAt)}
                     </td>
-                    <td className="px-4 py-3 font-medium text-[#e8ecff]">{l.actor}</td>
+                    <td className="px-4 py-3 font-medium text-[var(--xx-info-1)]">{l.actor}</td>
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold ${

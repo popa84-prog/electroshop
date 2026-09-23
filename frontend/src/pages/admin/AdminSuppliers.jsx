@@ -155,9 +155,9 @@ export default function AdminSuppliers() {
         </div>
       ) : (
         <div className="card overflow-x-auto">
-            <table className="min-w-full divide-y divide-[rgba(255,255,255,0.08)] text-sm">
+            <table className="min-w-full divide-y divide-[rgba(var(--xx-veil),0.08)] text-sm">
               <thead className="text-left">
-                <tr className="bg-[rgba(255,255,255,0.03)]">
+                <tr className="bg-[rgba(var(--xx-veil),0.03)]">
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Nume</th>
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">
                     Persoană contact
@@ -170,7 +170,7 @@ export default function AdminSuppliers() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[rgba(255,255,255,0.07)]">
+              <tbody className="divide-y divide-[rgba(var(--xx-veil),0.07)]">
                 {suppliers.map((s) => (
                   <tr key={s.id}>
                     <td className="px-4 py-3 font-medium text-[color:var(--xx-ink)]">{s.name}</td>
@@ -185,7 +185,7 @@ export default function AdminSuppliers() {
                           onClick={() => openEdit(s)}
                           title="Editează furnizorul"
                           aria-label={`Editează furnizorul ${s.name}`}
-                          className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(46,123,255,0.5)] hover:text-[#7fb0ff]"
+                          className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(46,123,255,0.5)] hover:text-[var(--xx-link)]"
                         >
                           <GeoIcon name="gear" className="h-4 w-4" accent="currentColor" />
                         </button>
@@ -194,7 +194,7 @@ export default function AdminSuppliers() {
                           onClick={() => handleDelete(s)}
                           title="Șterge furnizorul"
                           aria-label={`Șterge furnizorul ${s.name}`}
-                          className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.55)] hover:text-[color:var(--xx-red)]"
+                          className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.55)] hover:text-[color:var(--xx-red)]"
                         >
                           <GeoIcon name="trash" className="h-4 w-4" accent="currentColor" />
                         </button>
@@ -215,7 +215,7 @@ export default function AdminSuppliers() {
         onClose={() => setModalOpen(false)}
       >
         {error && (
-          <div className="mb-4 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-4 py-2 text-sm text-[#ffc2cc]">
+          <div className="mb-4 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-4 py-2 text-sm text-[var(--xx-danger-1)]">
             {error}
           </div>
         )}

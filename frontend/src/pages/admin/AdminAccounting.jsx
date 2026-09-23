@@ -43,7 +43,7 @@ import { formatPrice } from '../../utils/format';
  * light-theme hexes it used to carry.
  *
  * On the chart colours specifically: sales take the green series slot
- * (`#1fac79`) and purchases the magenta one (`#d032b8`) rather than the obvious
+ * (`var(--xx-good-6)`) and purchases the magenta one (`var(--xx-magenta-4)`) rather than the obvious
  * green/red pairing. Red is a *reserved status* colour in this design system
  * and is never spent on a data series; magenta is also the safer choice here,
  * since green against red is the one pair a deuteranopic operator cannot
@@ -176,7 +176,7 @@ export default function AdminAccounting() {
               key={preset.key}
               type="button"
               onClick={() => applyPreset(preset.key)}
-              className="rounded-full border border-[rgba(255,255,255,0.12)] px-3 py-1.5 text-xs font-medium text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.5)] hover:text-[color:var(--xx-ink)]"
+              className="rounded-full border border-[rgba(var(--xx-veil),0.12)] px-3 py-1.5 text-xs font-medium text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.5)] hover:text-[color:var(--xx-ink)]"
             >
               {preset.label}
             </button>

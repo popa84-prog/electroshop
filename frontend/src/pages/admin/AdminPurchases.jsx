@@ -189,9 +189,9 @@ export default function AdminPurchases() {
         </div>
       ) : (
         <div className="card overflow-x-auto">
-          <table className="min-w-full divide-y divide-[rgba(255,255,255,0.08)] text-sm">
+          <table className="min-w-full divide-y divide-[rgba(var(--xx-veil),0.08)] text-sm">
               <thead className="text-left">
-                <tr className="bg-[rgba(255,255,255,0.03)]">
+                <tr className="bg-[rgba(var(--xx-veil),0.03)]">
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">#</th>
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Data</th>
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Furnizor</th>
@@ -204,7 +204,7 @@ export default function AdminPurchases() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[rgba(255,255,255,0.07)]">
+              <tbody className="divide-y divide-[rgba(var(--xx-veil),0.07)]">
                 {purchases.map((p) => (
                   <tr key={p.id}>
                     <td className="px-4 py-3 font-mono text-xs font-semibold text-[color:var(--xx-cyan)]">
@@ -231,7 +231,7 @@ export default function AdminPurchases() {
                             onClick={() => productService.downloadReceptionNote(p.id)}
                             title={`Descarcă ${p.receptionNumber}`}
                             aria-label={`Descarcă nota de intrare-recepție ${p.receptionNumber}`}
-                            className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(13,148,136,0.6)] hover:text-[#5eead4]"
+                            className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(13,148,136,0.6)] hover:text-[var(--xx-aqua-3)]"
                           >
                             <GeoIcon name="document" className="h-4 w-4" accent="currentColor" />
                           </button>
@@ -241,7 +241,7 @@ export default function AdminPurchases() {
                           onClick={() => setDetail(p)}
                           title="Detaliile intrării"
                           aria-label={`Detaliile intrării #${p.id}`}
-                          className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(46,123,255,0.5)] hover:text-[#7fb0ff]"
+                          className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(46,123,255,0.5)] hover:text-[var(--xx-link)]"
                         >
                           <GeoIcon name="zoom" className="h-4 w-4" accent="currentColor" />
                         </button>
@@ -250,7 +250,7 @@ export default function AdminPurchases() {
                           onClick={() => handleDelete(p)}
                           title="Șterge intrarea"
                           aria-label={`Șterge intrarea #${p.id}`}
-                          className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.55)] hover:text-[color:var(--xx-red)]"
+                          className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.55)] hover:text-[color:var(--xx-red)]"
                         >
                           <GeoIcon name="trash" className="h-4 w-4" accent="currentColor" />
                         </button>
@@ -273,7 +273,7 @@ export default function AdminPurchases() {
         maxWidth="max-w-3xl"
       >
         {error && (
-          <div className="mb-4 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-4 py-2 text-sm text-[#ffc2cc]">
+          <div className="mb-4 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-4 py-2 text-sm text-[var(--xx-danger-1)]">
             {error}
           </div>
         )}
@@ -338,7 +338,7 @@ export default function AdminPurchases() {
               {form.items.map((it, idx) => (
                 <div
                   key={idx}
-                  className="flex flex-wrap items-center gap-2 rounded-xl border border-[rgba(255,255,255,0.09)] bg-[rgba(255,255,255,0.04)] p-2"
+                  className="flex flex-wrap items-center gap-2 rounded-xl border border-[rgba(var(--xx-veil),0.09)] bg-[rgba(var(--xx-veil),0.04)] p-2"
                 >
                   <select
                     className="input min-w-[160px] flex-1"
@@ -381,7 +381,7 @@ export default function AdminPurchases() {
                       onClick={() => removeItemRow(idx)}
                       aria-label={`Elimină rândul ${idx + 1}`}
                       title="Elimină rândul"
-                      className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.55)] hover:text-[color:var(--xx-red)]"
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.55)] hover:text-[color:var(--xx-red)]"
                     >
                       <GeoIcon name="close" className="h-3.5 w-3.5" accent="currentColor" />
                     </button>
@@ -435,7 +435,7 @@ export default function AdminPurchases() {
       >
         {detail && (
           <div className="space-y-3">
-            <dl className="grid grid-cols-1 gap-2 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] p-3 text-sm sm:grid-cols-2">
+            <dl className="grid grid-cols-1 gap-2 rounded-xl border border-[rgba(var(--xx-veil),0.1)] bg-[rgba(var(--xx-veil),0.04)] p-3 text-sm sm:grid-cols-2">
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-[0.14em] xx-ink-dim">Furnizor</dt>
                 <dd className="text-[color:var(--xx-ink)]">{detail.supplierName}</dd>
@@ -460,7 +460,7 @@ export default function AdminPurchases() {
               {detail.items.map((it) => (
                 <div
                   key={it.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-[rgba(255,255,255,0.09)] bg-[rgba(255,255,255,0.04)] p-2 text-sm"
+                  className="flex items-center justify-between gap-3 rounded-xl border border-[rgba(var(--xx-veil),0.09)] bg-[rgba(var(--xx-veil),0.04)] p-2 text-sm"
                 >
                   <span className="flex-1 font-medium text-[color:var(--xx-ink)]">{it.productName}</span>
                   <span className="text-xs tabular-nums xx-ink-dim">
@@ -473,7 +473,7 @@ export default function AdminPurchases() {
               ))}
             </div>
 
-            <div className="flex items-center justify-between border-t border-[rgba(255,255,255,0.12)] pt-3">
+            <div className="flex items-center justify-between border-t border-[rgba(var(--xx-veil),0.12)] pt-3">
               <span className="font-semibold xx-ink-muted">Total</span>
               <span className="font-display text-lg font-bold text-[color:var(--xx-ink)]">
                 {formatPrice(detail.totalAmount)}

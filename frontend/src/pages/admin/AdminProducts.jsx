@@ -1288,7 +1288,7 @@ export default function AdminProducts() {
         <div
           role="group"
           aria-label="Mod de afișare"
-          className="ml-auto flex items-center gap-1 rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] p-1"
+          className="ml-auto flex items-center gap-1 rounded-xl border border-[rgba(var(--xx-veil),0.12)] bg-[rgba(var(--xx-veil),0.04)] p-1"
         >
           {[
             { mode: 'table', icon: 'layers', label: 'Tabel' },
@@ -1339,12 +1339,12 @@ export default function AdminProducts() {
                     className={`flex h-9 cursor-pointer items-center gap-2 rounded-full border px-3 text-xs font-semibold transition-all duration-xx ease-xx ${
                       checked
                         ? 'border-[rgba(34,232,245,0.55)] bg-[rgba(34,232,245,0.14)] text-[color:var(--xx-ink)] shadow-[0_0_26px_-10px_rgba(34,232,245,0.9)]'
-                        : 'border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] hover:border-[rgba(122,60,255,0.5)] hover:text-[color:var(--xx-ink)]'
+                        : 'border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-muted)] hover:border-[rgba(122,60,255,0.5)] hover:text-[color:var(--xx-ink)]'
                     }`}
                   >
                     <input
                       type="checkbox"
-                      className="h-3.5 w-3.5 shrink-0 cursor-pointer rounded accent-[#22e8f5]"
+                      className="h-3.5 w-3.5 shrink-0 cursor-pointer rounded accent-[var(--xx-aqua)]"
                       checked={checked}
                       onChange={() => toggleStockFilter(f.key)}
                     />
@@ -1373,7 +1373,7 @@ export default function AdminProducts() {
                   className={`flex h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-all duration-xx ease-xx ${
                     statusFilter === f.key
                       ? 'border-[rgba(34,232,245,0.55)] bg-[rgba(34,232,245,0.14)] text-[color:var(--xx-ink)] shadow-[0_0_26px_-10px_rgba(34,232,245,0.9)]'
-                      : 'border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] hover:border-[rgba(122,60,255,0.5)] hover:text-[color:var(--xx-ink)]'
+                      : 'border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-muted)] hover:border-[rgba(122,60,255,0.5)] hover:text-[color:var(--xx-ink)]'
                   }`}
                 >
                   <GeoIcon name={f.icon} className="h-3.5 w-3.5" accent="currentColor" />
@@ -1489,14 +1489,14 @@ export default function AdminProducts() {
         </div>
       ) : (
         <div className="card overflow-x-auto">
-          <table className="min-w-full divide-y divide-[rgba(255,255,255,0.08)] text-sm">
+          <table className="min-w-full divide-y divide-[rgba(var(--xx-veil),0.08)] text-sm">
             <thead className="text-left">
-              <tr className="bg-[rgba(255,255,255,0.03)]">
+              <tr className="bg-[rgba(var(--xx-veil),0.03)]">
                 <th className="w-10 px-4 py-3">
                   <input
                     ref={selectAllRef}
                     type="checkbox"
-                    className="h-4 w-4 cursor-pointer rounded accent-[#22e8f5]"
+                    className="h-4 w-4 cursor-pointer rounded accent-[var(--xx-aqua)]"
                     checked={allOnPageSelected}
                     onChange={toggleAllOnPage}
                     aria-label="Selectează toate produsele de pe această pagină"
@@ -1515,7 +1515,7 @@ export default function AdminProducts() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[rgba(255,255,255,0.07)]">
+            <tbody className="divide-y divide-[rgba(var(--xx-veil),0.07)]">
               {products.map((p) => (
                 <tr
                   key={p.id}
@@ -1528,7 +1528,7 @@ export default function AdminProducts() {
                   <td className="px-4 py-3">
                     <input
                       type="checkbox"
-                      className="h-4 w-4 cursor-pointer rounded accent-[#22e8f5]"
+                      className="h-4 w-4 cursor-pointer rounded accent-[var(--xx-aqua)]"
                       checked={selectedIds.has(p.id)}
                       onChange={() => toggleOne(p.id)}
                       aria-label={`Selectează ${p.name}`}
@@ -1545,7 +1545,7 @@ export default function AdminProducts() {
                         src={resolveImage(p.imageUrl)}
                         alt={p.name}
                         loading="lazy"
-                        className="h-10 w-10 rounded-lg border border-[rgba(255,255,255,0.12)] object-cover transition-all duration-xx ease-xx group-hover:border-[rgba(34,232,245,0.5)] group-hover:shadow-[0_0_22px_-6px_rgba(34,232,245,0.8)]"
+                        className="h-10 w-10 rounded-lg border border-[rgba(var(--xx-veil),0.12)] object-cover transition-all duration-xx ease-xx group-hover:border-[rgba(34,232,245,0.5)] group-hover:shadow-[0_0_22px_-6px_rgba(34,232,245,0.8)]"
                       />
                       <div>
                         <p className="flex items-center gap-1.5 font-medium text-[color:var(--xx-ink)] transition-colors duration-xx group-hover:text-[color:var(--xx-cyan)]">
@@ -1600,7 +1600,7 @@ export default function AdminProducts() {
                   </td>
                   <td className="px-4 py-3">
                     {p.profit != null ? (
-                      <span className="font-semibold text-[#7ee9bd]">
+                      <span className="font-semibold text-[var(--xx-good-3)]">
                         {formatPrice(p.profit)}
                         {p.marginPercent != null && (
                           <span className="ml-1 text-xs font-normal xx-ink-dim">
@@ -1638,8 +1638,8 @@ export default function AdminProducts() {
                         <span
                           className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
                             p.stockQuantity > 0
-                              ? 'border border-[rgba(31,172,121,0.42)] bg-[rgba(31,172,121,0.16)] text-[#93e9c4]'
-                              : 'border border-[rgba(184,47,60,0.42)] bg-[rgba(184,47,60,0.16)] text-[#ffb3bd]'
+                              ? 'border border-[rgba(31,172,121,0.42)] bg-[rgba(31,172,121,0.16)] text-[var(--xx-good-2)]'
+                              : 'border border-[rgba(184,47,60,0.42)] bg-[rgba(184,47,60,0.16)] text-[var(--xx-danger-2)]'
                           }`}
                         >
                           <span aria-hidden="true">{p.stockQuantity > 0 ? '✓' : '✕'}</span>
@@ -1660,12 +1660,12 @@ export default function AdminProducts() {
                             : 'Adaugă în vânzare — poți adăuga mai multe produse înainte de a finaliza'
                         }
                         aria-label={`Adaugă ${p.name} în vânzare`}
-                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.14)] px-2.5 text-xs font-semibold text-[#93e9c4] transition-all duration-xx ease-xx hover:border-[rgba(31,172,121,0.75)] hover:shadow-[0_0_24px_-8px_rgba(31,172,121,0.95)] disabled:cursor-not-allowed disabled:border-[rgba(255,255,255,0.1)] disabled:bg-transparent disabled:text-[color:var(--xx-ink-dim)] disabled:shadow-none"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.14)] px-2.5 text-xs font-semibold text-[var(--xx-good-2)] transition-all duration-xx ease-xx hover:border-[rgba(31,172,121,0.75)] hover:shadow-[0_0_24px_-8px_rgba(31,172,121,0.95)] disabled:cursor-not-allowed disabled:border-[rgba(var(--xx-veil),0.1)] disabled:bg-transparent disabled:text-[color:var(--xx-ink-dim)] disabled:shadow-none"
                       >
                         <GeoIcon name="coins" className="h-4 w-4" accent="currentColor" />
                         <span className="hidden xl:inline">Vândut</span>
                         {saleCart.some((l) => l.productId === p.id) && (
-                          <span className="rounded-full bg-[rgba(255,255,255,0.18)] px-1.5 text-[0.65rem] font-bold">
+                          <span className="rounded-full bg-[rgba(var(--xx-veil),0.18)] px-1.5 text-[0.65rem] font-bold">
                             {saleCart.find((l) => l.productId === p.id).quantity}
                           </span>
                         )}
@@ -1675,7 +1675,7 @@ export default function AdminProducts() {
                         onClick={() => openPreview(p)}
                         title="Previzualizează produsul"
                         aria-label={`Previzualizează ${p.name}`}
-                        className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.5)] hover:text-[color:var(--xx-cyan)]"
+                        className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.5)] hover:text-[color:var(--xx-cyan)]"
                       >
                         <GeoIcon name="zoom" className="h-4 w-4" accent="currentColor" />
                       </button>
@@ -1684,7 +1684,7 @@ export default function AdminProducts() {
                         onClick={() => openEdit(p)}
                         title="Editează produsul"
                         aria-label={`Editează ${p.name}`}
-                        className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(46,123,255,0.5)] hover:text-[#7fb0ff]"
+                        className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(46,123,255,0.5)] hover:text-[var(--xx-link)]"
                       >
                         <GeoIcon name="gear" className="h-4 w-4" accent="currentColor" />
                       </button>
@@ -1694,7 +1694,7 @@ export default function AdminProducts() {
                         disabled={activeBusyId === p.id}
                         title={p.active ? 'Dezactivează produsul' : 'Activează produsul'}
                         aria-label={`${p.active ? 'Dezactivează' : 'Activează'} ${p.name}`}
-                        className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(122,60,255,0.55)] hover:text-[#c4a8ff] disabled:opacity-40"
+                        className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(122,60,255,0.55)] hover:text-[var(--xx-violet-2)] disabled:opacity-40"
                       >
                         <GeoIcon
                           name={p.active ? 'clock' : 'bolt'}
@@ -1707,7 +1707,7 @@ export default function AdminProducts() {
                         onClick={() => askDelete([p])}
                         title="Șterge produsul"
                         aria-label={`Șterge ${p.name}`}
-                        className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.55)] hover:text-[color:var(--xx-red)]"
+                        className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.55)] hover:text-[color:var(--xx-red)]"
                       >
                         <GeoIcon name="trash" className="h-4 w-4" accent="currentColor" />
                       </button>
@@ -1725,10 +1725,10 @@ export default function AdminProducts() {
           bottom of the viewport) while the operator searches/paginates to add more
           products, so building "3 of this, 1 of that" doesn't lose progress. */}
       {saleCart.length > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-40 animate-xx-materialize border-t border-[rgba(31,172,121,0.4)] bg-[rgba(9,11,28,0.86)] px-4 py-3 backdrop-blur-xl shadow-[0_-18px_50px_-20px_rgba(31,172,121,0.55)]">
+        <div className="fixed inset-x-0 bottom-0 z-40 animate-xx-materialize border-t border-[rgba(31,172,121,0.4)] bg-[rgba(var(--xx-panel),0.86)] px-4 py-3 backdrop-blur-xl shadow-[0_-18px_50px_-20px_rgba(31,172,121,0.55)]">
           <div className="mx-auto flex max-w-[1680px] flex-wrap items-center gap-3">
             <span className="flex items-center gap-2 text-sm font-medium text-[color:var(--xx-ink)]">
-              <GeoIcon name="cart" className="h-5 w-5" accent="#3ddc9a" />
+              <GeoIcon name="cart" className="h-5 w-5" accent="var(--xx-good-5)" />
               {saleCartCount} {saleCartCount === 1 ? 'produs' : 'produse'} · {saleCart.length}{' '}
               {saleCart.length === 1 ? 'articol' : 'articole'} distincte
             </span>
@@ -1777,7 +1777,7 @@ export default function AdminProducts() {
                 return (
                   <div
                     key={line.productId}
-                    className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] p-3"
+                    className="rounded-xl border border-[rgba(var(--xx-veil),0.1)] bg-[rgba(var(--xx-veil),0.04)] p-3"
                   >
                     {/* Top row — full product identity, never truncated, so two
                         variants of the same phone (different color/storage) can
@@ -1786,7 +1786,7 @@ export default function AdminProducts() {
                       <img
                         src={resolveImage(line.imageUrl)}
                         alt={line.name}
-                        className="h-20 w-20 shrink-0 rounded-lg border border-[rgba(255,255,255,0.12)] object-cover"
+                        className="h-20 w-20 shrink-0 rounded-lg border border-[rgba(var(--xx-veil),0.12)] object-cover"
                       />
                       <div className="min-w-0 flex-1">
                         <p className="break-words text-sm font-medium leading-snug text-[color:var(--xx-ink)]">
@@ -1818,7 +1818,7 @@ export default function AdminProducts() {
                         type="button"
                         onClick={() => removeFromSaleCart(line.productId)}
                         disabled={saleCartBusy}
-                        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.55)] hover:text-[color:var(--xx-red)] disabled:opacity-40"
+                        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.55)] hover:text-[color:var(--xx-red)] disabled:opacity-40"
                         title="Elimină din vânzare"
                         aria-label={`Elimină ${line.name} din vânzare`}
                       >
@@ -1827,7 +1827,7 @@ export default function AdminProducts() {
                     </div>
                     {/* Bottom row — the editable quantity/price and the computed
                         line total, right-aligned under the product identity. */}
-                    <div className="mt-3 flex items-center justify-end gap-3 border-t border-[rgba(255,255,255,0.08)] pt-3">
+                    <div className="mt-3 flex items-center justify-end gap-3 border-t border-[rgba(var(--xx-veil),0.08)] pt-3">
                       <label className="flex items-center gap-2 text-xs xx-ink-dim">
                         Cantitate
                         <input
@@ -1872,7 +1872,7 @@ export default function AdminProducts() {
           {saleCartError && (
             <p
               role="alert"
-              className="rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-3 py-2 text-sm font-medium text-[#ffc2cc]"
+              className="rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-3 py-2 text-sm font-medium text-[var(--xx-danger-1)]"
             >
               {saleCartError}
             </p>
@@ -1946,7 +1946,7 @@ export default function AdminProducts() {
         onClose={closeDelete}
         maxWidth="max-w-lg"
       >
-        <div className="flex items-start gap-3 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.1)] px-4 py-3 text-sm text-[#ffc2cc]">
+        <div className="flex items-start gap-3 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.1)] px-4 py-3 text-sm text-[var(--xx-danger-1)]">
           <GeoIcon name="alert" className="mt-0.5 h-5 w-5 shrink-0" accent="currentColor" />
           <span>
             Ești pe cale să ștergi definitiv{' '}
@@ -1961,7 +1961,7 @@ export default function AdminProducts() {
         {deleteError && (
           <div
             role="alert"
-            className="mt-3 rounded-xl border border-[rgba(255,84,112,0.5)] bg-[rgba(255,84,112,0.16)] px-4 py-2 text-sm text-[#ffc2cc]"
+            className="mt-3 rounded-xl border border-[rgba(255,84,112,0.5)] bg-[rgba(255,84,112,0.16)] px-4 py-2 text-sm text-[var(--xx-danger-1)]"
           >
             {deleteError}
           </div>
@@ -2028,7 +2028,7 @@ export default function AdminProducts() {
             </li>
           ))}
         </ul>
-        <div className="mt-3 flex items-start gap-3 rounded-xl border border-[rgba(34,197,148,0.4)] bg-[rgba(34,197,148,0.08)] px-4 py-3 text-sm text-[#b8ffd6]">
+        <div className="mt-3 flex items-start gap-3 rounded-xl border border-[rgba(34,197,148,0.4)] bg-[rgba(34,197,148,0.08)] px-4 py-3 text-sm text-[var(--xx-good-1)]">
           <GeoIcon name="check" className="mt-0.5 h-5 w-5 shrink-0" accent="currentColor" />
           <span>
             Comenzile și achizițiile care conțin acest produs <strong className="text-[color:var(--xx-ink)]">rămân neschimbate</strong> —
@@ -2037,7 +2037,7 @@ export default function AdminProducts() {
             regenerează identic.
           </span>
         </div>
-        <div className="mt-3 flex items-start gap-3 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.1)] px-4 py-3 text-sm text-[#ffc2cc]">
+        <div className="mt-3 flex items-start gap-3 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.1)] px-4 py-3 text-sm text-[var(--xx-danger-1)]">
           <GeoIcon name="alert" className="mt-0.5 h-5 w-5 shrink-0" accent="currentColor" />
           <span>
             Ce se pierde este doar prezența produsului în catalog: nu mai poate fi editat, restocat,
@@ -2051,7 +2051,7 @@ export default function AdminProducts() {
         {forceError && (
           <div
             role="alert"
-            className="mt-3 rounded-xl border border-[rgba(255,84,112,0.5)] bg-[rgba(255,84,112,0.16)] px-4 py-2 text-sm text-[#ffc2cc]"
+            className="mt-3 rounded-xl border border-[rgba(255,84,112,0.5)] bg-[rgba(255,84,112,0.16)] px-4 py-2 text-sm text-[var(--xx-danger-1)]"
           >
             {forceError}
           </div>
@@ -2098,7 +2098,7 @@ export default function AdminProducts() {
         {error && (
           <div
             role="alert"
-            className="mb-4 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-4 py-2 text-sm text-[#ffc2cc]"
+            className="mb-4 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-4 py-2 text-sm text-[var(--xx-danger-1)]"
           >
             {error}
           </div>
@@ -2175,7 +2175,7 @@ export default function AdminProducts() {
               {imgError && (
                 <div
                   role="alert"
-                  className="mb-2 rounded-lg border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-3 py-1.5 text-xs text-[#ffc2cc]"
+                  className="mb-2 rounded-lg border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-3 py-1.5 text-xs text-[var(--xx-danger-1)]"
                 >
                   {imgError}
                 </div>
@@ -2194,7 +2194,7 @@ export default function AdminProducts() {
                 className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-4 py-6 text-center text-sm transition-all duration-xx ease-xx ${
                   dragOver
                     ? 'border-[rgba(34,232,245,0.7)] bg-[rgba(34,232,245,0.1)] shadow-[0_0_44px_-14px_rgba(34,232,245,0.95)]'
-                    : 'border-[rgba(255,255,255,0.16)]'
+                    : 'border-[rgba(var(--xx-veil),0.16)]'
                 }`}
               >
                 <GeoIcon name="layers" className="mb-1 h-6 w-6" accent="var(--xx-cyan)" />
@@ -2236,7 +2236,7 @@ export default function AdminProducts() {
                         className={`group relative cursor-grab overflow-hidden rounded-xl border transition-all duration-xx ease-xx active:cursor-grabbing ${
                           dragOverImageId === img.id
                             ? 'border-[rgba(34,232,245,0.75)] shadow-[0_0_40px_-12px_rgba(34,232,245,0.95)]'
-                            : 'border-[rgba(255,255,255,0.12)]'
+                            : 'border-[rgba(var(--xx-veil),0.12)]'
                         } ${dragImageId === img.id ? 'opacity-40' : ''}`}
                       >
                         <img
@@ -2247,17 +2247,17 @@ export default function AdminProducts() {
                           draggable={false}
                         />
                         {img.primary && (
-                          <span className="absolute left-1 top-1 rounded-md border border-[rgba(34,232,245,0.5)] bg-[rgba(9,11,28,0.8)] px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--xx-cyan)] backdrop-blur-sm">
+                          <span className="absolute left-1 top-1 rounded-md border border-[rgba(34,232,245,0.5)] bg-[rgba(var(--xx-panel),0.8)] px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--xx-cyan)] backdrop-blur-sm">
                             Principală
                           </span>
                         )}
                         {img.width && img.height && (
-                          <span className="absolute bottom-0 right-0 rounded-tl-md bg-[rgba(3,4,12,0.8)] px-1 py-0.5 text-[9px] text-[#a8b0d4]">
+                          <span className="absolute bottom-0 right-0 rounded-tl-md bg-[rgba(var(--xx-panel),0.8)] px-1 py-0.5 text-[9px] text-[var(--xx-ink-muted)]">
                             {img.width}×{img.height}
                             {img.format ? ` · ${img.format.toUpperCase()}` : ''}
                           </span>
                         )}
-                        <div className="absolute inset-x-0 top-0 flex items-center gap-1 bg-[rgba(3,4,12,0.72)] p-1 opacity-0 backdrop-blur-sm transition-opacity duration-xx ease-xx group-hover:opacity-100 focus-within:opacity-100">
+                        <div className="absolute inset-x-0 top-0 flex items-center gap-1 bg-[rgba(var(--xx-panel),0.72)] p-1 opacity-0 backdrop-blur-sm transition-opacity duration-xx ease-xx group-hover:opacity-100 focus-within:opacity-100">
                           {!img.primary && (
                             <button
                               type="button"
@@ -2275,7 +2275,7 @@ export default function AdminProducts() {
                                 type="button"
                                 onClick={() => handleDeleteImage(img.id)}
                                 disabled={imgBusy}
-                                className="rounded-md border border-[rgba(255,84,112,0.6)] bg-[rgba(255,84,112,0.22)] px-1.5 py-0.5 text-[10px] font-semibold text-[#ffc2cc] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.9)] disabled:opacity-40"
+                                className="rounded-md border border-[rgba(255,84,112,0.6)] bg-[rgba(255,84,112,0.22)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--xx-danger-1)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.9)] disabled:opacity-40"
                               >
                                 Sigur?
                               </button>
@@ -2283,7 +2283,7 @@ export default function AdminProducts() {
                                 type="button"
                                 onClick={cancelDeleteImage}
                                 disabled={imgBusy}
-                                className="rounded-md border border-[rgba(255,255,255,0.2)] px-1.5 py-0.5 text-[10px] font-medium text-[#a8b0d4] transition-all duration-xx ease-xx hover:text-[color:var(--xx-ink)] disabled:opacity-40"
+                                className="rounded-md border border-[rgba(var(--xx-veil),0.2)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:text-[color:var(--xx-ink)] disabled:opacity-40"
                               >
                                 Anulează
                               </button>
@@ -2336,7 +2336,7 @@ export default function AdminProducts() {
         {importError && (
           <div
             role="alert"
-            className="mb-4 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-4 py-2 text-sm text-[#ffc2cc]"
+            className="mb-4 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-4 py-2 text-sm text-[var(--xx-danger-1)]"
           >
             {importError}
           </div>
@@ -2350,10 +2350,10 @@ export default function AdminProducts() {
             : 'Încarcă fișierul .xlsx completat după șablon. Îl verific întâi (fără a scrie nimic) și îți arăt exact ce e valid și ce trebuie corectat. Abia după confirmare import produsele.'}
         </p>
 
-        <label className="mb-2 flex cursor-pointer items-start gap-2.5 rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] px-3 py-2.5 text-sm xx-ink-muted transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.4)]">
+        <label className="mb-2 flex cursor-pointer items-start gap-2.5 rounded-xl border border-[rgba(var(--xx-veil),0.12)] bg-[rgba(var(--xx-veil),0.04)] px-3 py-2.5 text-sm xx-ink-muted transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.4)]">
           <input
             type="checkbox"
-            className="mt-0.5 h-4 w-4 cursor-pointer rounded accent-[#22e8f5]"
+            className="mt-0.5 h-4 w-4 cursor-pointer rounded accent-[var(--xx-aqua)]"
             checked={syncMode}
             onChange={(e) => {
               setSyncMode(e.target.checked);
@@ -2369,10 +2369,10 @@ export default function AdminProducts() {
           </span>
         </label>
 
-        <label className="mb-3 flex cursor-pointer items-start gap-2.5 rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] px-3 py-2.5 text-sm xx-ink-muted transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.4)]">
+        <label className="mb-3 flex cursor-pointer items-start gap-2.5 rounded-xl border border-[rgba(var(--xx-veil),0.12)] bg-[rgba(var(--xx-veil),0.04)] px-3 py-2.5 text-sm xx-ink-muted transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.4)]">
           <input
             type="checkbox"
-            className="mt-0.5 h-4 w-4 cursor-pointer rounded accent-[#22e8f5]"
+            className="mt-0.5 h-4 w-4 cursor-pointer rounded accent-[var(--xx-aqua)]"
             checked={restockMode}
             onChange={(e) => {
               setRestockMode(e.target.checked);
@@ -2389,10 +2389,10 @@ export default function AdminProducts() {
           </span>
         </label>
 
-        <label className="mb-3 flex cursor-pointer items-start gap-2.5 rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] px-3 py-2.5 text-sm xx-ink-muted transition-all duration-xx ease-xx hover:border-[rgba(13,148,136,0.5)]">
+        <label className="mb-3 flex cursor-pointer items-start gap-2.5 rounded-xl border border-[rgba(var(--xx-veil),0.12)] bg-[rgba(var(--xx-veil),0.04)] px-3 py-2.5 text-sm xx-ink-muted transition-all duration-xx ease-xx hover:border-[rgba(13,148,136,0.5)]">
           <input
             type="checkbox"
-            className="mt-0.5 h-4 w-4 cursor-pointer rounded accent-[#0d9488]"
+            className="mt-0.5 h-4 w-4 cursor-pointer rounded accent-[var(--xx-aqua-5)]"
             checked={receiptMode}
             onChange={(e) => {
               setReceiptMode(e.target.checked);
@@ -2526,7 +2526,7 @@ export default function AdminProducts() {
               </p>
             )}
 
-            <div className="max-h-64 overflow-auto rounded-lg border border-[rgba(255,255,255,0.1)]">
+            <div className="max-h-64 overflow-auto rounded-lg border border-[rgba(var(--xx-veil),0.1)]">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="text-left xx-ink-dim">
@@ -2539,7 +2539,7 @@ export default function AdminProducts() {
                 </thead>
                 <tbody>
                   {receiptResult.lines.map((ln, i) => (
-                    <tr key={`${ln.productName}-${i}`} className="border-t border-[rgba(255,255,255,0.07)]">
+                    <tr key={`${ln.productName}-${i}`} className="border-t border-[rgba(var(--xx-veil),0.07)]">
                       <td className="px-2 py-1.5 text-[color:var(--xx-ink)]">
                         {ln.productName}
                         {ln.isNew && <span className="ml-1 text-[10px] uppercase xx-ink-dim">nou</span>}
@@ -2584,7 +2584,7 @@ export default function AdminProducts() {
             {importDone && (
               <div
                 role="status"
-                className="flex items-start gap-2 rounded-xl border border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.12)] px-4 py-2.5 text-sm text-[#93e9c4]"
+                className="flex items-start gap-2 rounded-xl border border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.12)] px-4 py-2.5 text-sm text-[var(--xx-good-2)]"
               >
                 <GeoIcon name="check" className="mt-0.5 h-4 w-4 shrink-0" accent="currentColor" />
                 {syncMode
@@ -2597,11 +2597,11 @@ export default function AdminProducts() {
 
             {importReport.errors?.length > 0 && (
               <div className="max-h-48 overflow-y-auto rounded-xl border border-[rgba(255,84,112,0.4)] bg-[rgba(255,84,112,0.08)] p-3 text-sm">
-                <p className="mb-1 flex items-center gap-2 font-semibold text-[#ffc2cc]">
+                <p className="mb-1 flex items-center gap-2 font-semibold text-[var(--xx-danger-1)]">
                   <GeoIcon name="alert" className="h-4 w-4" accent="currentColor" />
                   Rânduri cu probleme (vor fi sărite):
                 </p>
-                <ul className="list-disc space-y-1 pl-5 text-[#ffc2cc]">
+                <ul className="list-disc space-y-1 pl-5 text-[var(--xx-danger-1)]">
                   {importReport.errors.map((e) => (
                     <li key={e.row}>
                       Rând {e.row}: {e.message}
@@ -2613,11 +2613,11 @@ export default function AdminProducts() {
 
             {importReport.warnings?.length > 0 && (
               <div className="max-h-40 overflow-y-auto rounded-xl border border-[rgba(176,140,9,0.42)] bg-[rgba(176,140,9,0.1)] p-3 text-sm">
-                <p className="mb-1 flex items-center gap-2 font-semibold text-[#f0d089]">
+                <p className="mb-1 flex items-center gap-2 font-semibold text-[var(--xx-warn-2)]">
                   <GeoIcon name="clock" className="h-4 w-4" accent="currentColor" />
                   Avertismente:
                 </p>
-                <ul className="list-disc space-y-1 pl-5 text-[#f0d089]">
+                <ul className="list-disc space-y-1 pl-5 text-[var(--xx-warn-2)]">
                   {importReport.warnings.map((w, i) => (
                     <li key={i}>{w}</li>
                   ))}
@@ -2684,7 +2684,7 @@ export default function AdminProducts() {
         {recatError && (
           <div
             role="alert"
-            className="mb-4 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-4 py-2 text-sm text-[#ffc2cc]"
+            className="mb-4 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-4 py-2 text-sm text-[var(--xx-danger-1)]"
           >
             {recatError}
           </div>
@@ -2719,13 +2719,13 @@ export default function AdminProducts() {
               className={`flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5 text-sm transition-all duration-xx ease-xx ${
                 recatMode === opt.value
                   ? 'border-[rgba(34,232,245,0.55)] bg-[rgba(34,232,245,0.08)]'
-                  : 'border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] hover:border-[rgba(34,232,245,0.4)]'
+                  : 'border-[rgba(var(--xx-veil),0.12)] bg-[rgba(var(--xx-veil),0.04)] hover:border-[rgba(34,232,245,0.4)]'
               }`}
             >
               <input
                 type="radio"
                 name="recat-mode"
-                className="mt-0.5 h-4 w-4 cursor-pointer accent-[#22e8f5]"
+                className="mt-0.5 h-4 w-4 cursor-pointer accent-[var(--xx-aqua)]"
                 checked={recatMode === opt.value}
                 onChange={() => changeRecatMode(opt.value)}
               />
@@ -2757,7 +2757,7 @@ export default function AdminProducts() {
             {recatDone ? (
               <div
                 role="status"
-                className="flex items-start gap-2 rounded-xl border border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.12)] px-4 py-2.5 text-sm text-[#93e9c4]"
+                className="flex items-start gap-2 rounded-xl border border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.12)] px-4 py-2.5 text-sm text-[var(--xx-good-2)]"
               >
                 <GeoIcon name="check" className="mt-0.5 h-4 w-4 shrink-0" accent="currentColor" />
                 Recategorizare finalizată: {recatDone.changed} produse au primit categoria și
@@ -2766,7 +2766,7 @@ export default function AdminProducts() {
             ) : (
               <div
                 role="status"
-                className="flex items-start gap-2 rounded-xl border border-[rgba(34,232,245,0.4)] bg-[rgba(34,232,245,0.08)] px-4 py-2.5 text-sm text-[#a8f0f7]"
+                className="flex items-start gap-2 rounded-xl border border-[rgba(34,232,245,0.4)] bg-[rgba(34,232,245,0.08)] px-4 py-2.5 text-sm text-[var(--xx-aqua-1)]"
               >
                 <GeoIcon name="shield" className="mt-0.5 h-4 w-4 shrink-0" accent="currentColor" />
                 Previzualizare — nu s-a scris nimic în baza de date.
@@ -2774,7 +2774,7 @@ export default function AdminProducts() {
             )}
 
             {recatReport.unresolved > 0 && (
-              <div className="rounded-xl border border-[rgba(176,140,9,0.42)] bg-[rgba(176,140,9,0.1)] px-4 py-2.5 text-sm text-[#f0d089]">
+              <div className="rounded-xl border border-[rgba(176,140,9,0.42)] bg-[rgba(176,140,9,0.1)] px-4 py-2.5 text-sm text-[var(--xx-warn-2)]">
                 {recatReport.unresolved}{' '}
                 {recatReport.unresolved === 1 ? 'produs a ajuns' : 'produse au ajuns'} în „Diverse
                 electronice / Gadgeturi”: denumirea lor nu conține niciun indiciu suficient de clar.
@@ -2790,9 +2790,9 @@ export default function AdminProducts() {
             )}
 
             {recatReport.changes.length > 0 && (
-              <div className="max-h-80 overflow-y-auto rounded-xl border border-[rgba(255,255,255,0.12)]">
+              <div className="max-h-80 overflow-y-auto rounded-xl border border-[rgba(var(--xx-veil),0.12)]">
                 <table className="w-full text-left text-sm">
-                  <thead className="sticky top-0 bg-[rgba(12,16,32,0.96)] text-[0.68rem] uppercase tracking-[0.12em] xx-ink-muted">
+                  <thead className="sticky top-0 bg-[rgba(var(--xx-panel),0.96)] text-[0.68rem] uppercase tracking-[0.12em] xx-ink-muted">
                     <tr>
                       <th className="px-3 py-2 font-semibold">Produs</th>
                       <th className="px-3 py-2 font-semibold">Acum</th>
@@ -2804,13 +2804,13 @@ export default function AdminProducts() {
                     {recatReport.changes.map((c) => (
                       <tr
                         key={c.id}
-                        className="border-t border-[rgba(255,255,255,0.08)] align-top"
+                        className="border-t border-[rgba(var(--xx-veil),0.08)] align-top"
                       >
                         <td className="px-3 py-2 text-[color:var(--xx-ink)]">{c.name}</td>
-                        <td className="px-3 py-2 text-[#ff8fa8]">
+                        <td className="px-3 py-2 text-[var(--xx-danger-3)]">
                           {c.oldCategory} / {c.oldSubcategory}
                         </td>
-                        <td className="px-3 py-2 text-[#7ee9bd]">
+                        <td className="px-3 py-2 text-[var(--xx-good-3)]">
                           {c.newCategory} / {c.newSubcategory}
                         </td>
                         <td className="px-3 py-2 text-xs xx-ink-muted">{c.reason}</td>
@@ -2822,7 +2822,7 @@ export default function AdminProducts() {
             )}
 
             {recatReport.changed === 0 && (
-              <div className="rounded-xl border border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.12)] px-4 py-2.5 text-sm text-[#93e9c4]">
+              <div className="rounded-xl border border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.12)] px-4 py-2.5 text-sm text-[var(--xx-good-2)]">
                 Nu am găsit nimic de corectat în acest mod — categoriile și subcategoriile sunt deja
                 consecvente.
               </div>
@@ -2865,7 +2865,7 @@ export default function AdminProducts() {
         {brandError && (
           <div
             role="alert"
-            className="mb-4 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-4 py-2 text-sm text-[#ffc2cc]"
+            className="mb-4 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-4 py-2 text-sm text-[var(--xx-danger-1)]"
           >
             {brandError}
           </div>
@@ -2902,13 +2902,13 @@ export default function AdminProducts() {
               className={`flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5 text-sm transition-all duration-xx ease-xx ${
                 brandMode === opt.value
                   ? 'border-[rgba(34,232,245,0.55)] bg-[rgba(34,232,245,0.08)]'
-                  : 'border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] hover:border-[rgba(34,232,245,0.4)]'
+                  : 'border-[rgba(var(--xx-veil),0.12)] bg-[rgba(var(--xx-veil),0.04)] hover:border-[rgba(34,232,245,0.4)]'
               }`}
             >
               <input
                 type="radio"
                 name="brand-mode"
-                className="mt-0.5 h-4 w-4 cursor-pointer accent-[#22e8f5]"
+                className="mt-0.5 h-4 w-4 cursor-pointer accent-[var(--xx-aqua)]"
                 checked={brandMode === opt.value}
                 onChange={() => changeBrandMode(opt.value)}
               />
@@ -2937,7 +2937,7 @@ export default function AdminProducts() {
             {brandDone ? (
               <div
                 role="status"
-                className="flex items-start gap-2 rounded-xl border border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.12)] px-4 py-2.5 text-sm text-[#93e9c4]"
+                className="flex items-start gap-2 rounded-xl border border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.12)] px-4 py-2.5 text-sm text-[var(--xx-good-2)]"
               >
                 <GeoIcon name="check" className="mt-0.5 h-4 w-4 shrink-0" accent="currentColor" />
                 Reparare finalizată: {brandDone.changed} produse au primit marca corectă.
@@ -2945,7 +2945,7 @@ export default function AdminProducts() {
             ) : (
               <div
                 role="status"
-                className="flex items-start gap-2 rounded-xl border border-[rgba(34,232,245,0.4)] bg-[rgba(34,232,245,0.08)] px-4 py-2.5 text-sm text-[#a8f0f7]"
+                className="flex items-start gap-2 rounded-xl border border-[rgba(34,232,245,0.4)] bg-[rgba(34,232,245,0.08)] px-4 py-2.5 text-sm text-[var(--xx-aqua-1)]"
               >
                 <GeoIcon name="shield" className="mt-0.5 h-4 w-4 shrink-0" accent="currentColor" />
                 Previzualizare — nu s-a scris nimic în baza de date.
@@ -2953,7 +2953,7 @@ export default function AdminProducts() {
             )}
 
             {brandReport.cleared > 0 && (
-              <div className="rounded-xl border border-[rgba(176,140,9,0.42)] bg-[rgba(176,140,9,0.1)] px-4 py-2.5 text-sm text-[#f0d089]">
+              <div className="rounded-xl border border-[rgba(176,140,9,0.42)] bg-[rgba(176,140,9,0.1)] px-4 py-2.5 text-sm text-[var(--xx-warn-2)]">
                 {brandReport.cleared}{' '}
                 {brandReport.cleared === 1
                   ? 'produs rămâne fără marcă'
@@ -2972,9 +2972,9 @@ export default function AdminProducts() {
             )}
 
             {brandReport.changes.length > 0 && (
-              <div className="max-h-80 overflow-y-auto rounded-xl border border-[rgba(255,255,255,0.12)]">
+              <div className="max-h-80 overflow-y-auto rounded-xl border border-[rgba(var(--xx-veil),0.12)]">
                 <table className="w-full text-left text-sm">
-                  <thead className="sticky top-0 bg-[rgba(12,16,32,0.96)] text-[0.68rem] uppercase tracking-[0.12em] xx-ink-muted">
+                  <thead className="sticky top-0 bg-[rgba(var(--xx-panel),0.96)] text-[0.68rem] uppercase tracking-[0.12em] xx-ink-muted">
                     <tr>
                       <th className="px-3 py-2 font-semibold">Produs</th>
                       <th className="px-3 py-2 font-semibold">Acum</th>
@@ -2984,10 +2984,10 @@ export default function AdminProducts() {
                   </thead>
                   <tbody>
                     {brandReport.changes.map((c) => (
-                      <tr key={c.id} className="border-t border-[rgba(255,255,255,0.08)] align-top">
+                      <tr key={c.id} className="border-t border-[rgba(var(--xx-veil),0.08)] align-top">
                         <td className="px-3 py-2 text-[color:var(--xx-ink)]">{c.name}</td>
-                        <td className="px-3 py-2 text-[#ff8fa8]">{c.oldBrand}</td>
-                        <td className="px-3 py-2 text-[#7ee9bd]">{c.newBrand}</td>
+                        <td className="px-3 py-2 text-[var(--xx-danger-3)]">{c.oldBrand}</td>
+                        <td className="px-3 py-2 text-[var(--xx-good-3)]">{c.newBrand}</td>
                         <td className="px-3 py-2 text-xs xx-ink-muted">{c.reason}</td>
                       </tr>
                     ))}
@@ -2997,7 +2997,7 @@ export default function AdminProducts() {
             )}
 
             {brandReport.changed === 0 && (
-              <div className="rounded-xl border border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.12)] px-4 py-2.5 text-sm text-[#93e9c4]">
+              <div className="rounded-xl border border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.12)] px-4 py-2.5 text-sm text-[var(--xx-good-2)]">
                 Nu am găsit nimic de corectat în acest mod — mărcile sunt deja consecvente cu
                 denumirile produselor.
               </div>
@@ -3044,7 +3044,7 @@ export default function AdminProducts() {
                 src={resolveImage(previewProduct.imageUrl)}
                 alt={previewProduct.name}
                 loading="lazy"
-                className="h-28 w-28 flex-shrink-0 rounded-xl border border-[rgba(255,255,255,0.14)] object-cover shadow-[0_0_44px_-16px_rgba(34,232,245,0.8)]"
+                className="h-28 w-28 flex-shrink-0 rounded-xl border border-[rgba(var(--xx-veil),0.14)] object-cover shadow-[0_0_44px_-16px_rgba(34,232,245,0.8)]"
               />
               <div className="min-w-0 flex-1">
                 <p className="text-lg font-semibold text-[color:var(--xx-ink)]">{previewProduct.name}</p>
@@ -3069,7 +3069,7 @@ export default function AdminProducts() {
                     </span>
                   )}
                   {previewProduct.profit != null && (
-                    <span className="text-sm font-semibold text-[#7ee9bd]">
+                    <span className="text-sm font-semibold text-[var(--xx-good-3)]">
                       Profit: {formatPrice(previewProduct.profit)}
                       {previewProduct.marginPercent != null && ` · ${previewProduct.marginPercent}%`}
                     </span>
@@ -3096,7 +3096,7 @@ export default function AdminProducts() {
                       src={img.thumbnailUrl || img.url}
                       alt=""
                       loading="lazy"
-                      className="h-16 w-full rounded-lg border border-[rgba(255,255,255,0.1)] object-cover"
+                      className="h-16 w-full rounded-lg border border-[rgba(var(--xx-veil),0.1)] object-cover"
                     />
                   ))}
                 </div>
@@ -3114,14 +3114,14 @@ export default function AdminProducts() {
               ) : previewHistory.length === 0 ? (
                 <p className="text-xs xx-ink-muted">Nicio activitate înregistrată pentru acest produs.</p>
               ) : (
-                <ul className="max-h-40 space-y-1.5 overflow-y-auto rounded-[0.9rem] border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] p-3 text-xs">
+                <ul className="max-h-40 space-y-1.5 overflow-y-auto rounded-[0.9rem] border border-[rgba(var(--xx-veil),0.1)] bg-[rgba(var(--xx-veil),0.04)] p-3 text-xs">
                   {previewHistory.map((h) => (
                     <li
                       key={h.id}
-                      className="flex items-start justify-between gap-3 border-b border-[rgba(255,255,255,0.06)] pb-1.5 last:border-0 last:pb-0"
+                      className="flex items-start justify-between gap-3 border-b border-[rgba(var(--xx-veil),0.06)] pb-1.5 last:border-0 last:pb-0"
                     >
                       <span className="xx-ink-muted">
-                        <span className="font-semibold text-[#c9d4ff]">
+                        <span className="font-semibold text-[var(--xx-info-3)]">
                           {ACTION_LABELS[h.action] || h.action}
                         </span>
                         {h.details ? ` — ${h.details}` : ''}
@@ -3167,16 +3167,16 @@ export default function AdminProducts() {
  */
 function Stat({ label, value, tone = 'slate' }) {
   const tones = {
-    slate: { ink: '#e8ecff', edge: 'rgba(255,255,255,0.12)', glow: 'rgba(255,255,255,0.18)' },
-    green: { ink: '#7ee9bd', edge: 'rgba(31,172,121,0.38)', glow: 'rgba(31,172,121,0.5)' },
-    red: { ink: '#ff8fa8', edge: 'rgba(255,90,122,0.38)', glow: 'rgba(255,90,122,0.5)' },
-    amber: { ink: '#ffd27a', edge: 'rgba(255,186,80,0.38)', glow: 'rgba(255,186,80,0.5)' },
+    slate: { ink: 'var(--xx-info-1)', edge: 'rgba(var(--xx-veil),0.12)', glow: 'rgba(var(--xx-veil),0.18)' },
+    green: { ink: 'var(--xx-good-3)', edge: 'rgba(31,172,121,0.38)', glow: 'rgba(31,172,121,0.5)' },
+    red: { ink: 'var(--xx-danger-3)', edge: 'rgba(255,90,122,0.38)', glow: 'rgba(255,90,122,0.5)' },
+    amber: { ink: 'var(--xx-warn-3)', edge: 'rgba(255,186,80,0.38)', glow: 'rgba(255,186,80,0.5)' },
   };
   const t = tones[tone] || tones.slate;
 
   return (
     <div
-      className="rounded-[0.9rem] border bg-[rgba(255,255,255,0.04)] p-3 text-center"
+      className="rounded-[0.9rem] border bg-[rgba(var(--xx-veil),0.04)] p-3 text-center"
       style={{ borderColor: t.edge }}
     >
       <p
@@ -3230,14 +3230,14 @@ function ProductTile({
       max={4}
       scale={1.015}
       className="h-full"
-      innerClassName={`group flex h-full flex-col overflow-hidden rounded-[1.15rem] border bg-[rgba(255,255,255,0.04)] backdrop-blur-xl transition-colors duration-200 ${
+      innerClassName={`group flex h-full flex-col overflow-hidden rounded-[1.15rem] border bg-[rgba(var(--xx-veil),0.04)] backdrop-blur-xl transition-colors duration-200 ${
         selected
           ? 'border-[rgba(34,232,245,0.65)] bg-[rgba(34,232,245,0.07)]'
-          : 'border-[rgba(255,255,255,0.1)] hover:border-[rgba(122,60,255,0.45)]'
+          : 'border-[rgba(var(--xx-veil),0.1)] hover:border-[rgba(122,60,255,0.45)]'
       }`}
     >
       {/* Imaginea — suprafața pe care operatorul o evaluează în acest mod. */}
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-[rgba(255,255,255,0.03)]">
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-[rgba(var(--xx-veil),0.03)]">
         <img
           src={resolveImage(p.imageUrl)}
           alt={p.name}
@@ -3247,15 +3247,15 @@ function ProductTile({
 
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[rgba(9,11,28,0.92)] via-[rgba(9,11,28,0.35)] to-transparent"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[rgba(var(--xx-panel),0.92)] via-[rgba(var(--xx-panel),0.35)] to-transparent"
         />
 
-        <label className="absolute left-3 top-3 flex cursor-pointer items-center rounded-lg bg-[rgba(9,11,28,0.72)] p-1.5 backdrop-blur-md">
+        <label className="absolute left-3 top-3 flex cursor-pointer items-center rounded-lg bg-[rgba(var(--xx-panel),0.72)] p-1.5 backdrop-blur-md">
           <input
             type="checkbox"
             checked={selected}
             onChange={onToggle}
-            className="h-4 w-4 cursor-pointer accent-[#22e8f5]"
+            className="h-4 w-4 cursor-pointer accent-[var(--xx-aqua)]"
             aria-label={`Selectează ${p.name}`}
           />
         </label>
@@ -3273,7 +3273,7 @@ function ProductTile({
 
         <div className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-2">
           <span
-            className="text-lg font-bold text-[#e8ecff]"
+            className="text-lg font-bold text-[var(--xx-info-1)]"
             style={{ textShadow: '0 0 24px rgba(34,232,245,0.45)' }}
           >
             {formatPrice(p.price)}
@@ -3281,8 +3281,8 @@ function ProductTile({
           <span
             className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.68rem] font-semibold backdrop-blur-md ${
               outOfStock
-                ? 'border-[rgba(255,90,122,0.45)] bg-[rgba(255,90,122,0.16)] text-[#ff8fa8]'
-                : 'border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.16)] text-[#7ee9bd]'
+                ? 'border-[rgba(255,90,122,0.45)] bg-[rgba(255,90,122,0.16)] text-[var(--xx-danger-3)]'
+                : 'border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.16)] text-[var(--xx-good-3)]'
             }`}
           >
             <span aria-hidden="true">{outOfStock ? '✕' : '✓'}</span>
@@ -3293,13 +3293,13 @@ function ProductTile({
 
       {/* Identitatea produsului. */}
       <div className="flex flex-1 flex-col gap-1 px-4 pt-3">
-        <p className="line-clamp-2 text-sm font-semibold text-[#e8ecff]">{p.name}</p>
+        <p className="line-clamp-2 text-sm font-semibold text-[var(--xx-info-1)]">{p.name}</p>
         {p.brand ? <p className="text-xs xx-ink-dim">{p.brand}</p> : null}
         {p.sku ? <p className="font-mono text-[0.68rem] xx-ink-muted">{p.sku}</p> : null}
       </div>
 
       {/* Acțiunile — aceleași cinci ca în tabel, în aceeași ordine. */}
-      <div className="mt-3 flex items-center gap-1.5 border-t border-[rgba(255,255,255,0.08)] px-3 py-2.5">
+      <div className="mt-3 flex items-center gap-1.5 border-t border-[rgba(var(--xx-veil),0.08)] px-3 py-2.5">
         <button
           type="button"
           onClick={onSell}
@@ -3308,8 +3308,8 @@ function ProductTile({
           aria-label={`Adaugă ${p.name} în vânzare`}
           className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-xs font-semibold transition-colors duration-200 ${
             outOfStock
-              ? 'cursor-not-allowed border-[rgba(255,255,255,0.08)] text-[rgba(232,236,255,0.35)]'
-              : 'border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.12)] text-[#7ee9bd] hover:bg-[rgba(31,172,121,0.22)]'
+              ? 'cursor-not-allowed border-[rgba(var(--xx-veil),0.08)] text-[rgba(var(--xx-ink-rgb),0.35)]'
+              : 'border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.12)] text-[var(--xx-good-3)] hover:bg-[rgba(31,172,121,0.22)]'
           }`}
         >
           <GeoIcon name="coins" className="h-4 w-4" />
@@ -3321,7 +3321,7 @@ function ProductTile({
           onClick={onPreview}
           title="Previzualizează"
           aria-label={`Previzualizează ${p.name}`}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[#c9d4ff] transition-colors duration-200 hover:border-[rgba(34,232,245,0.5)] hover:text-[#22e8f5]"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[var(--xx-info-3)] transition-colors duration-200 hover:border-[rgba(34,232,245,0.5)] hover:text-[var(--xx-aqua)]"
         >
           <GeoIcon name="zoom" className="h-4 w-4" />
         </button>
@@ -3331,7 +3331,7 @@ function ProductTile({
           onClick={onEdit}
           title="Editează"
           aria-label={`Editează ${p.name}`}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[#c9d4ff] transition-colors duration-200 hover:border-[rgba(122,60,255,0.55)] hover:text-[#b795ff]"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[var(--xx-info-3)] transition-colors duration-200 hover:border-[rgba(122,60,255,0.55)] hover:text-[var(--xx-violet-3)]"
         >
           <GeoIcon name="gear" className="h-4 w-4" />
         </button>
@@ -3342,7 +3342,7 @@ function ProductTile({
           disabled={activeBusy}
           title={p.active ? 'Dezactivează produsul' : 'Activează produsul'}
           aria-label={`${p.active ? 'Dezactivează' : 'Activează'} ${p.name}`}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[#c9d4ff] transition-colors duration-200 hover:border-[rgba(255,186,80,0.5)] hover:text-[#ffd27a] disabled:opacity-45"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[var(--xx-info-3)] transition-colors duration-200 hover:border-[rgba(255,186,80,0.5)] hover:text-[var(--xx-warn-3)] disabled:opacity-45"
         >
           <GeoIcon name={p.active ? 'clock' : 'bolt'} className="h-4 w-4" />
         </button>
@@ -3352,7 +3352,7 @@ function ProductTile({
           onClick={onDelete}
           title="Șterge produsul"
           aria-label={`Șterge ${p.name}`}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[#c9d4ff] transition-colors duration-200 hover:border-[rgba(255,90,122,0.5)] hover:text-[#ff8fa8]"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[var(--xx-info-3)] transition-colors duration-200 hover:border-[rgba(255,90,122,0.5)] hover:text-[var(--xx-danger-3)]"
         >
           <GeoIcon name="trash" className="h-4 w-4" />
         </button>
@@ -3364,7 +3364,7 @@ function ProductTile({
 /** O cifra din rezumatul receptiei. */
 function ReceiptStat({ label, value }) {
   return (
-    <div className="rounded-lg border border-[rgba(255,255,255,0.1)] px-2.5 py-2">
+    <div className="rounded-lg border border-[rgba(var(--xx-veil),0.1)] px-2.5 py-2">
       <div className="text-[10px] uppercase tracking-wide xx-ink-dim">{label}</div>
       <div className="font-display text-sm text-[color:var(--xx-ink)]">{value}</div>
     </div>

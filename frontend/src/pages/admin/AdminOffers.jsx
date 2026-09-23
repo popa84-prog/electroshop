@@ -224,9 +224,9 @@ export default function AdminOffers() {
         </div>
       ) : (
         <div className="card overflow-x-auto">
-          <table className="min-w-full divide-y divide-[rgba(255,255,255,0.08)] text-sm">
+          <table className="min-w-full divide-y divide-[rgba(var(--xx-veil),0.08)] text-sm">
               <thead className="text-left">
-                <tr className="bg-[rgba(255,255,255,0.03)]">
+                <tr className="bg-[rgba(var(--xx-veil),0.03)]">
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Ofertă</th>
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Zonă</th>
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Fereastră</th>
@@ -236,7 +236,7 @@ export default function AdminOffers() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[rgba(255,255,255,0.07)]">
+              <tbody className="divide-y divide-[rgba(var(--xx-veil),0.07)]">
                 {offers.map((o) => {
                   const badge = liveBadge(o);
                   return (
@@ -270,8 +270,8 @@ export default function AdminOffers() {
                             aria-label={o.active ? `Dezactivează oferta ${o.title}` : `Activează oferta ${o.title}`}
                             className={`grid h-8 w-8 place-items-center rounded-lg border transition-all duration-xx ease-xx ${
                               o.active
-                                ? 'border-[rgba(110,247,168,0.5)] text-[#b8ffd6] hover:border-[rgba(255,84,112,0.55)] hover:text-[color:var(--xx-red)]'
-                                : 'border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] hover:border-[rgba(110,247,168,0.5)] hover:text-[#b8ffd6]'
+                                ? 'border-[rgba(110,247,168,0.5)] text-[var(--xx-good-1)] hover:border-[rgba(255,84,112,0.55)] hover:text-[color:var(--xx-red)]'
+                                : 'border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-muted)] hover:border-[rgba(110,247,168,0.5)] hover:text-[var(--xx-good-1)]'
                             }`}
                           >
                             <GeoIcon name="bolt" className="h-4 w-4" accent="currentColor" />
@@ -281,7 +281,7 @@ export default function AdminOffers() {
                             onClick={() => openEdit(o)}
                             title="Editează oferta"
                             aria-label={`Editează oferta ${o.title}`}
-                            className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(46,123,255,0.5)] hover:text-[#7fb0ff]"
+                            className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(46,123,255,0.5)] hover:text-[var(--xx-link)]"
                           >
                             <GeoIcon name="gear" className="h-4 w-4" accent="currentColor" />
                           </button>
@@ -290,7 +290,7 @@ export default function AdminOffers() {
                             onClick={() => handleDelete(o)}
                             title="Șterge oferta"
                             aria-label={`Șterge oferta ${o.title}`}
-                            className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.55)] hover:text-[color:var(--xx-red)]"
+                            className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.55)] hover:text-[color:var(--xx-red)]"
                           >
                             <GeoIcon name="trash" className="h-4 w-4" accent="currentColor" />
                           </button>
@@ -313,7 +313,7 @@ export default function AdminOffers() {
         maxWidth="max-w-2xl"
       >
         {error && (
-          <div className="mb-4 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-4 py-2 text-sm text-[#ffc2cc]">
+          <div className="mb-4 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-4 py-2 text-sm text-[var(--xx-danger-1)]">
             {error}
           </div>
         )}
@@ -380,7 +380,7 @@ export default function AdminOffers() {
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="flex items-center gap-2 rounded-xl border border-[rgba(255,255,255,0.12)] px-3.5 py-2.5 text-sm text-[color:var(--xx-ink)]">
+            <label className="flex items-center gap-2 rounded-xl border border-[rgba(var(--xx-veil),0.12)] px-3.5 py-2.5 text-sm text-[color:var(--xx-ink)]">
               <input
                 type="checkbox"
                 name="recurringDaily"
@@ -390,7 +390,7 @@ export default function AdminOffers() {
               />
               Se resetează zilnic la miezul nopții
             </label>
-            <label className="flex items-center gap-2 rounded-xl border border-[rgba(255,255,255,0.12)] px-3.5 py-2.5 text-sm text-[color:var(--xx-ink)]">
+            <label className="flex items-center gap-2 rounded-xl border border-[rgba(var(--xx-veil),0.12)] px-3.5 py-2.5 text-sm text-[color:var(--xx-ink)]">
               <input
                 type="checkbox"
                 name="showTimer"
@@ -403,7 +403,7 @@ export default function AdminOffers() {
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="flex items-center gap-2 rounded-xl border border-[rgba(255,255,255,0.12)] px-3.5 py-2.5 text-sm text-[color:var(--xx-ink)]">
+            <label className="flex items-center gap-2 rounded-xl border border-[rgba(var(--xx-veil),0.12)] px-3.5 py-2.5 text-sm text-[color:var(--xx-ink)]">
               <input
                 type="checkbox"
                 name="active"

@@ -219,7 +219,7 @@ export default function AdminUsers() {
               {pending.map((u) => (
                 <div
                   key={u.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.05)] px-3 py-2"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[rgba(var(--xx-veil),0.1)] bg-[rgba(var(--xx-veil),0.05)] px-3 py-2"
                 >
                   <div>
                     <p className="font-medium text-[color:var(--xx-ink)]">{u.fullName}</p>
@@ -271,9 +271,9 @@ export default function AdminUsers() {
         </div>
       ) : (
         <div className="card overflow-x-auto">
-          <table className="min-w-full divide-y divide-[rgba(255,255,255,0.08)] text-sm">
+          <table className="min-w-full divide-y divide-[rgba(var(--xx-veil),0.08)] text-sm">
               <thead className="text-left">
-                <tr className="bg-[rgba(255,255,255,0.03)]">
+                <tr className="bg-[rgba(var(--xx-veil),0.03)]">
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Nume</th>
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Email</th>
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em]">Roluri</th>
@@ -287,7 +287,7 @@ export default function AdminUsers() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[rgba(255,255,255,0.07)]">
+              <tbody className="divide-y divide-[rgba(var(--xx-veil),0.07)]">
                 {users.map((u) => (
                   <tr key={u.id}>
                     <td className="px-4 py-3 font-medium text-[color:var(--xx-ink)]">{u.fullName}</td>
@@ -311,27 +311,27 @@ export default function AdminUsers() {
                         <span
                           className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                             u.enabled
-                              ? 'border border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.16)] text-[#93e9c4]'
-                              : 'border border-[rgba(184,47,60,0.45)] bg-[rgba(184,47,60,0.16)] text-[#ffb3bd]'
+                              ? 'border border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.16)] text-[var(--xx-good-2)]'
+                              : 'border border-[rgba(184,47,60,0.45)] bg-[rgba(184,47,60,0.16)] text-[var(--xx-danger-2)]'
                           }`}
                         >
                           <span aria-hidden="true">{u.enabled ? '●' : '○'}</span>
                           {u.enabled ? 'Activ' : 'Inactiv'}
                         </span>
                         {!u.approved && (
-                          <span className="inline-flex items-center gap-1 rounded-full border border-[rgba(176,140,9,0.45)] bg-[rgba(176,140,9,0.16)] px-2.5 py-0.5 text-xs font-semibold text-[#f0d089]">
+                          <span className="inline-flex items-center gap-1 rounded-full border border-[rgba(176,140,9,0.45)] bg-[rgba(176,140,9,0.16)] px-2.5 py-0.5 text-xs font-semibold text-[var(--xx-warn-2)]">
                             <span aria-hidden="true">◷</span>
                             În așteptare
                           </span>
                         )}
                         {u.locked && (
-                          <span className="inline-flex items-center gap-1 rounded-full border border-[rgba(184,47,60,0.45)] bg-[rgba(184,47,60,0.16)] px-2.5 py-0.5 text-xs font-semibold text-[#ffb3bd]">
+                          <span className="inline-flex items-center gap-1 rounded-full border border-[rgba(184,47,60,0.45)] bg-[rgba(184,47,60,0.16)] px-2.5 py-0.5 text-xs font-semibold text-[var(--xx-danger-2)]">
                             <GeoIcon name="shield" className="h-3 w-3" accent="currentColor" />
                             Blocat
                           </span>
                         )}
                         {u.twoFactorEnabled && (
-                          <span className="inline-flex items-center gap-1 rounded-full border border-[rgba(34,232,245,0.45)] bg-[rgba(34,232,245,0.14)] px-2.5 py-0.5 text-xs font-semibold text-[#a5f0f8]">
+                          <span className="inline-flex items-center gap-1 rounded-full border border-[rgba(34,232,245,0.45)] bg-[rgba(34,232,245,0.14)] px-2.5 py-0.5 text-xs font-semibold text-[var(--xx-aqua-1)]">
                             <GeoIcon name="bolt" className="h-3 w-3" accent="currentColor" />
                             2FA
                           </span>
@@ -359,7 +359,7 @@ export default function AdminUsers() {
                             onClick={() => handleUnlock(u)}
                             title="Deblochează contul"
                             aria-label={`Deblochează contul ${u.email}`}
-                            className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-amber)] transition-all duration-xx ease-xx hover:border-[rgba(255,194,75,0.55)]"
+                            className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-amber)] transition-all duration-xx ease-xx hover:border-[rgba(255,194,75,0.55)]"
                           >
                             <GeoIcon name="shield" className="h-4 w-4" accent="currentColor" />
                           </button>
@@ -370,7 +370,7 @@ export default function AdminUsers() {
                             onClick={() => handleDisableTwoFactor(u)}
                             title="Dezactivează autentificarea în doi pași"
                             aria-label={`Dezactivează 2FA pentru ${u.email}`}
-                            className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-amber)] transition-all duration-xx ease-xx hover:border-[rgba(255,194,75,0.55)]"
+                            className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-amber)] transition-all duration-xx ease-xx hover:border-[rgba(255,194,75,0.55)]"
                           >
                             <GeoIcon name="bolt" className="h-4 w-4" accent="currentColor" />
                           </button>
@@ -380,7 +380,7 @@ export default function AdminUsers() {
                           onClick={() => openEdit(u)}
                           title="Editează utilizatorul"
                           aria-label={`Editează utilizatorul ${u.email}`}
-                          className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(46,123,255,0.5)] hover:text-[#7fb0ff]"
+                          className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(46,123,255,0.5)] hover:text-[var(--xx-link)]"
                         >
                           <GeoIcon name="gear" className="h-4 w-4" accent="currentColor" />
                         </button>
@@ -389,7 +389,7 @@ export default function AdminUsers() {
                           onClick={() => handleDelete(u)}
                           title="Șterge utilizatorul"
                           aria-label={`Șterge utilizatorul ${u.email}`}
-                          className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.55)] hover:text-[color:var(--xx-red)]"
+                          className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.55)] hover:text-[color:var(--xx-red)]"
                         >
                           <GeoIcon name="trash" className="h-4 w-4" accent="currentColor" />
                         </button>
@@ -410,7 +410,7 @@ export default function AdminUsers() {
         onClose={() => setModalOpen(false)}
       >
         {error && (
-          <div className="mb-4 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-4 py-2 text-sm text-[#ffc2cc]">
+          <div className="mb-4 rounded-xl border border-[rgba(255,84,112,0.45)] bg-[rgba(255,84,112,0.12)] px-4 py-2 text-sm text-[var(--xx-danger-1)]">
             {error}
           </div>
         )}
@@ -450,12 +450,12 @@ export default function AdminUsers() {
                     className={`flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-all duration-xx ease-xx ${
                       active
                         ? 'border-[rgba(34,232,245,0.55)] bg-[rgba(34,232,245,0.12)] text-[color:var(--xx-ink)]'
-                        : 'border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] hover:border-[rgba(122,60,255,0.5)]'
+                        : 'border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-muted)] hover:border-[rgba(122,60,255,0.5)]'
                     }`}
                   >
                     <input
                       type="checkbox"
-                      className="h-3.5 w-3.5 accent-[#22e8f5]"
+                      className="h-3.5 w-3.5 accent-[var(--xx-aqua)]"
                       checked={active}
                       onChange={() => toggleRole(r)}
                     />
@@ -472,7 +472,7 @@ export default function AdminUsers() {
           <label className="flex cursor-pointer items-center gap-2 text-sm xx-ink-muted">
             <input
               type="checkbox"
-              className="h-3.5 w-3.5 accent-[#22e8f5]"
+              className="h-3.5 w-3.5 accent-[var(--xx-aqua)]"
               checked={form.enabled}
               onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
             />

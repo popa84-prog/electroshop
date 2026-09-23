@@ -121,9 +121,9 @@ export default function AdminLoginEvents() {
       ) : (
         <Reveal>
           <div className="card overflow-x-auto">
-            <table className="min-w-full divide-y divide-[rgba(255,255,255,0.08)] text-sm">
+            <table className="min-w-full divide-y divide-[rgba(var(--xx-veil),0.08)] text-sm">
               <thead className="text-left">
-                <tr className="bg-[rgba(255,255,255,0.03)]">
+                <tr className="bg-[rgba(var(--xx-veil),0.03)]">
                   {['Status', 'Utilizator', 'Adresă IP', 'Locație', 'Dispozitiv', 'Data / ora'].map(
                     (h) => (
                       <th
@@ -136,7 +136,7 @@ export default function AdminLoginEvents() {
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[rgba(255,255,255,0.06)]">
+              <tbody className="divide-y divide-[rgba(var(--xx-veil),0.06)]">
                 {events.map((e) => (
                   <tr
                     key={e.id}
@@ -148,12 +148,12 @@ export default function AdminLoginEvents() {
                   >
                     <td className="px-4 py-3">
                       {e.success ? (
-                        <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.14)] px-2.5 py-1 text-xs font-semibold text-[#7ee9bd]">
+                        <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.14)] px-2.5 py-1 text-xs font-semibold text-[var(--xx-good-3)]">
                           <span aria-hidden="true">✓</span>
                           Reușită
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[rgba(255,90,122,0.45)] bg-[rgba(255,90,122,0.14)] px-2.5 py-1 text-xs font-semibold text-[#ff8fa8]">
+                        <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[rgba(255,90,122,0.45)] bg-[rgba(255,90,122,0.14)] px-2.5 py-1 text-xs font-semibold text-[var(--xx-danger-3)]">
                           <span aria-hidden="true">✕</span>
                           {FAILURE_LABELS[e.failureReason] || 'Eșuată'}
                         </span>
@@ -161,7 +161,7 @@ export default function AdminLoginEvents() {
                     </td>
 
                     <td className="px-4 py-3">
-                      <p className="font-semibold text-[#e8ecff]">{e.userName || '—'}</p>
+                      <p className="font-semibold text-[var(--xx-info-1)]">{e.userName || '—'}</p>
                       <p className="text-xs xx-ink-muted">{e.userEmail}</p>
                     </td>
 

@@ -137,7 +137,7 @@ export default function AdminNotifications() {
           </HoloInput>
         </div>
 
-        <label className="mb-6 flex cursor-pointer items-center gap-2.5 rounded-[0.8rem] border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3.5 py-2.5 text-sm text-[#c9d4ff] transition-colors duration-200 hover:border-[rgba(34,232,245,0.4)]">
+        <label className="mb-6 flex cursor-pointer items-center gap-2.5 rounded-[0.8rem] border border-[rgba(var(--xx-veil),0.1)] bg-[rgba(var(--xx-veil),0.04)] px-3.5 py-2.5 text-sm text-[var(--xx-info-3)] transition-colors duration-200 hover:border-[rgba(34,232,245,0.4)]">
           <input
             type="checkbox"
             checked={unreadOnly}
@@ -145,7 +145,7 @@ export default function AdminNotifications() {
               setUnreadOnly(e.target.checked);
               setPage(0);
             }}
-            className="h-4 w-4 cursor-pointer accent-[#22e8f5]"
+            className="h-4 w-4 cursor-pointer accent-[var(--xx-aqua)]"
           />
           Doar necitite
         </label>
@@ -172,9 +172,9 @@ export default function AdminNotifications() {
       ) : (
         <Reveal>
           <div className="card overflow-x-auto">
-            <table className="min-w-full divide-y divide-[rgba(255,255,255,0.08)] text-sm">
+            <table className="min-w-full divide-y divide-[rgba(var(--xx-veil),0.08)] text-sm">
               <thead className="text-left">
-                <tr className="bg-[rgba(255,255,255,0.03)]">
+                <tr className="bg-[rgba(var(--xx-veil),0.03)]">
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] xx-ink-muted">
                     Tip
                   </th>
@@ -190,7 +190,7 @@ export default function AdminNotifications() {
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[rgba(255,255,255,0.06)]">
+              <tbody className="divide-y divide-[rgba(var(--xx-veil),0.06)]">
                 {items.map((n) => (
                   <tr
                     key={n.id}
@@ -215,7 +215,7 @@ export default function AdminNotifications() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <p className="font-semibold text-[#e8ecff]">{n.title}</p>
+                      <p className="font-semibold text-[var(--xx-info-1)]">{n.title}</p>
                       {n.message && <p className="mt-0.5 xx-ink-muted">{n.message}</p>}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 font-mono text-xs xx-ink-muted">
@@ -238,7 +238,7 @@ export default function AdminNotifications() {
                           disabled={markingId === n.id}
                           title="Marchează ca citită"
                           aria-label={`Marchează „${n.title}” ca citită`}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[#c9d4ff] transition-colors duration-200 hover:border-[rgba(31,172,121,0.5)] hover:text-[#7ee9bd] disabled:opacity-45"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[var(--xx-info-3)] transition-colors duration-200 hover:border-[rgba(31,172,121,0.5)] hover:text-[var(--xx-good-3)] disabled:opacity-45"
                         >
                           <GeoIcon name="check" className="h-4 w-4" />
                         </button>

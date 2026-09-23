@@ -232,7 +232,7 @@ public class OfferService {
 
         offerRepository.save(benefit("Livrare rapidă", "Transport gratuit, oriunde în țară",
                 "truck", "var(--xx-cyan)", 0));
-        offerRepository.save(benefit("Garanție completă", "Produse originale, garanție legală",
+        offerRepository.save(benefit("Garanție 3 zile", "Funcționare garantată la livrare",
                 "shield", "var(--xx-lime)", 1));
         offerRepository.save(benefit("Cumpărăm electronice", "Evaluare corectă, plată pe loc",
                 "coins", "var(--xx-amber)", 2));

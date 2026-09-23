@@ -93,8 +93,20 @@ public class TemplateAiTextGenerator implements AiTextGenerator {
         // The closing line is the only sentence not derived from a stored value, and it
         // makes no claim about the product — it describes the shop's own terms, which
         // are the same for everything in the catalogue.
-        sentences.add("Produsul beneficiază de garanție conform politicii magazinului "
-                + "și poate fi returnat în termenul legal.");
+        //
+        // Wording set by the seller. The previous version pointed vaguely at "the
+        // shop's warranty policy", which described a page that no longer says what
+        // it used to; a description that refers to terms the reader cannot find is
+        // worse than one that states them outright.
+        //
+        // The return sentence points at the shop's own published conditions rather
+        // than at "the legal term". Every ordinance citation was removed from the
+        // return page, so a description that still invoked a statutory deadline
+        // would be the last place in the site quoting a rule the site no longer
+        // states — and the deadline it implied would have no visible source.
+        sentences.add("Garantăm benevol că produsul funcționează la livrare. "
+                + "Garanția este valabilă 3 zile de la primire. "
+                + "Produsul poate fi returnat în condițiile de retur publicate pe site.");
 
         String confidence = knownAttributes >= 4 ? "HIGH"
                 : knownAttributes >= 2 ? "MEDIUM"

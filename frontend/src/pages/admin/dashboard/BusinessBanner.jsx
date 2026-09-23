@@ -36,7 +36,7 @@ export default function BusinessBanner({ compact = false }) {
         <button
           type="button"
           onClick={reload}
-          className="rounded-lg border border-[rgba(255,255,255,0.18)] px-3 py-1.5 text-xs
+          className="rounded-lg border border-[rgba(var(--xx-veil),0.18)] px-3 py-1.5 text-xs
             transition-colors duration-xx hover:border-[color:var(--xx-cyan)]
             hover:text-[color:var(--xx-cyan)]"
         >
@@ -51,7 +51,7 @@ export default function BusinessBanner({ compact = false }) {
       key: 'stockValue',
       label: 'Valoare totală stoc',
       hint: 'Capitalul imobilizat în marfă, la preț de achiziție',
-      accent: '#2e7bff',
+      accent: 'var(--xx-blue)',
       icon: <BoxIcon />,
       to: '/admin/products',
     },
@@ -59,7 +59,7 @@ export default function BusinessBanner({ compact = false }) {
       key: 'profitPotential',
       label: 'Profit potențial',
       hint: 'Marja pe care ar aduce-o stocul curent vândut la prețul de listă',
-      accent: '#1fac79',
+      accent: 'var(--xx-good-6)',
       icon: <TrendIcon />,
       to: '/admin/products',
     },
@@ -67,7 +67,7 @@ export default function BusinessBanner({ compact = false }) {
       key: 'monthSales',
       label: 'Vânzări luna curentă',
       hint: 'Venit înregistrat de la începutul lunii',
-      accent: '#d032b8',
+      accent: 'var(--xx-magenta-4)',
       icon: <CartIcon />,
       to: '/admin/orders',
     },
@@ -75,7 +75,7 @@ export default function BusinessBanner({ compact = false }) {
       key: 'averageMargin',
       label: 'Marjă medie',
       hint: 'Marja ca procent din valoarea de vânzare a stocului',
-      accent: '#b08c09',
+      accent: 'var(--xx-warn-6)',
       icon: <PercentIcon />,
       to: '/admin/accounting',
     },
@@ -112,7 +112,7 @@ export default function BusinessBanner({ compact = false }) {
             border-[rgba(176,140,9,0.35)] bg-[rgba(176,140,9,0.08)] px-3 py-2 text-xs
             text-[color:var(--xx-ink-dim)]"
         >
-          <span aria-hidden="true" className="text-[#e0bd4a]">●</span>
+          <span aria-hidden="true" className="text-[var(--xx-warn-5)]">●</span>
           <span>
             <strong className="font-semibold text-[color:var(--xx-ink)]">
               {quality.productsWithoutCost}
@@ -170,7 +170,7 @@ function MetricCard({ label, hint, accent, icon, to, metric, currency, loading, 
         <p className={`mt-3 font-display font-semibold tabular-nums text-[color:var(--xx-ink)]
           ${compact ? 'text-lg' : 'text-xl sm:text-2xl'}`}>
           {loading && !metric ? (
-            <span className="xx-shimmer inline-block h-6 w-24 rounded bg-[rgba(255,255,255,0.08)]" />
+            <span className="xx-shimmer inline-block h-6 w-24 rounded bg-[rgba(var(--xx-veil),0.08)]" />
           ) : (
             <CountUp value={value} format={unit} currency={currency} />
           )}

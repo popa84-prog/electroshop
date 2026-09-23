@@ -121,7 +121,7 @@ export default function PredictiveSalesPanel({ compact, title, dragHandle, onHid
                 <>
                   {' · '}
                   <span
-                    className={data.expectedChangePct >= 0 ? 'text-[#4fd3a0]' : 'text-[#ff8a97]'}
+                    className={data.expectedChangePct >= 0 ? 'text-[var(--xx-good-4)]' : 'text-[var(--xx-danger-4)]'}
                   >
                     {data.expectedChangePct >= 0 ? '+' : ''}
                     {data.expectedChangePct.toFixed(1)}%
@@ -198,12 +198,12 @@ export default function PredictiveSalesPanel({ compact, title, dragHandle, onHid
               {boundary ? (
                 <ReferenceLine
                   x={boundary}
-                  stroke="rgba(255,255,255,0.25)"
+                  stroke="rgba(var(--xx-veil),0.25)"
                   strokeDasharray="3 3"
                   label={{
                     value: 'azi',
                     position: 'insideTopRight',
-                    fill: 'rgba(255,255,255,0.45)',
+                    fill: 'rgba(var(--xx-veil),0.45)',
                     fontSize: 10,
                   }}
                 />

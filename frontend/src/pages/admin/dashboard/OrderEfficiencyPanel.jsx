@@ -111,8 +111,8 @@ export default function OrderEfficiencyPanel({ compact, title, dragHandle, onHid
         {kpis.map((kpi) => (
           <div
             key={kpi.label}
-            className="rounded-xl border border-[rgba(255,255,255,0.1)]
-              bg-[rgba(255,255,255,0.03)] p-2.5"
+            className="rounded-xl border border-[rgba(var(--xx-veil),0.1)]
+              bg-[rgba(var(--xx-veil),0.03)] p-2.5"
           >
             <p className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--xx-ink-dim)]">
               {kpi.label}
@@ -188,8 +188,8 @@ export default function OrderEfficiencyPanel({ compact, title, dragHandle, onHid
                 {data.returnReasons.map((reason) => (
                   <li
                     key={reason.reason}
-                    className="rounded-full border border-[rgba(255,255,255,0.14)]
-                      bg-[rgba(255,255,255,0.04)] px-2 py-0.5 text-[11px]
+                    className="rounded-full border border-[rgba(var(--xx-veil),0.14)]
+                      bg-[rgba(var(--xx-veil),0.04)] px-2 py-0.5 text-[11px]
                       text-[color:var(--xx-ink-dim)]"
                   >
                     {reason.reason}

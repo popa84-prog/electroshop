@@ -91,7 +91,7 @@ export default function ProfitBreakdownPanel({ compact, title, dragHandle, onHid
                 : ''}
             </span>
             {data.itemsWithoutCost > 0 ? (
-              <span className="text-[10px] text-[#e0bd4a]">
+              <span className="text-[10px] text-[var(--xx-warn-5)]">
                 {data.itemsWithoutCost} linii fără cost înregistrat, excluse din profit
               </span>
             ) : null}
@@ -120,7 +120,7 @@ export default function ProfitBreakdownPanel({ compact, title, dragHandle, onHid
                 setCategory('');
                 setBrand('');
               }}
-              className="rounded-lg border border-[rgba(255,255,255,0.14)] px-2 py-1 text-[11px]
+              className="rounded-lg border border-[rgba(var(--xx-veil),0.14)] px-2 py-1 text-[11px]
                 text-[color:var(--xx-ink-dim)] transition-colors duration-xx
                 hover:text-[color:var(--xx-ink)]"
             >
@@ -190,7 +190,7 @@ export default function ProfitBreakdownPanel({ compact, title, dragHandle, onHid
                 paddingAngle={2}
                 // A 2px gap between slices in the surface colour, so adjacent
                 // segments stay separable without relying on hue alone.
-                stroke="#0a0b1e"
+                stroke="var(--xx-surface-1)"
                 strokeWidth={2}
               >
                 {(data?.byBrand || []).map((slice, index) => (
@@ -211,7 +211,7 @@ export default function ProfitBreakdownPanel({ compact, title, dragHandle, onHid
                   <Link
                     to={`/admin/products?id=${product.productId}`}
                     className="flex items-center gap-2 rounded-lg px-1.5 py-1 transition-colors
-                      duration-xx hover:bg-[rgba(255,255,255,0.04)]"
+                      duration-xx hover:bg-[rgba(var(--xx-veil),0.04)]"
                   >
                     <span className="w-4 shrink-0 text-right text-[10px] tabular-nums
                       text-[color:var(--xx-ink-dim)]">
@@ -279,7 +279,7 @@ function FilterSelect({ label, value, onChange, options }) {
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="rounded-lg border border-[rgba(255,255,255,0.12)] bg-[rgba(9,10,26,0.9)]
+        className="rounded-lg border border-[rgba(var(--xx-veil),0.12)] bg-[rgba(var(--xx-panel),0.9)]
           px-2 py-1 text-[11px] text-[color:var(--xx-ink)] transition-colors duration-xx
           focus:border-[color:var(--xx-cyan)] focus:outline-none"
       >

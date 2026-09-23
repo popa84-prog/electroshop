@@ -91,8 +91,8 @@ export default function LayoutToolbar({
             />
             <div
               className="xx-no-scrollbar absolute right-0 z-40 mt-1 max-h-80 w-64 overflow-y-auto
-                rounded-xl border border-[rgba(255,255,255,0.14)] bg-[rgba(9,10,26,0.97)] p-1.5
-                shadow-[0_28px_70px_-32px_rgba(0,0,0,0.95)] backdrop-blur-glass-lg"
+                rounded-xl border border-[rgba(var(--xx-veil),0.14)] bg-[rgba(var(--xx-panel),0.97)] p-1.5
+                shadow-[0_28px_70px_-32px_rgba(var(--xx-shade),0.95)] backdrop-blur-glass-lg"
             >
               <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]
                 text-[color:var(--xx-ink-dim)]">
@@ -102,7 +102,7 @@ export default function LayoutToolbar({
                 <label
                   key={panel.id}
                   className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm
-                    transition-colors duration-xx hover:bg-[rgba(255,255,255,0.05)]
+                    transition-colors duration-xx hover:bg-[rgba(var(--xx-veil),0.05)]
                     ${panel.pinned ? 'opacity-50' : 'cursor-pointer'}`}
                 >
                   <input
@@ -110,7 +110,7 @@ export default function LayoutToolbar({
                     checked={!panel.hidden}
                     disabled={panel.pinned}
                     onChange={() => onToggleHidden(panel.id)}
-                    className="h-3.5 w-3.5 rounded border-[rgba(255,255,255,0.3)]
+                    className="h-3.5 w-3.5 rounded border-[rgba(var(--xx-veil),0.3)]
                       bg-transparent accent-[color:var(--xx-cyan)]"
                   />
                   <span className="min-w-0 truncate text-[color:var(--xx-ink)]">{panel.title}</span>
@@ -146,7 +146,7 @@ export default function LayoutToolbar({
               onReset();
               setConfirmingReset(false);
             }}
-            className="font-semibold text-[#ff8a97] underline underline-offset-2"
+            className="font-semibold text-[var(--xx-danger-4)] underline underline-offset-2"
           >
             Da
           </button>
@@ -179,7 +179,7 @@ function buttonClass(active) {
     focus-visible:ring-2 focus-visible:ring-[color:var(--xx-cyan)] ${
       active
         ? 'border-[rgba(34,232,245,0.5)] bg-[rgba(34,232,245,0.12)] text-[color:var(--xx-cyan)]'
-        : 'border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-dim)] hover:border-[rgba(255,255,255,0.28)] hover:text-[color:var(--xx-ink)]'
+        : 'border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-dim)] hover:border-[rgba(var(--xx-veil),0.28)] hover:text-[color:var(--xx-ink)]'
     }`;
 }
 
@@ -194,8 +194,8 @@ function SaveIndicator({ state }) {
 
   const config = {
     saving: { text: 'Se salvează…', tone: 'text-[color:var(--xx-ink-dim)]' },
-    saved: { text: 'Salvat', tone: 'text-[#4fd3a0]' },
-    error: { text: 'Nesalvat', tone: 'text-[#ff8a97]' },
+    saved: { text: 'Salvat', tone: 'text-[var(--xx-good-4)]' },
+    error: { text: 'Nesalvat', tone: 'text-[var(--xx-danger-4)]' },
   }[state];
 
   if (!config) return null;

@@ -21,21 +21,21 @@ export default function DashboardHeader({ hasPermission, compact = false, action
       label: 'Produse',
       permission: 'PRODUCTS_VIEW',
       icon: <BoxIcon />,
-      accent: '#2e7bff',
+      accent: 'var(--xx-blue)',
     },
     {
       to: '/admin/orders',
       label: 'Comenzi',
       permission: 'ORDERS_VIEW',
       icon: <CartIcon />,
-      accent: '#d032b8',
+      accent: 'var(--xx-magenta-4)',
     },
     {
       to: '/admin/offers',
       label: 'Promoții',
       permission: 'OFFERS_MANAGE',
       icon: <TagIcon />,
-      accent: '#b08c09',
+      accent: 'var(--xx-warn-6)',
     },
   ].filter((item) => !item.permission || hasPermission(item.permission));
 
@@ -57,9 +57,9 @@ export default function DashboardHeader({ hasPermission, compact = false, action
               key={item.to}
               to={item.to}
               className="group inline-flex items-center gap-2 rounded-lg border
-                border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.03)] px-3 py-2
+                border-[rgba(var(--xx-veil),0.12)] bg-[rgba(var(--xx-veil),0.03)] px-3 py-2
                 text-sm font-medium text-[color:var(--xx-ink-dim)] transition-all duration-xx
-                ease-xx hover:border-[rgba(255,255,255,0.28)] hover:text-[color:var(--xx-ink)]
+                ease-xx hover:border-[rgba(var(--xx-veil),0.28)] hover:text-[color:var(--xx-ink)]
                 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--xx-cyan)]"
             >
               <span

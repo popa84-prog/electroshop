@@ -80,8 +80,8 @@ export default function ActivityPanel({ compact, title, dragHandle, onHide }) {
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Caută în activitate…"
           aria-label="Caută în activitate"
-          className="w-full rounded-lg border border-[rgba(255,255,255,0.12)]
-            bg-[rgba(255,255,255,0.04)] px-3 py-1.5 text-xs text-[color:var(--xx-ink)]
+          className="w-full rounded-lg border border-[rgba(var(--xx-veil),0.12)]
+            bg-[rgba(var(--xx-veil),0.04)] px-3 py-1.5 text-xs text-[color:var(--xx-ink)]
             placeholder:text-[color:var(--xx-ink-dim)] focus:border-[color:var(--xx-cyan)]
             focus:outline-none"
         />
@@ -110,8 +110,8 @@ export default function ActivityPanel({ compact, title, dragHandle, onHide }) {
             const open = expanded === entry.id;
             return (
               <li key={entry.id} className="rounded-lg border border-transparent
-                transition-colors duration-xx hover:border-[rgba(255,255,255,0.08)]
-                hover:bg-[rgba(255,255,255,0.03)]">
+                transition-colors duration-xx hover:border-[rgba(var(--xx-veil),0.08)]
+                hover:bg-[rgba(var(--xx-veil),0.03)]">
                 <button
                   type="button"
                   onClick={() => setExpanded(open ? null : entry.id)}
@@ -140,7 +140,7 @@ export default function ActivityPanel({ compact, title, dragHandle, onHide }) {
                 </button>
 
                 {open ? (
-                  <div className="border-t border-[rgba(255,255,255,0.08)] px-2 py-2 text-[11px]">
+                  <div className="border-t border-[rgba(var(--xx-veil),0.08)] px-2 py-2 text-[11px]">
                     <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
                       <dt className="text-[color:var(--xx-ink-dim)]">Cine</dt>
                       <dd className="text-[color:var(--xx-ink)]">{entry.actor || 'sistem'}</dd>
@@ -176,8 +176,8 @@ export default function ActivityPanel({ compact, title, dragHandle, onHide }) {
                               <td className="pr-2 text-[color:var(--xx-ink-dim)]">
                                 {change.field}
                               </td>
-                              <td className="pr-2 text-[#ff8a97]">{change.oldValue ?? '—'}</td>
-                              <td className="text-[#4fd3a0]">{change.newValue ?? '—'}</td>
+                              <td className="pr-2 text-[var(--xx-danger-4)]">{change.oldValue ?? '—'}</td>
+                              <td className="text-[var(--xx-good-4)]">{change.newValue ?? '—'}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -192,7 +192,7 @@ export default function ActivityPanel({ compact, title, dragHandle, onHide }) {
                       <Link
                         to={entry.linkTo}
                         className="mt-2 inline-block rounded-lg border
-                          border-[rgba(255,255,255,0.16)] px-2 py-0.5 text-[10px]
+                          border-[rgba(var(--xx-veil),0.16)] px-2 py-0.5 text-[10px]
                           text-[color:var(--xx-cyan)] transition-colors duration-xx
                           hover:border-[color:var(--xx-cyan)]"
                       >
@@ -220,7 +220,7 @@ function FilterChip({ active, onClick, label, count }) {
         transition-all duration-xx ${
           active
             ? 'border-[rgba(34,232,245,0.5)] bg-[rgba(34,232,245,0.12)] text-[color:var(--xx-cyan)]'
-            : 'border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-dim)] hover:text-[color:var(--xx-ink)]'
+            : 'border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-dim)] hover:text-[color:var(--xx-ink)]'
         }`}
     >
       {label}
@@ -232,11 +232,11 @@ function FilterChip({ active, onClick, label, count }) {
 /** One hue per category, drawn from the validated series palette. */
 function categoryColor(category) {
   return {
-    PRODUCTS: '#2e7bff',
-    ORDERS: '#d032b8',
-    USERS: '#1fac79',
-    SYSTEM: '#b08c09',
-  }[category] || 'rgba(255,255,255,0.35)';
+    PRODUCTS: 'var(--xx-blue)',
+    ORDERS: 'var(--xx-magenta-4)',
+    USERS: 'var(--xx-good-6)',
+    SYSTEM: 'var(--xx-warn-6)',
+  }[category] || 'rgba(var(--xx-veil),0.35)';
 }
 
 function formatDate(value) {

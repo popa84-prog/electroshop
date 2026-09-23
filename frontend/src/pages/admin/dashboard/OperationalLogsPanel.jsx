@@ -92,7 +92,7 @@ export default function OperationalLogsPanel({ compact, title, dragHandle, onHid
             className={`rounded-lg border px-2 py-1.5 text-left transition-all duration-xx ${
               source === count.source
                 ? 'border-[rgba(34,232,245,0.5)] bg-[rgba(34,232,245,0.1)]'
-                : 'border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.25)]'
+                : 'border-[rgba(var(--xx-veil),0.1)] bg-[rgba(var(--xx-veil),0.03)] hover:border-[rgba(var(--xx-veil),0.25)]'
             }`}
           >
             <span className="block text-[10px] uppercase tracking-[0.1em]
@@ -100,11 +100,11 @@ export default function OperationalLogsPanel({ compact, title, dragHandle, onHid
               {count.source}
             </span>
             <span className="mt-0.5 flex items-baseline gap-1.5 text-xs tabular-nums">
-              <span className={count.errors > 0 ? 'text-[#ff8a97]' : 'text-[color:var(--xx-ink)]'}>
+              <span className={count.errors > 0 ? 'text-[var(--xx-danger-4)]' : 'text-[color:var(--xx-ink)]'}>
                 {count.errors}
               </span>
               {count.warns > 0 ? (
-                <span className="text-[10px] text-[#e0bd4a]">{count.warns} avert.</span>
+                <span className="text-[10px] text-[var(--xx-warn-5)]">{count.warns} avert.</span>
               ) : null}
             </span>
           </button>
@@ -124,7 +124,7 @@ export default function OperationalLogsPanel({ compact, title, dragHandle, onHid
                 className="flex items-center justify-between gap-2 rounded-lg
                   bg-[rgba(184,47,60,0.06)] px-2 py-1 text-[11px]"
               >
-                <span className="min-w-0 truncate font-mono text-[10px] text-[#ff8a97]">
+                <span className="min-w-0 truncate font-mono text-[10px] text-[var(--xx-danger-4)]">
                   {group.code}
                 </span>
                 <span className="shrink-0 tabular-nums text-[color:var(--xx-ink-dim)]">
@@ -143,8 +143,8 @@ export default function OperationalLogsPanel({ compact, title, dragHandle, onHid
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Caută în jurnal…"
           aria-label="Caută în jurnal"
-          className="min-w-0 flex-1 rounded-lg border border-[rgba(255,255,255,0.12)]
-            bg-[rgba(255,255,255,0.04)] px-3 py-1.5 text-xs text-[color:var(--xx-ink)]
+          className="min-w-0 flex-1 rounded-lg border border-[rgba(var(--xx-veil),0.12)]
+            bg-[rgba(var(--xx-veil),0.04)] px-3 py-1.5 text-xs text-[color:var(--xx-ink)]
             placeholder:text-[color:var(--xx-ink-dim)] focus:border-[color:var(--xx-cyan)]
             focus:outline-none"
         />
@@ -229,7 +229,7 @@ function Select({ label, value, onChange, options }) {
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="rounded-lg border border-[rgba(255,255,255,0.12)] bg-[rgba(9,10,26,0.9)]
+        className="rounded-lg border border-[rgba(var(--xx-veil),0.12)] bg-[rgba(var(--xx-panel),0.9)]
           px-2 py-1 text-[11px] text-[color:var(--xx-ink)] focus:border-[color:var(--xx-cyan)]
           focus:outline-none"
       >

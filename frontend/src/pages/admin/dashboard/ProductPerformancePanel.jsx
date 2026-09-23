@@ -84,7 +84,7 @@ export default function ProductPerformancePanel({ compact, title, dragHandle, on
               text-[11px] font-medium transition-all duration-xx ${
                 tab === item.key
                   ? 'border-[rgba(34,232,245,0.5)] bg-[rgba(34,232,245,0.12)] text-[color:var(--xx-cyan)]'
-                  : 'border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-dim)] hover:text-[color:var(--xx-ink)]'
+                  : 'border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-dim)] hover:text-[color:var(--xx-ink)]'
               }`}
           >
             {item.label}
@@ -121,7 +121,7 @@ function TrendList({ rows, loading, compact, currency, kind }) {
           <Link
             to={`/admin/products?id=${row.productId}`}
             className="flex items-center gap-2.5 rounded-lg px-1.5 py-1.5 transition-colors
-              duration-xx hover:bg-[rgba(255,255,255,0.04)]"
+              duration-xx hover:bg-[rgba(var(--xx-veil),0.04)]"
           >
             <span className="min-w-0 flex-1">
               <span className="block truncate text-xs text-[color:var(--xx-ink)]">{row.name}</span>
@@ -132,12 +132,12 @@ function TrendList({ rows, loading, compact, currency, kind }) {
                 </span>
                 {/* The absolute movement is always shown; the percentage only
                     when the baseline was large enough to make it meaningful. */}
-                <span className={row.unitsDelta >= 0 ? 'text-[#4fd3a0]' : 'text-[#ff8a97]'}>
+                <span className={row.unitsDelta >= 0 ? 'text-[var(--xx-good-4)]' : 'text-[var(--xx-danger-4)]'}>
                   {row.unitsDelta >= 0 ? '+' : ''}
                   {row.unitsDelta}
                 </span>
                 {row.changePct !== null && row.changePct !== undefined ? (
-                  <span className={row.changePct >= 0 ? 'text-[#4fd3a0]' : 'text-[#ff8a97]'}>
+                  <span className={row.changePct >= 0 ? 'text-[var(--xx-good-4)]' : 'text-[var(--xx-danger-4)]'}>
                     ({row.changePct >= 0 ? '+' : ''}
                     {row.changePct.toFixed(0)}%)
                   </span>
@@ -187,8 +187,8 @@ function RecommendationList({ items, loading, compact, currency }) {
       {items.map((item) => (
         <li
           key={`${item.action}-${item.productId}`}
-          className="rounded-xl border border-[rgba(255,255,255,0.1)]
-            bg-[rgba(255,255,255,0.03)] p-2.5"
+          className="rounded-xl border border-[rgba(var(--xx-veil),0.1)]
+            bg-[rgba(var(--xx-veil),0.03)] p-2.5"
         >
           <div className="flex items-start justify-between gap-2">
             <Link
@@ -198,7 +198,7 @@ function RecommendationList({ items, loading, compact, currency }) {
             >
               <span className="line-clamp-2">{item.name}</span>
             </Link>
-            <span className="shrink-0 rounded-full border border-[rgba(255,255,255,0.16)]
+            <span className="shrink-0 rounded-full border border-[rgba(var(--xx-veil),0.16)]
               px-2 py-0.5 text-[10px] text-[color:var(--xx-ink-dim)]">
               {actionLabels[item.action] || item.action}
             </span>

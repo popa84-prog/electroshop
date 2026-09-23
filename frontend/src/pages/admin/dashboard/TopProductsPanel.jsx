@@ -66,7 +66,7 @@ export default function TopProductsPanel({ compact, title, dragHandle, onHide })
     >
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div role="radiogroup" aria-label="Clasament după"
-             className="inline-flex rounded-lg border border-[rgba(255,255,255,0.12)] p-0.5">
+             className="inline-flex rounded-lg border border-[rgba(var(--xx-veil),0.12)] p-0.5">
           {metrics.map((item) => (
             <button
               key={item.key}
@@ -76,7 +76,7 @@ export default function TopProductsPanel({ compact, title, dragHandle, onHide })
               onClick={() => setMetric(item.key)}
               className={`rounded-md px-2 py-1 text-[11px] font-semibold transition-all duration-xx ${
                 metric === item.key
-                  ? 'bg-[rgba(208,50,184,0.18)] text-[#f07fdc]'
+                  ? 'bg-[rgba(208,50,184,0.18)] text-[var(--xx-magenta-2)]'
                   : 'text-[color:var(--xx-ink-dim)] hover:text-[color:var(--xx-ink)]'
               }`}
             >
@@ -99,7 +99,7 @@ export default function TopProductsPanel({ compact, title, dragHandle, onHide })
               <Link
                 to={`/admin/products?id=${product.productId}`}
                 className="flex items-center gap-2.5 rounded-lg px-1.5 py-1.5 transition-colors
-                  duration-xx hover:bg-[rgba(255,255,255,0.04)]"
+                  duration-xx hover:bg-[rgba(var(--xx-veil),0.04)]"
               >
                 <span className="w-4 shrink-0 text-right text-[10px] tabular-nums
                   text-[color:var(--xx-ink-dim)]">
@@ -111,12 +111,12 @@ export default function TopProductsPanel({ compact, title, dragHandle, onHide })
                     src={product.imageUrl}
                     alt=""
                     loading="lazy"
-                    className="h-8 w-8 shrink-0 rounded-lg border border-[rgba(255,255,255,0.1)]
+                    className="h-8 w-8 shrink-0 rounded-lg border border-[rgba(var(--xx-veil),0.1)]
                       object-cover"
                   />
                 ) : (
                   <span className="h-8 w-8 shrink-0 rounded-lg border
-                    border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)]" aria-hidden="true" />
+                    border-[rgba(var(--xx-veil),0.1)] bg-[rgba(var(--xx-veil),0.04)]" aria-hidden="true" />
                 )}
 
                 <span className="min-w-0 flex-1">
@@ -152,15 +152,15 @@ export default function TopProductsPanel({ compact, title, dragHandle, onHide })
       )}
 
       {promote.length > 0 ? (
-        <div className="mt-4 border-t border-[rgba(255,255,255,0.08)] pt-3">
+        <div className="mt-4 border-t border-[rgba(var(--xx-veil),0.08)] pt-3">
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em]
             text-[color:var(--xx-ink-dim)]">
             Produse care ar trebui promovate
           </p>
           <ul className="space-y-1.5">
             {promote.slice(0, 3).map((item) => (
-              <li key={item.productId} className="rounded-lg border border-[rgba(255,255,255,0.1)]
-                bg-[rgba(255,255,255,0.03)] px-2.5 py-2">
+              <li key={item.productId} className="rounded-lg border border-[rgba(var(--xx-veil),0.1)]
+                bg-[rgba(var(--xx-veil),0.03)] px-2.5 py-2">
                 <Link
                   to={`/admin/products?id=${item.productId}`}
                   className="block truncate text-xs font-medium text-[color:var(--xx-ink)]
@@ -190,7 +190,7 @@ function Select({ label, value, onChange, options }) {
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="rounded-lg border border-[rgba(255,255,255,0.12)] bg-[rgba(9,10,26,0.9)]
+        className="rounded-lg border border-[rgba(var(--xx-veil),0.12)] bg-[rgba(var(--xx-panel),0.9)]
           px-2 py-1 text-[11px] text-[color:var(--xx-ink)] focus:border-[color:var(--xx-cyan)]
           focus:outline-none"
       >

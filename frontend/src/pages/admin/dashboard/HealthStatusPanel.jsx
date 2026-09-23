@@ -63,8 +63,8 @@ export default function HealthStatusPanel({ compact, title, dragHandle, onHide }
       </dl>
 
       <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
-        <div className="rounded-lg border border-[rgba(255,255,255,0.1)]
-          bg-[rgba(255,255,255,0.03)] px-2.5 py-1.5">
+        <div className="rounded-lg border border-[rgba(var(--xx-veil),0.1)]
+          bg-[rgba(var(--xx-veil),0.03)] px-2.5 py-1.5">
           <p className="text-[color:var(--xx-ink-dim)]">Bază de date</p>
           <p className="mt-0.5 flex items-center gap-1.5">
             <SeverityBadge level={data?.dbStatus === 'UP' ? 'SUCCESS' : 'DANGER'}
@@ -78,8 +78,8 @@ export default function HealthStatusPanel({ compact, title, dragHandle, onHide }
           </p>
         </div>
 
-        <div className="rounded-lg border border-[rgba(255,255,255,0.1)]
-          bg-[rgba(255,255,255,0.03)] px-2.5 py-1.5">
+        <div className="rounded-lg border border-[rgba(var(--xx-veil),0.1)]
+          bg-[rgba(var(--xx-veil),0.03)] px-2.5 py-1.5">
           <p className="text-[color:var(--xx-ink-dim)]">Memorie</p>
           <p className="mt-0.5 tabular-nums text-[color:var(--xx-ink)]">
             {data ? `${data.memoryUsedMb} / ${data.memoryMaxMb} MB` : '—'}
@@ -118,7 +118,7 @@ export default function HealthStatusPanel({ compact, title, dragHandle, onHide }
       ) : null}
 
       {data?.recentErrors?.length ? (
-        <div className="mt-3 border-t border-[rgba(255,255,255,0.08)] pt-2">
+        <div className="mt-3 border-t border-[rgba(var(--xx-veil),0.08)] pt-2">
           <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.1em]
             text-[color:var(--xx-ink-dim)]">
             Ultimele erori
@@ -126,7 +126,7 @@ export default function HealthStatusPanel({ compact, title, dragHandle, onHide }
           <ul className="space-y-1">
             {data.recentErrors.map((entry, index) => (
               <li key={`${entry.code}-${index}`} className="text-[10px] leading-relaxed">
-                <span className="text-[#ff8a97]">{entry.code}</span>{' '}
+                <span className="text-[var(--xx-danger-4)]">{entry.code}</span>{' '}
                 <span className="text-[color:var(--xx-ink-dim)]">{entry.message}</span>
               </li>
             ))}
@@ -142,8 +142,8 @@ function Metric({ label, value, suffix = '', missing = '—' }) {
   const has = value !== null && value !== undefined && Number.isFinite(numeric);
 
   return (
-    <div className="rounded-lg border border-[rgba(255,255,255,0.1)]
-      bg-[rgba(255,255,255,0.03)] px-2.5 py-1.5">
+    <div className="rounded-lg border border-[rgba(var(--xx-veil),0.1)]
+      bg-[rgba(var(--xx-veil),0.03)] px-2.5 py-1.5">
       <dt className="text-[10px] uppercase tracking-[0.1em] text-[color:var(--xx-ink-dim)]">
         {label}
       </dt>

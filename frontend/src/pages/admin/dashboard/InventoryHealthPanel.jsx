@@ -80,7 +80,7 @@ export default function InventoryHealthPanel({ compact, title, dragHandle, onHid
             </span>
             <span>
               din care blocat în supra-stoc{' '}
-              <strong className="font-semibold tabular-nums text-[#e0bd4a]">
+              <strong className="font-semibold tabular-nums text-[var(--xx-warn-5)]">
                 {money(summary.overstockedValue, data.currency)}
               </strong>
             </span>
@@ -105,7 +105,7 @@ export default function InventoryHealthPanel({ compact, title, dragHandle, onHid
               font-medium transition-all duration-xx ${
                 tab === item.key
                   ? 'border-[rgba(34,232,245,0.5)] bg-[rgba(34,232,245,0.12)] text-[color:var(--xx-cyan)]'
-                  : 'border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-dim)] hover:text-[color:var(--xx-ink)]'
+                  : 'border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-dim)] hover:text-[color:var(--xx-ink)]'
               }`}
           >
             {item.label}
@@ -148,8 +148,8 @@ function RestockList({ items, currency, loading, compact }) {
       {items.map((item) => (
         <li
           key={item.productId}
-          className="rounded-xl border border-[rgba(255,255,255,0.1)]
-            bg-[rgba(255,255,255,0.03)] p-2.5"
+          className="rounded-xl border border-[rgba(var(--xx-veil),0.1)]
+            bg-[rgba(var(--xx-veil),0.03)] p-2.5"
         >
           <div className="flex items-start justify-between gap-2">
             <Link

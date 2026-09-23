@@ -104,7 +104,7 @@ export default function AdminToolsPanel({ compact, title, dragHandle, onHide }) 
                 <Link
                   key={shortcut.key}
                   to={shortcut.linkTo}
-                  className="rounded-lg border border-[rgba(255,255,255,0.12)] px-2 py-1
+                  className="rounded-lg border border-[rgba(var(--xx-veil),0.12)] px-2 py-1
                     text-[11px] text-[color:var(--xx-ink-dim)] transition-colors duration-xx
                     hover:border-[color:var(--xx-cyan)] hover:text-[color:var(--xx-cyan)]"
                   title={
@@ -132,7 +132,7 @@ export default function AdminToolsPanel({ compact, title, dragHandle, onHide }) 
               text-[11px] font-medium transition-all duration-xx ${
                 tab === item.key
                   ? 'border-[rgba(34,232,245,0.5)] bg-[rgba(34,232,245,0.12)] text-[color:var(--xx-cyan)]'
-                  : 'border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-dim)] hover:text-[color:var(--xx-ink)]'
+                  : 'border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-dim)] hover:text-[color:var(--xx-ink)]'
               }`}
           >
             {item.label}
@@ -154,8 +154,8 @@ export default function AdminToolsPanel({ compact, title, dragHandle, onHide }) 
               : 'Adaugă o notiță…'
           }
           maxLength={data?.limits?.maxContentLength ?? 4000}
-          className="min-w-0 flex-1 rounded-lg border border-[rgba(255,255,255,0.12)]
-            bg-[rgba(255,255,255,0.04)] px-3 py-1.5 text-xs text-[color:var(--xx-ink)]
+          className="min-w-0 flex-1 rounded-lg border border-[rgba(var(--xx-veil),0.12)]
+            bg-[rgba(var(--xx-veil),0.04)] px-3 py-1.5 text-xs text-[color:var(--xx-ink)]
             placeholder:text-[color:var(--xx-ink-dim)] focus:border-[color:var(--xx-cyan)]
             focus:outline-none"
         />
@@ -165,8 +165,8 @@ export default function AdminToolsPanel({ compact, title, dragHandle, onHide }) 
             value={dueAt}
             onChange={(event) => setDueAt(event.target.value)}
             aria-label="Când"
-            className="rounded-lg border border-[rgba(255,255,255,0.12)]
-              bg-[rgba(255,255,255,0.04)] px-2 py-1.5 text-xs text-[color:var(--xx-ink)]
+            className="rounded-lg border border-[rgba(var(--xx-veil),0.12)]
+              bg-[rgba(var(--xx-veil),0.04)] px-2 py-1.5 text-xs text-[color:var(--xx-ink)]
               focus:border-[color:var(--xx-cyan)] focus:outline-none"
           />
         ) : null}
@@ -183,7 +183,7 @@ export default function AdminToolsPanel({ compact, title, dragHandle, onHide }) 
 
       {failure ? (
         <p className="mb-2 rounded-lg border border-[rgba(184,47,60,0.4)]
-          bg-[rgba(184,47,60,0.08)] px-2.5 py-1.5 text-[11px] text-[#ff8a97]">
+          bg-[rgba(184,47,60,0.08)] px-2.5 py-1.5 text-[11px] text-[var(--xx-danger-4)]">
           {failure}
         </p>
       ) : null}
@@ -200,7 +200,7 @@ export default function AdminToolsPanel({ compact, title, dragHandle, onHide }) 
             <li
               key={item.id}
               className={`flex items-start gap-2 rounded-lg px-2 py-1.5 transition-colors
-                duration-xx hover:bg-[rgba(255,255,255,0.035)] ${
+                duration-xx hover:bg-[rgba(var(--xx-veil),0.035)] ${
                   item.overdue ? 'border border-[rgba(184,47,60,0.35)]' : ''
                 }`}
             >
@@ -211,7 +211,7 @@ export default function AdminToolsPanel({ compact, title, dragHandle, onHide }) 
                   disabled={busy}
                   onChange={() => run(() => adminToolsService.toggle(item.id))}
                   aria-label={item.done ? 'Marchează ca nefinalizat' : 'Marchează ca finalizat'}
-                  className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-[rgba(255,255,255,0.3)]
+                  className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-[rgba(var(--xx-veil),0.3)]
                     bg-transparent accent-[color:var(--xx-cyan)]"
                 />
               ) : null}
@@ -228,7 +228,7 @@ export default function AdminToolsPanel({ compact, title, dragHandle, onHide }) 
                 </span>
                 {item.dueAt ? (
                   <span className={`block text-[10px] ${
-                    item.overdue ? 'text-[#ff8a97]' : 'text-[color:var(--xx-ink-dim)]'
+                    item.overdue ? 'text-[var(--xx-danger-4)]' : 'text-[color:var(--xx-ink-dim)]'
                   }`}>
                     {item.overdue ? 'Depășit · ' : ''}
                     {new Date(item.dueAt).toLocaleString('ro-RO', {
@@ -247,7 +247,7 @@ export default function AdminToolsPanel({ compact, title, dragHandle, onHide }) 
                 onClick={() => run(() => adminToolsService.remove(item.id))}
                 aria-label="Șterge"
                 className="shrink-0 text-[color:var(--xx-ink-dim)] transition-colors duration-xx
-                  hover:text-[#ff8a97] disabled:opacity-40"
+                  hover:text-[var(--xx-danger-4)] disabled:opacity-40"
               >
                 ✕
               </button>

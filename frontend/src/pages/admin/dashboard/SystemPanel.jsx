@@ -66,7 +66,7 @@ export default function SystemPanel({ compact, title, dragHandle, onHide }) {
               bază de date{' '}
               <strong
                 className={
-                  data?.dbStatus === 'UP' ? 'text-[#4fd3a0]' : 'text-[#ff8a97]'
+                  data?.dbStatus === 'UP' ? 'text-[var(--xx-good-4)]' : 'text-[var(--xx-danger-4)]'
                 }
               >
                 {data?.dbStatus === 'UP' ? 'disponibilă' : 'indisponibilă'}
@@ -85,7 +85,7 @@ export default function SystemPanel({ compact, title, dragHandle, onHide }) {
               <li
                 key={target.key}
                 className="flex items-center justify-between gap-2 rounded-lg border
-                  border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] px-2.5 py-1.5"
+                  border-[rgba(var(--xx-veil),0.1)] bg-[rgba(var(--xx-veil),0.03)] px-2.5 py-1.5"
               >
                 <span className="min-w-0">
                   <span className="block text-xs text-[color:var(--xx-ink)]">{target.label}</span>
@@ -95,7 +95,7 @@ export default function SystemPanel({ compact, title, dragHandle, onHide }) {
                 </span>
                 <Link
                   to={target.to}
-                  className="shrink-0 rounded-lg border border-[rgba(255,255,255,0.16)] px-2 py-0.5
+                  className="shrink-0 rounded-lg border border-[rgba(var(--xx-veil),0.16)] px-2 py-0.5
                     text-[10px] text-[color:var(--xx-cyan)] transition-colors duration-xx
                     hover:border-[color:var(--xx-cyan)]"
                 >
@@ -116,7 +116,7 @@ export default function SystemPanel({ compact, title, dragHandle, onHide }) {
               <li
                 key={job.name}
                 className="flex items-start justify-between gap-2 rounded-lg border
-                  border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] px-2.5 py-1.5"
+                  border-[rgba(var(--xx-veil),0.1)] bg-[rgba(var(--xx-veil),0.03)] px-2.5 py-1.5"
               >
                 <span className="min-w-0">
                   <span className="block text-xs text-[color:var(--xx-ink)]">{job.label}</span>
@@ -152,7 +152,7 @@ export default function SystemPanel({ compact, title, dragHandle, onHide }) {
               {data.recentErrors.slice(0, 4).map((entry, index) => (
                 <li key={`${entry.code}-${index}`}
                     className="rounded-lg bg-[rgba(184,47,60,0.06)] px-2.5 py-1.5 text-[11px]">
-                  <span className="text-[#ff8a97]">{entry.code}</span>{' '}
+                  <span className="text-[var(--xx-danger-4)]">{entry.code}</span>{' '}
                   <span className="text-[color:var(--xx-ink-dim)]">{entry.message}</span>
                 </li>
               ))}

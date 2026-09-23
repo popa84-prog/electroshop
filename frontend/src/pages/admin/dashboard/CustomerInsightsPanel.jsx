@@ -173,8 +173,8 @@ export default function CustomerInsightsPanel({ compact, title, dragHandle, onHi
                 {(data?.segments || []).map((segment, index) => (
                   <li
                     key={segment.key}
-                    className="rounded-lg border border-[rgba(255,255,255,0.1)]
-                      bg-[rgba(255,255,255,0.03)] px-2.5 py-1.5"
+                    className="rounded-lg border border-[rgba(var(--xx-veil),0.1)]
+                      bg-[rgba(var(--xx-veil),0.03)] px-2.5 py-1.5"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="flex min-w-0 items-center gap-1.5">
@@ -208,7 +208,7 @@ export default function CustomerInsightsPanel({ compact, title, dragHandle, onHi
           </div>
 
           {data?.topCustomers?.length ? (
-            <div className="mt-4 border-t border-[rgba(255,255,255,0.08)] pt-3">
+            <div className="mt-4 border-t border-[rgba(var(--xx-veil),0.08)] pt-3">
               <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.1em]
                 text-[color:var(--xx-ink-dim)]">
                 Clienți cu valoarea cea mai mare
@@ -219,7 +219,7 @@ export default function CustomerInsightsPanel({ compact, title, dragHandle, onHi
                     <Link
                       to={`/admin/users?id=${customer.userId}`}
                       className="flex items-center justify-between gap-2 rounded-lg px-1.5 py-1
-                        text-xs transition-colors duration-xx hover:bg-[rgba(255,255,255,0.04)]"
+                        text-xs transition-colors duration-xx hover:bg-[rgba(var(--xx-veil),0.04)]"
                     >
                       <span className="min-w-0 truncate text-[color:var(--xx-ink)]">
                         {customer.fullName || customer.email}

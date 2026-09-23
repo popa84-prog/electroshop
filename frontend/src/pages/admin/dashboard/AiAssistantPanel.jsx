@@ -104,8 +104,8 @@ export default function AiAssistantPanel({ compact, title, dragHandle, onHide })
               {suggestions.map((suggestion) => (
                 <li
                   key={suggestion.id}
-                  className="rounded-xl border border-[rgba(255,255,255,0.1)]
-                    bg-[rgba(255,255,255,0.03)] p-2.5"
+                  className="rounded-xl border border-[rgba(var(--xx-veil),0.1)]
+                    bg-[rgba(var(--xx-veil),0.03)] p-2.5"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p className="min-w-0 text-xs font-medium text-[color:var(--xx-ink)]">
@@ -140,7 +140,7 @@ export default function AiAssistantPanel({ compact, title, dragHandle, onHide })
                     {suggestion.linkTo ? (
                       <Link
                         to={suggestion.linkTo}
-                        className="rounded-lg border border-[rgba(255,255,255,0.16)] px-2 py-0.5
+                        className="rounded-lg border border-[rgba(var(--xx-veil),0.16)] px-2 py-0.5
                           text-[10px] text-[color:var(--xx-cyan)] transition-colors duration-xx
                           hover:border-[color:var(--xx-cyan)]"
                       >

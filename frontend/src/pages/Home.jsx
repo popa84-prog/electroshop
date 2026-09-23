@@ -77,7 +77,7 @@ function iconFor(name) {
 // electronice noi.
 const BENEFITS_FALLBACK = [
   { icon: 'truck', accent: 'var(--xx-cyan)', title: 'Livrare rapidă', text: 'Transport gratuit, oriunde în țară' },
-  { icon: 'shield', accent: 'var(--xx-lime)', title: 'Garanție completă', text: 'Produse originale, garanție legală' },
+  { icon: 'shield', accent: 'var(--xx-lime)', title: 'Garanție 3 zile', text: 'Funcționare garantată la livrare' },
   { icon: 'coins', accent: 'var(--xx-amber)', title: 'Cumpărăm electronice', text: 'Evaluare corectă, plată pe loc' },
   { icon: 'tag', accent: 'var(--xx-purple)', title: 'Plata la livrare', text: 'Plătești doar când primești coletul' },
 ];
@@ -204,7 +204,7 @@ export default function Home() {
   return (
     <div className="space-y-16 sm:space-y-24">
       {/* ─────────────── 1. Cinematic hero (reactor core) ─────────────── */}
-      <section className="relative overflow-hidden rounded-[1.75rem] border border-[rgba(255,255,255,0.14)] px-6 py-16 sm:px-12 sm:py-24 tv:py-32">
+      <section className="relative overflow-hidden rounded-[1.75rem] border border-[rgba(var(--xx-veil),0.14)] px-6 py-16 sm:px-12 sm:py-24 tv:py-32">
         {/* Layer 1 — the gradient field. Static: an earlier version panned this
             background continuously (`animate-xx-gradient`, 12s infinite loop),
             which read as a distracting, unstoppable shimmer behind the hero
@@ -216,7 +216,7 @@ export default function Home() {
         <span
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 rounded-[1.75rem]"
-          style={{ boxShadow: 'inset 0 0 120px -40px rgba(34,232,245,0.85), inset 0 1px 0 0 rgba(255,255,255,0.16)' }}
+          style={{ boxShadow: 'inset 0 0 120px -40px rgba(34,232,245,0.85), inset 0 1px 0 0 rgba(var(--xx-veil),0.16)' }}
         />
         {/* A slow vertical scan used to sweep this band on an infinite loop
             (`animate-xx-scan`) — the same "transitory effect" family removed
@@ -225,13 +225,13 @@ export default function Home() {
         <div className="relative max-w-3xl">
           <p className="xx-eyebrow">ElectroShop · XXII</p>
 
-          <h1 className="font-display text-4xl font-bold leading-[1.05] tracking-tight text-white sm:text-6xl tv:text-7xl">
+          <h1 className="font-display text-4xl font-bold leading-[1.05] tracking-tight text-[color:var(--xx-ink)] sm:text-6xl tv:text-7xl">
             Tehnologie de top,
             <br />
             <span className="xx-text-gradient">la prețuri corecte</span>
           </h1>
 
-          <p className="mt-5 max-w-xl text-base text-[#c6cdf0] sm:text-lg tv:text-xl">
+          <p className="mt-5 max-w-xl text-base text-[var(--xx-info-4)] sm:text-lg tv:text-xl">
             Descoperă cele mai noi telefoane, laptopuri, produse audio și accesorii — cu livrare gratuită și plata
             la primire.
           </p>
@@ -255,7 +255,7 @@ export default function Home() {
             <div className="card card-static flex h-full items-start gap-3 p-4">
               <span
                 aria-hidden="true"
-                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[rgba(255,255,255,0.13)] bg-[rgba(255,255,255,0.05)]"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[rgba(var(--xx-veil),0.13)] bg-[rgba(var(--xx-veil),0.05)]"
               >
                 <GeoIcon name={benefit.icon} className="h-5 w-5" accent={benefit.accent} />
               </span>
@@ -320,7 +320,7 @@ export default function Home() {
           direct dacă acest modul există pe pagină. */}
       {promo && (
       <Reveal>
-        <section className="relative overflow-hidden rounded-[1.5rem] border border-[rgba(255,61,203,0.3)] bg-[rgba(12,7,26,0.72)] p-6 backdrop-blur-glass sm:p-9">
+        <section className="relative overflow-hidden rounded-[1.5rem] border border-[rgba(255,61,203,0.3)] bg-[rgba(var(--xx-panel),0.72)] p-6 backdrop-blur-glass sm:p-9">
           <span
             aria-hidden="true"
             className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full opacity-60"
@@ -335,12 +335,12 @@ export default function Home() {
           <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-xl">
               {promo.badgeLabel && <span className="badge badge-magenta">{promo.badgeLabel}</span>}
-              <h2 className="mt-3 font-display text-2xl font-bold text-white sm:text-4xl">
+              <h2 className="mt-3 font-display text-2xl font-bold text-[color:var(--xx-ink)] sm:text-4xl">
                 <span className="xx-text-gradient-hot">{promo.title}</span>
                 {promo.headline ? ` ${promo.headline}` : ''}
               </h2>
               {promo.description && (
-                <p className="mt-3 text-sm text-[#c6cdf0] sm:text-base">{promo.description}</p>
+                <p className="mt-3 text-sm text-[var(--xx-info-4)] sm:text-base">{promo.description}</p>
               )}
               {promo.ctaLabel && (
                 <NeonButton to={promo.ctaUrl || '/products'} variant="hot" size="lg" className="mt-6" pulse>

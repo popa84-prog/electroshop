@@ -63,7 +63,7 @@ export default function Orders() {
               <GeoIcon name="box" className="h-6 w-6" />
             </span>
             <div>
-              <p className="text-base font-semibold text-[#e8ecff]">
+              <p className="text-base font-semibold text-[var(--xx-info-1)]">
                 Nu ai plasat încă nicio comandă.
               </p>
               <p className="mt-1 text-sm xx-ink-muted">
@@ -93,7 +93,7 @@ export default function Orders() {
                   innerClassName="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="min-w-0">
-                    <p className="flex items-center gap-2 font-semibold text-[#e8ecff]">
+                    <p className="flex items-center gap-2 font-semibold text-[var(--xx-info-1)]">
                       <GeoIcon name="document" className="h-4 w-4 shrink-0" />
                       Comanda <span className="font-mono">#{o.id}</span>
                     </p>
@@ -117,7 +117,7 @@ export default function Orders() {
                       {statusLabel(o.status)}
                     </span>
                     <span
-                      className="text-lg font-bold text-[#e8ecff]"
+                      className="text-lg font-bold text-[var(--xx-info-1)]"
                       style={{ textShadow: '0 0 24px rgba(34,232,245,0.45)' }}
                     >
                       {formatPrice(o.totalAmount)}

@@ -112,7 +112,7 @@ export default function Cart() {
                 <Reveal key={item.id} delay={index * 60}>
                   <article className="card flex flex-wrap items-center gap-4 p-4 transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.32)]">
                     <Link to={`/products/${item.id}`} className="shrink-0" aria-label={item.name}>
-                      <div className="h-20 w-20 overflow-hidden rounded-xl bg-[rgba(255,255,255,0.05)]">
+                      <div className="h-20 w-20 overflow-hidden rounded-xl bg-[rgba(var(--xx-veil),0.05)]">
                         <img
                           src={resolveImage(item.imageUrl)}
                           alt={item.name}
@@ -143,13 +143,13 @@ export default function Cart() {
                     </div>
 
                     {/* Quantity stepper — 44px targets, so it works with a thumb. */}
-                    <div className="flex items-center gap-1 rounded-full border border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.05)] p-1">
+                    <div className="flex items-center gap-1 rounded-full border border-[rgba(var(--xx-veil),0.14)] bg-[rgba(var(--xx-veil),0.05)] p-1">
                       <button
                         type="button"
                         onClick={() => updateQuantity(item.id, item.quantity - 1)}
                         disabled={item.quantity <= 1}
                         aria-label={`Scade cantitatea pentru ${item.name}`}
-                        className="grid h-9 w-9 place-items-center rounded-full text-[color:var(--xx-ink)] transition-colors duration-xx hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
+                        className="grid h-9 w-9 place-items-center rounded-full text-[color:var(--xx-ink)] transition-colors duration-xx hover:bg-[rgba(var(--xx-veil),0.1)] disabled:cursor-not-allowed disabled:opacity-30"
                       >
                         −
                       </button>
@@ -169,7 +169,7 @@ export default function Cart() {
                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
                         disabled={atMax}
                         aria-label={`Crește cantitatea pentru ${item.name}`}
-                        className="grid h-9 w-9 place-items-center rounded-full text-[color:var(--xx-ink)] transition-colors duration-xx hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
+                        className="grid h-9 w-9 place-items-center rounded-full text-[color:var(--xx-ink)] transition-colors duration-xx hover:bg-[rgba(var(--xx-veil),0.1)] disabled:cursor-not-allowed disabled:opacity-30"
                       >
                         +
                       </button>
@@ -188,14 +188,14 @@ export default function Cart() {
                             removeItem(item.id);
                             setConfirming(null);
                           }}
-                          className="rounded-full border border-[rgba(255,84,112,0.5)] bg-[rgba(255,84,112,0.12)] px-3 py-1.5 text-xs font-semibold text-[#ffb3c0] transition-all duration-xx hover:shadow-[0_0_28px_-6px_rgba(255,84,112,0.7)]"
+                          className="rounded-full border border-[rgba(255,84,112,0.5)] bg-[rgba(255,84,112,0.12)] px-3 py-1.5 text-xs font-semibold text-[var(--xx-danger-2)] transition-all duration-xx hover:shadow-[0_0_28px_-6px_rgba(255,84,112,0.7)]"
                         >
                           Confirmă
                         </button>
                         <button
                           type="button"
                           onClick={() => setConfirming(null)}
-                          className="rounded-full px-2 py-1.5 text-xs xx-ink-dim transition-colors duration-xx hover:text-white"
+                          className="rounded-full px-2 py-1.5 text-xs xx-ink-dim transition-colors duration-xx hover:text-[color:var(--xx-ink)]"
                         >
                           Anulează
                         </button>
@@ -224,14 +224,14 @@ export default function Cart() {
                       clearCart();
                       setClearing(false);
                     }}
-                    className="rounded-full border border-[rgba(255,84,112,0.5)] bg-[rgba(255,84,112,0.12)] px-4 py-2 text-xs font-semibold text-[#ffb3c0]"
+                    className="rounded-full border border-[rgba(255,84,112,0.5)] bg-[rgba(255,84,112,0.12)] px-4 py-2 text-xs font-semibold text-[var(--xx-danger-2)]"
                   >
                     Confirmă golirea coșului
                   </button>
                   <button
                     type="button"
                     onClick={() => setClearing(false)}
-                    className="text-xs xx-ink-dim transition-colors duration-xx hover:text-white"
+                    className="text-xs xx-ink-dim transition-colors duration-xx hover:text-[color:var(--xx-ink)]"
                   >
                     Anulează
                   </button>
@@ -255,7 +255,7 @@ export default function Cart() {
           <div className="space-y-6 lg:sticky lg:top-28">
             <div
               className="card p-5 sm:p-6"
-              style={{ boxShadow: 'inset 0 0 80px -26px rgba(46,123,255,0.6), 0 26px 60px -30px rgba(0,0,0,0.9)' }}
+              style={{ boxShadow: 'inset 0 0 80px -26px rgba(46,123,255,0.6), 0 26px 60px -30px rgba(var(--xx-shade),0.9)' }}
             >
               <p className="xx-eyebrow">Sumar</p>
               <h2 className="xx-title text-xl">Comanda ta</h2>
@@ -279,7 +279,7 @@ export default function Cart() {
 
               {/* Free-shipping progress — real arithmetic on the subtotal. */}
               <div className="mt-4">
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-[rgba(255,255,255,0.08)]">
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-[rgba(var(--xx-veil),0.08)]">
                   <span
                     className="block h-full rounded-full bg-xx-primary transition-[width] duration-700 ease-xx"
                     style={{ width: `${progress}%` }}
@@ -292,7 +292,7 @@ export default function Cart() {
                 </p>
               </div>
 
-              <div className="mt-4 flex items-center justify-between border-t border-[rgba(255,255,255,0.1)] pt-4">
+              <div className="mt-4 flex items-center justify-between border-t border-[rgba(var(--xx-veil),0.1)] pt-4">
                 <span className="text-sm uppercase tracking-[0.14em] xx-ink-dim">Total</span>
                 <span className="font-display text-2xl font-bold xx-text-gradient">
                   {formatPrice(totalPrice + shipping)}
@@ -316,7 +316,7 @@ export default function Cart() {
                 </p>
               ) : null}
 
-              <div className="mt-4 grid grid-cols-2 gap-2 border-t border-[rgba(255,255,255,0.1)] pt-4">
+              <div className="mt-4 grid grid-cols-2 gap-2 border-t border-[rgba(var(--xx-veil),0.1)] pt-4">
                 <span className="flex items-center gap-2 text-xs xx-ink-dim">
                   <GeoIcon name="shield" className="h-4 w-4" accent="var(--xx-aqua)" />
                   Plată securizată

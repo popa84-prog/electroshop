@@ -68,9 +68,9 @@ function FilterChip({ label, value, onClear }) {
       type="button"
       onClick={onClear}
       aria-label={`Elimină filtrul ${label}: ${value}`}
-      className="group inline-flex items-center gap-1.5 rounded-full border border-[rgba(34,232,245,0.35)] bg-[rgba(34,232,245,0.1)] py-1 pl-3 pr-2 text-xs font-medium text-[#c9d4ff] transition-all duration-200 hover:border-[rgba(255,90,122,0.55)] hover:bg-[rgba(255,90,122,0.12)] hover:text-[#ff8fa8]"
+      className="group inline-flex items-center gap-1.5 rounded-full border border-[rgba(34,232,245,0.35)] bg-[rgba(34,232,245,0.1)] py-1 pl-3 pr-2 text-xs font-medium text-[var(--xx-info-3)] transition-all duration-200 hover:border-[rgba(255,90,122,0.55)] hover:bg-[rgba(255,90,122,0.12)] hover:text-[var(--xx-danger-3)]"
     >
-      <span className="uppercase tracking-[0.12em] text-[#22e8f5] transition-colors duration-200 group-hover:text-[#ff8fa8]">
+      <span className="uppercase tracking-[0.12em] text-[var(--xx-aqua)] transition-colors duration-200 group-hover:text-[var(--xx-danger-3)]">
         {label}
       </span>
       <span>{value}</span>
@@ -247,8 +247,8 @@ export default function Products() {
         onClick={() => updateParam({ view: mode })}
         className={`flex h-9 w-10 items-center justify-center transition-all duration-200 ${
           active
-            ? 'bg-[rgba(34,232,245,0.16)] text-[#22e8f5] shadow-[inset_0_0_18px_-6px_rgba(34,232,245,0.9)]'
-            : 'bg-[rgba(255,255,255,0.03)] text-[#c9d4ff] hover:bg-[rgba(255,255,255,0.07)] hover:text-[#e8ecff]'
+            ? 'bg-[rgba(34,232,245,0.16)] text-[var(--xx-aqua)] shadow-[inset_0_0_18px_-6px_rgba(34,232,245,0.9)]'
+            : 'bg-[rgba(var(--xx-veil),0.03)] text-[var(--xx-info-3)] hover:bg-[rgba(var(--xx-veil),0.07)] hover:text-[var(--xx-info-1)]'
         }`}
       >
         <GeoIcon name={iconName} className="h-4 w-4" accent="currentColor" />
@@ -277,7 +277,7 @@ export default function Products() {
           <button
             type="button"
             onClick={clearFilters}
-            className="ml-1 text-xs font-semibold text-[#b795ff] underline-offset-4 transition-colors duration-200 hover:text-[#ff4fd8] hover:underline"
+            className="ml-1 text-xs font-semibold text-[var(--xx-violet-3)] underline-offset-4 transition-colors duration-200 hover:text-[var(--xx-magenta-3)] hover:underline"
           >
             Șterge toate filtrele
           </button>
@@ -394,12 +394,12 @@ export default function Products() {
               </NeonButton>
             </div>
 
-            <label className="flex cursor-pointer items-center gap-2.5 py-3 text-sm text-[#c9d4ff] transition-colors duration-200 hover:text-[#e8ecff]">
+            <label className="flex cursor-pointer items-center gap-2.5 py-3 text-sm text-[var(--xx-info-3)] transition-colors duration-200 hover:text-[var(--xx-info-1)]">
               <input
                 type="checkbox"
                 checked={inStock}
                 onChange={(e) => updateParam({ inStock: e.target.checked, page: 0 })}
-                className="h-4 w-4 cursor-pointer rounded border-[rgba(34,232,245,0.4)] bg-[rgba(255,255,255,0.05)] accent-[#22e8f5]"
+                className="h-4 w-4 cursor-pointer rounded border-[rgba(34,232,245,0.4)] bg-[rgba(var(--xx-veil),0.05)] accent-[var(--xx-aqua)]"
               />
               Doar produse în stoc
             </label>
@@ -455,7 +455,7 @@ export default function Products() {
               </select>
             </label>
 
-            <div className="flex overflow-hidden rounded-[0.7rem] border border-[rgba(255,255,255,0.12)]">
+            <div className="flex overflow-hidden rounded-[0.7rem] border border-[rgba(var(--xx-veil),0.12)]">
               {viewButton('grid', 'grid', 'Grilă')}
               {viewButton('list', 'menu', 'Listă')}
             </div>
@@ -467,10 +467,10 @@ export default function Products() {
             <Reveal direction="scale">
               <div className="card card-static flex flex-col items-center gap-3 py-16 text-center">
                 <span className="flex h-16 w-16 items-center justify-center rounded-full border border-[rgba(122,60,255,0.45)] bg-[rgba(122,60,255,0.12)] shadow-[0_0_38px_-10px_rgba(122,60,255,0.8)]">
-                  <GeoIcon name="zoom" className="h-7 w-7" accent="#b795ff" />
+                  <GeoIcon name="zoom" className="h-7 w-7" accent="var(--xx-violet-3)" />
                 </span>
 
-                <p className="text-base font-semibold text-[#e8ecff]">Niciun produs găsit</p>
+                <p className="text-base font-semibold text-[var(--xx-info-1)]">Niciun produs găsit</p>
 
                 <p className="max-w-sm text-sm leading-relaxed xx-ink-muted">
                   {activeFilters

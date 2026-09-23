@@ -89,13 +89,13 @@ export default function Login() {
               Nu ai cont?{' '}
               <Link
                 to="/register"
-                className="font-semibold text-[#22e8f5] transition-colors duration-200 hover:text-[#7ee9ff] hover:underline"
+                className="font-semibold text-[var(--xx-aqua)] transition-colors duration-200 hover:text-[var(--xx-aqua-2)] hover:underline"
               >
                 Solicită acces
               </Link>
             </p>
 
-            <p className="mt-5 border-t border-[rgba(255,255,255,0.07)] pt-4 text-center text-[11px] leading-relaxed xx-ink-dim">
+            <p className="mt-5 border-t border-[rgba(var(--xx-veil),0.07)] pt-4 text-center text-[11px] leading-relaxed xx-ink-dim">
               Acces exclusiv autentificat. Conturile noi sunt activate după aprobarea
               administratorului.
             </p>
@@ -106,7 +106,7 @@ export default function Login() {
       {error && (
         <div
           role="alert"
-          className="mb-4 flex items-start gap-2.5 rounded-[0.9rem] border border-[rgba(255,90,122,0.45)] bg-[rgba(255,90,122,0.12)] px-4 py-3 text-sm text-[#ff8fa8]"
+          className="mb-4 flex items-start gap-2.5 rounded-[0.9rem] border border-[rgba(255,90,122,0.45)] bg-[rgba(255,90,122,0.12)] px-4 py-3 text-sm text-[var(--xx-danger-3)]"
         >
           <GeoIcon name="alert" className="mt-0.5 h-4 w-4 shrink-0" accent="currentColor" />
           <span>{error}</span>
@@ -155,7 +155,7 @@ export default function Login() {
               setCode('');
               setError(null);
             }}
-            className="mt-2 flex w-full items-center justify-center gap-1.5 text-center text-xs xx-ink-dim transition-colors duration-200 hover:text-[#22e8f5]"
+            className="mt-2 flex w-full items-center justify-center gap-1.5 text-center text-xs xx-ink-dim transition-colors duration-200 hover:text-[var(--xx-aqua)]"
           >
             <GeoIcon name="arrow" className="h-3 w-3 rotate-180" accent="currentColor" />
             Înapoi la autentificare

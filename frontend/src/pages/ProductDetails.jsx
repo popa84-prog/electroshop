@@ -52,7 +52,7 @@ import {
 /** Static guarantees — real shop policy, not per-product data. */
 const ASSURANCES = [
   { icon: 'truck', title: 'Livrare 24–48h', detail: 'Curier rapid în toată țara' },
-  { icon: 'shield', title: 'Garanție 24 luni', detail: 'Service autorizat' },
+  { icon: 'shield', title: 'Garanție 3 zile', detail: 'Funcționare la livrare' },
   { icon: 'refresh', title: 'Retur 14 zile', detail: 'Fără justificare' },
   { icon: 'bolt', title: 'Plată securizată', detail: 'Card sau ramburs' },
 ];
@@ -60,10 +60,10 @@ const ASSURANCES = [
 function SpecRow({ icon, label, value }) {
   if (value === null || value === undefined || value === '') return null;
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-[rgba(255,255,255,0.09)] bg-[rgba(255,255,255,0.035)] px-3.5 py-3 transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.35)] hover:bg-[rgba(34,232,245,0.06)]">
+    <div className="flex items-center gap-3 rounded-xl border border-[rgba(var(--xx-veil),0.09)] bg-[rgba(var(--xx-veil),0.035)] px-3.5 py-3 transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.35)] hover:bg-[rgba(34,232,245,0.06)]">
       <span
         aria-hidden="true"
-        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.05)]"
+        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[rgba(var(--xx-veil),0.1)] bg-[rgba(var(--xx-veil),0.05)]"
       >
         <GeoIcon name={icon} className="h-4 w-4" accent="var(--xx-cyan)" />
       </span>
@@ -264,7 +264,7 @@ export default function ProductDetails() {
           <div className="lg:sticky lg:top-28">
             <div
               className="card relative overflow-hidden p-5 sm:p-6"
-              style={{ boxShadow: 'inset 0 0 80px -26px rgba(122,60,255,0.7), 0 26px 60px -30px rgba(0,0,0,0.9)' }}
+              style={{ boxShadow: 'inset 0 0 80px -26px rgba(122,60,255,0.7), 0 26px 60px -30px rgba(var(--xx-shade),0.9)' }}
             >
               <div className="flex flex-wrap items-center gap-2">
                 {product.brand ? (
@@ -330,13 +330,13 @@ export default function ProductDetails() {
               {!outOfStock && (
                 <div className="mt-5 flex items-center gap-3">
                   <span className="text-sm xx-ink-muted">Cantitate</span>
-                  <div className="flex items-center gap-1 rounded-full border border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.05)] p-1">
+                  <div className="flex items-center gap-1 rounded-full border border-[rgba(var(--xx-veil),0.14)] bg-[rgba(var(--xx-veil),0.05)] p-1">
                     <button
                       type="button"
                       onClick={() => stepQuantity(-1)}
                       disabled={quantity <= 1}
                       aria-label="Scade cantitatea"
-                      className="grid h-8 w-8 place-items-center rounded-full text-[color:var(--xx-ink)] transition-colors duration-xx hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
+                      className="grid h-8 w-8 place-items-center rounded-full text-[color:var(--xx-ink)] transition-colors duration-xx hover:bg-[rgba(var(--xx-veil),0.1)] disabled:cursor-not-allowed disabled:opacity-30"
                     >
                       −
                     </button>
@@ -358,7 +358,7 @@ export default function ProductDetails() {
                       onClick={() => stepQuantity(1)}
                       disabled={quantity >= product.stockQuantity}
                       aria-label="Crește cantitatea"
-                      className="grid h-8 w-8 place-items-center rounded-full text-[color:var(--xx-ink)] transition-colors duration-xx hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
+                      className="grid h-8 w-8 place-items-center rounded-full text-[color:var(--xx-ink)] transition-colors duration-xx hover:bg-[rgba(var(--xx-veil),0.1)] disabled:cursor-not-allowed disabled:opacity-30"
                     >
                       +
                     </button>
@@ -392,7 +392,7 @@ export default function ProductDetails() {
                 </NeonButton>
               </div>
 
-              <div className="mt-5 grid grid-cols-2 gap-2 border-t border-[rgba(255,255,255,0.1)] pt-4">
+              <div className="mt-5 grid grid-cols-2 gap-2 border-t border-[rgba(var(--xx-veil),0.1)] pt-4">
                 {ASSURANCES.map((item) => (
                   <div key={item.title} className="flex items-start gap-2">
                     <GeoIcon name={item.icon} className="mt-0.5 h-4 w-4 shrink-0" accent="var(--xx-aqua)" />
@@ -433,7 +433,7 @@ export default function ProductDetails() {
                 <SpecRow icon="layers" label="Subcategorie" value={product.subcategory} />
                 <SpecRow icon="document" label="Cod produs" value={product.sku} />
                 <SpecRow icon="box" label="Stoc" value={`${product.stockQuantity} buc.`} />
-                <SpecRow icon="shield" label="Garanție" value="24 luni" />
+                <SpecRow icon="shield" label="Garanție" value="3 zile" />
                 <SpecRow icon="coins" label="Preț" value={formatPrice(product.price)} />
               </div>
             </section>

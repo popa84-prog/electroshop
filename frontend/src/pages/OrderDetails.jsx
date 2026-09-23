@@ -58,9 +58,9 @@ export default function OrderDetails() {
       <Reveal direction="scale">
         <div className="card card-static flex flex-col items-center gap-4 px-6 py-16 text-center">
           <span className="flex h-14 w-14 items-center justify-center rounded-full border border-[rgba(255,90,122,0.5)] bg-[rgba(255,90,122,0.14)]">
-            <GeoIcon name="alert" className="h-6 w-6" accent="#ff8fa8" />
+            <GeoIcon name="alert" className="h-6 w-6" accent="var(--xx-danger-3)" />
           </span>
-          <p role="alert" className="text-base font-semibold text-[#ff8fa8]">
+          <p role="alert" className="text-base font-semibold text-[var(--xx-danger-3)]">
             {error}
           </p>
           <NeonButton
@@ -79,7 +79,7 @@ export default function OrderDetails() {
     <div>
       <Link
         to="/orders"
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#22e8f5] transition-colors duration-200 hover:text-[#7ee9ff]"
+        className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--xx-aqua)] transition-colors duration-200 hover:text-[var(--xx-aqua-2)]"
       >
         <GeoIcon name="arrow" className="h-3.5 w-3.5 rotate-180" accent="currentColor" />
         Înapoi la comenzi
@@ -93,10 +93,10 @@ export default function OrderDetails() {
             style={{ boxShadow: '0 0 48px -18px rgba(31,172,121,0.65)' }}
           >
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[rgba(31,172,121,0.5)] bg-[rgba(31,172,121,0.16)]">
-              <GeoIcon name="check" className="h-4 w-4" accent="#7ee9bd" />
+              <GeoIcon name="check" className="h-4 w-4" accent="var(--xx-good-3)" />
             </span>
             <div>
-              <p className="text-sm font-semibold text-[#7ee9bd]">
+              <p className="text-sm font-semibold text-[var(--xx-good-3)]">
                 Comanda ta a fost plasată cu succes.
               </p>
               <p className="text-xs xx-ink-muted">
@@ -134,16 +134,16 @@ export default function OrderDetails() {
                   src={resolveImage(item.imageUrl)}
                   alt={item.productName}
                   loading="lazy"
-                  className="h-16 w-16 shrink-0 rounded-[0.8rem] border border-[rgba(255,255,255,0.1)] object-cover"
+                  className="h-16 w-16 shrink-0 rounded-[0.8rem] border border-[rgba(var(--xx-veil),0.1)] object-cover"
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-[#e8ecff]">{item.productName}</p>
+                  <p className="truncate font-medium text-[var(--xx-info-1)]">{item.productName}</p>
                   <p className="mt-0.5 text-sm xx-ink-muted">
                     <span className="font-mono">{item.quantity}</span> ×{' '}
                     <span className="font-mono">{formatPrice(item.unitPrice)}</span>
                   </p>
                 </div>
-                <span className="shrink-0 font-semibold text-[#e8ecff]">
+                <span className="shrink-0 font-semibold text-[var(--xx-info-1)]">
                   {formatPrice(item.subtotal)}
                 </span>
               </div>
@@ -162,15 +162,15 @@ export default function OrderDetails() {
               <p className="text-xs font-semibold uppercase tracking-[0.14em] xx-ink-dim">
                 Adresă livrare
               </p>
-              <p className="text-[#e8ecff]">{order.shippingAddress || '—'}</p>
+              <p className="text-[var(--xx-info-1)]">{order.shippingAddress || '—'}</p>
             </div>
 
-            <div className="mt-5 flex items-baseline justify-between border-t border-[rgba(255,255,255,0.1)] pt-4">
+            <div className="mt-5 flex items-baseline justify-between border-t border-[rgba(var(--xx-veil),0.1)] pt-4">
               <span className="text-sm font-semibold uppercase tracking-[0.14em] xx-ink-muted">
                 Total
               </span>
               <span
-                className="text-2xl font-bold text-[#e8ecff]"
+                className="text-2xl font-bold text-[var(--xx-info-1)]"
                 style={{ textShadow: '0 0 26px rgba(34,232,245,0.5)' }}
               >
                 {formatPrice(order.totalAmount)}

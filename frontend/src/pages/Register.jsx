@@ -83,10 +83,10 @@ export default function Register() {
       <AuthShell title="CERERE TRIMISĂ" eyebrow="Cont în așteptare">
         <div className="text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-[rgba(31,172,121,0.5)] bg-[rgba(31,172,121,0.14)] shadow-[0_0_28px_-6px_rgba(31,172,121,0.7)]">
-            <GeoIcon name="check" className="h-7 w-7" accent="#7ee9bd" />
+            <GeoIcon name="check" className="h-7 w-7" accent="var(--xx-good-3)" />
           </div>
 
-          <h2 className="text-lg font-semibold text-[#7ee9bd]">Contul tău a fost creat</h2>
+          <h2 className="text-lg font-semibold text-[var(--xx-good-3)]">Contul tău a fost creat</h2>
 
           <p className="mt-2 text-sm leading-relaxed xx-ink-muted">
             Cererea așteaptă aprobarea administratorului. Vei putea intra imediat ce contul este
@@ -114,7 +114,7 @@ export default function Register() {
           Ai deja cont?{' '}
           <Link
             to="/login"
-            className="font-semibold text-[#22e8f5] transition-colors duration-200 hover:text-[#7ee9ff] hover:underline"
+            className="font-semibold text-[var(--xx-aqua)] transition-colors duration-200 hover:text-[var(--xx-aqua-2)] hover:underline"
           >
             Autentifică-te
           </Link>
@@ -124,7 +124,7 @@ export default function Register() {
       {error && (
         <div
           role="alert"
-          className="mb-4 flex items-start gap-2.5 rounded-[0.9rem] border border-[rgba(255,90,122,0.45)] bg-[rgba(255,90,122,0.12)] px-4 py-3 text-sm text-[#ff8fa8]"
+          className="mb-4 flex items-start gap-2.5 rounded-[0.9rem] border border-[rgba(255,90,122,0.45)] bg-[rgba(255,90,122,0.12)] px-4 py-3 text-sm text-[var(--xx-danger-3)]"
         >
           <GeoIcon name="alert" className="mt-0.5 h-4 w-4 shrink-0" accent="currentColor" />
           <span>{error}</span>

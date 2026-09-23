@@ -27,18 +27,18 @@ export default function NotFound() {
         className="pointer-events-none absolute left-1/2 top-24 -z-10 h-64 w-64 -translate-x-1/2 rounded-full opacity-70 blur-[90px]"
         style={{
           background:
-            'radial-gradient(circle, rgba(122,60,255,0.55) 0%, rgba(34,232,245,0.28) 45%, rgba(0,0,0,0) 72%)',
+            'radial-gradient(circle, rgba(122,60,255,0.55) 0%, rgba(34,232,245,0.28) 45%, rgba(var(--xx-shade),0) 72%)',
         }}
       />
 
       <p
-        className="bg-gradient-to-r from-[#22e8f5] via-[#7a3cff] to-[#ff4fd8] bg-clip-text text-[5.5rem] font-bold leading-none tracking-tight text-transparent"
+        className="bg-gradient-to-r from-[var(--xx-aqua)] via-[var(--xx-purple)] to-[var(--xx-magenta-3)] bg-clip-text text-[5.5rem] font-bold leading-none tracking-tight text-transparent"
         style={{ filter: 'drop-shadow(0 0 38px rgba(122,60,255,0.55))' }}
       >
         404
       </p>
 
-      <h1 className="mt-5 text-2xl font-semibold text-[#e8ecff]">Pagina nu a fost găsită</h1>
+      <h1 className="mt-5 text-2xl font-semibold text-[var(--xx-info-1)]">Pagina nu a fost găsită</h1>
 
       <p className="mx-auto mt-2 max-w-md text-sm xx-ink-muted">
         Adresa aceasta nu corespunde niciunei pagini din magazin. Este posibil ca linkul să fie

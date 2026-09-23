@@ -165,7 +165,7 @@ export default function Checkout() {
       <div className="mx-auto max-w-lg py-20 text-center">
         <span
           aria-hidden="true"
-          className="mx-auto grid h-16 w-16 place-items-center rounded-2xl border border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.05)]"
+          className="mx-auto grid h-16 w-16 place-items-center rounded-2xl border border-[rgba(var(--xx-veil),0.14)] bg-[rgba(var(--xx-veil),0.05)]"
         >
           <GeoIcon name="cart" className="h-7 w-7" accent="var(--xx-ink-dim)" />
         </span>
@@ -200,10 +200,10 @@ export default function Checkout() {
                 aria-current={active ? 'step' : undefined}
                 className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border font-display text-sm font-bold transition-all duration-xx ease-xx ${
                   active
-                    ? 'border-[rgba(34,232,245,0.7)] bg-[rgba(34,232,245,0.14)] text-white shadow-glow-aqua'
+                    ? 'border-[rgba(34,232,245,0.7)] bg-[rgba(34,232,245,0.14)] text-[color:var(--xx-ink)] shadow-glow-aqua'
                     : done
                       ? 'border-[rgba(110,247,168,0.5)] bg-[rgba(110,247,168,0.12)] text-[color:var(--xx-lime)]'
-                      : 'border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.05)] text-[color:var(--xx-ink-dim)]'
+                      : 'border-[rgba(var(--xx-veil),0.14)] bg-[rgba(var(--xx-veil),0.05)] text-[color:var(--xx-ink-dim)]'
                 }`}
               >
                 {done ? <GeoIcon name="check" className="h-4 w-4" accent="currentColor" /> : entry.index}
@@ -218,7 +218,7 @@ export default function Checkout() {
               {entry.index === 1 ? (
                 <span
                   aria-hidden="true"
-                  className="hidden h-px flex-1 bg-[rgba(255,255,255,0.12)] sm:block"
+                  className="hidden h-px flex-1 bg-[rgba(var(--xx-veil),0.12)] sm:block"
                 />
               ) : null}
             </li>
@@ -229,7 +229,7 @@ export default function Checkout() {
       {error && (
         <div
           role="alert"
-          className="mb-5 flex items-start gap-3 rounded-2xl border border-[rgba(255,84,112,0.45)] bg-[rgba(30,8,18,0.75)] px-4 py-3 text-sm text-[#ffc2cc] animate-xx-materialize"
+          className="mb-5 flex items-start gap-3 rounded-2xl border border-[rgba(255,84,112,0.45)] bg-[rgba(var(--xx-panel-danger),0.75)] px-4 py-3 text-sm text-[var(--xx-danger-1)] animate-xx-materialize"
         >
           <GeoIcon name="alert" className="mt-0.5 h-4 w-4 shrink-0" accent="var(--xx-red)" />
           <span>{error}</span>
@@ -362,7 +362,7 @@ export default function Checkout() {
                     .map((row) => (
                       <div
                         key={row.label}
-                        className="flex items-start gap-3 rounded-xl border border-[rgba(255,255,255,0.09)] bg-[rgba(255,255,255,0.035)] px-3.5 py-3"
+                        className="flex items-start gap-3 rounded-xl border border-[rgba(var(--xx-veil),0.09)] bg-[rgba(var(--xx-veil),0.035)] px-3.5 py-3"
                       >
                         <GeoIcon name={row.icon} className="mt-0.5 h-4 w-4 shrink-0" accent="var(--xx-cyan)" />
                         <dt className="w-24 shrink-0 text-xs uppercase tracking-[0.12em] xx-ink-dim">
@@ -408,7 +408,7 @@ export default function Checkout() {
         <Module span={4} spanSm={6} spanTv={2}>
           <div
             className="card p-5 lg:sticky lg:top-28"
-            style={{ boxShadow: 'inset 0 0 80px -26px rgba(122,60,255,0.65), 0 26px 60px -30px rgba(0,0,0,0.9)' }}
+            style={{ boxShadow: 'inset 0 0 80px -26px rgba(122,60,255,0.65), 0 26px 60px -30px rgba(var(--xx-shade),0.9)' }}
           >
             <div className="flex items-center justify-between">
               <div>
@@ -442,7 +442,7 @@ export default function Checkout() {
               ))}
             </ul>
 
-            <dl className="mt-4 space-y-2 border-t border-[rgba(255,255,255,0.1)] pt-4 text-sm">
+            <dl className="mt-4 space-y-2 border-t border-[rgba(var(--xx-veil),0.1)] pt-4 text-sm">
               <div className="flex items-center justify-between">
                 <dt className="xx-ink-muted">Subtotal</dt>
                 <dd className="font-semibold text-[color:var(--xx-ink)]">{formatPrice(totalPrice)}</dd>
@@ -459,7 +459,7 @@ export default function Checkout() {
               </div>
             </dl>
 
-            <div className="mt-4 flex items-center justify-between border-t border-[rgba(255,255,255,0.1)] pt-4">
+            <div className="mt-4 flex items-center justify-between border-t border-[rgba(var(--xx-veil),0.1)] pt-4">
               <span className="text-sm uppercase tracking-[0.14em] xx-ink-dim">Total</span>
               <span className="font-display text-2xl font-bold xx-text-gradient">
                 {formatPrice(grandTotal)}

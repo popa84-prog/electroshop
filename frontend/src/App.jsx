@@ -21,6 +21,7 @@ import NotFound from './pages/NotFound';
 
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminProducts from './pages/admin/AdminProducts';
+import AdminImageSourcing from './pages/admin/AdminImageSourcing';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminSuppliers from './pages/admin/AdminSuppliers';
@@ -99,6 +100,7 @@ export default function App() {
         >
           <Route index element={<AdminDashboard />} />
           <Route path="products" element={<AdminProducts />} />
+          <Route path="image-sourcing" element={<AdminImageSourcing />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="orders" element={<AdminOrders />} />
           <Route path="suppliers" element={<AdminSuppliers />} />

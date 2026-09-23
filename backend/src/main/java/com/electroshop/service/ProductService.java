@@ -5,10 +5,12 @@ import com.electroshop.dto.CategoryStatDto;
 import com.electroshop.dto.ProductDto;
 import com.electroshop.dto.ProductRequest;
 import com.electroshop.exception.ResourceNotFoundException;
+import com.electroshop.model.InvoiceLine;
 import com.electroshop.model.OrderItem;
 import com.electroshop.model.Product;
 import com.electroshop.model.ProductImage;
 import com.electroshop.model.PurchaseItem;
+import com.electroshop.repository.InvoiceLineRepository;
 import com.electroshop.repository.OrderItemRepository;
 import com.electroshop.repository.ProductRepository;
 import com.electroshop.repository.PurchaseItemRepository;
@@ -52,6 +54,7 @@ public class ProductService {
     private final NotificationService notificationService;
     private final OrderItemRepository orderItemRepository;
     private final PurchaseItemRepository purchaseItemRepository;
+    private final InvoiceLineRepository invoiceLineRepository;
 
     public ProductService(ProductRepository productRepository, AuditService auditService,
                           CloudinaryService cloudinaryService,
@@ -59,7 +62,8 @@ public class ProductService {
                           PermissionService permissionService,
                           NotificationService notificationService,
                           OrderItemRepository orderItemRepository,
-                          PurchaseItemRepository purchaseItemRepository) {
+                          PurchaseItemRepository purchaseItemRepository,
+                          InvoiceLineRepository invoiceLineRepository) {
         this.productRepository = productRepository;
         this.auditService = auditService;
         this.cloudinaryService = cloudinaryService;
@@ -68,19 +72,30 @@ public class ProductService {
         this.notificationService = notificationService;
         this.orderItemRepository = orderItemRepository;
         this.purchaseItemRepository = purchaseItemRepository;
+        this.invoiceLineRepository = invoiceLineRepository;
     }
 
     /**
-     * Whether this product has ever been sold or received into stock. A row
-     * with sales or goods-in history can never be hard-deleted — the database
-     * enforces this already via {@code order_items}/{@code purchase_items}'
-     * foreign keys — so this check runs *before* attempting a delete, turning
-     * what would otherwise be a raw {@code DataIntegrityViolationException}
-     * into a deliberate "deactivate instead" decision.
+     * Whether this product has ever been sold, received into stock, or invoiced.
+     * A row with any such history can never be hard-deleted — the database
+     * enforces this already via the {@code order_items}, {@code purchase_items}
+     * and {@code invoice_lines} foreign keys — so this check runs *before*
+     * attempting a delete, turning what would otherwise be a raw
+     * {@code DataIntegrityViolationException} into a deliberate "deactivate
+     * instead" decision.
+     * <p>
+     * {@code invoice_lines} is checked even though, in the normal flow, every
+     * invoice line originates from an order line and would therefore already be
+     * covered by the first condition. The three tables are listed explicitly
+     * because this method's contract is "does the database hold a reference
+     * that would block a delete", and answering that from an assumption about
+     * how rows are usually created is how the invoicing module's foreign key
+     * came to be missed in the first place.
      */
     private boolean hasSalesHistory(Long productId) {
         return orderItemRepository.existsByProductId(productId)
-                || purchaseItemRepository.existsByProductId(productId);
+                || purchaseItemRepository.existsByProductId(productId)
+                || invoiceLineRepository.existsByProductId(productId);
     }
 
     @Transactional(readOnly = true)
@@ -412,12 +427,14 @@ public class ProductService {
      * safety net in {@link #delete(Long)}.
      * <p>
      * Unlike a naive hard delete — which the database would refuse outright
-     * over the {@code order_items}/{@code purchase_items} foreign keys — this
-     * unlinks each historical line from the product instead of deleting it:
-     * {@link OrderItem#setProduct(Product)}/{@link PurchaseItem#setProduct(Product)}
-     * is set to {@code null} on every line that referenced this product, while
-     * the line itself (quantity, sale price, {@code costPrice} acquisition-cost
-     * snapshot, and now {@code productName}) is left completely untouched. No
+     * over the {@code order_items}, {@code purchase_items} and
+     * {@code invoice_lines} foreign keys — this unlinks each historical line
+     * from the product instead of deleting it: {@code setProduct(null)} is
+     * called on every order line, purchase line and invoice line that referenced
+     * this product, while the line itself (quantity, sale price,
+     * {@code costPrice} acquisition-cost snapshot, the printed
+     * {@code productName}, and on invoice lines the frozen net/VAT/gross
+     * amounts and the storno counter) is left completely untouched. No
      * order or purchase total is recalculated, because nothing about any total
      * changes — every line that contributed to it before this call still
      * contributes to it exactly the same afterwards. {@link OrderItemDto}/
@@ -469,6 +486,25 @@ public class ProductService {
             item.setProduct(null);
         }
 
+        // Al treilea tabel de istoric, adăugat de modulul de facturare. Absența lui
+        // de aici era cauza erorii „Cannot delete or update a parent row" pe care o
+        // primea operatorul: produsul era deconectat de comenzi și de achiziții, dar
+        // rândurile din invoice_lines rămâneau legate, iar baza de date refuza, corect,
+        // să șteargă un rând la care încă se face referire.
+        //
+        // Spre deosebire de celelalte două, aici nu este nevoie de completarea numelui:
+        // invoice_lines.product_name este NOT NULL și se scrie obligatoriu la emitere,
+        // pentru că o factură trebuie să poată fi retipărită identic oricând. Garda
+        // rămâne totuși, pentru că o linie fără denumire ar fi o factură fără denumire
+        // de produs, iar costul ei este o comparație cu null.
+        List<InvoiceLine> invoiceLines = invoiceLineRepository.findByProductId(id);
+        for (InvoiceLine line : invoiceLines) {
+            if (line.getProductName() == null) {
+                line.setProductName(name);
+            }
+            line.setProduct(null);
+        }
+
         for (ProductImage img : p.getImages()) {
             cloudinaryService.delete(img.getPublicId());
         }
@@ -476,11 +512,12 @@ public class ProductService {
 
         auditService.log("PRODUCT_FORCE_DELETED_WITH_HISTORY", "Product", id,
                 name + " — șters definitiv din catalog. " + orderItems.size()
-                        + " linie(i) de comandă și " + purchaseItems.size()
-                        + " linie(i) de achiziție au fost păstrate neschimbate (cantitate, preț, profit), "
+                        + " linie(i) de comandă, " + purchaseItems.size()
+                        + " linie(i) de achiziție și " + invoiceLines.size()
+                        + " linie(i) de factură au fost păstrate neschimbate (cantitate, preț, profit), "
                         + "pentru contabilitate și istoricul profitului, doar deconectate de la produsul din catalog.");
 
-        return new ForceDeleteOutcome(orderItems.size(), purchaseItems.size());
+        return new ForceDeleteOutcome(orderItems.size(), purchaseItems.size(), invoiceLines.size());
     }
 
     /**
@@ -490,8 +527,15 @@ public class ProductService {
      *
      * @param orderItemsPreserved    order lines unlinked and preserved
      * @param purchaseItemsPreserved purchase lines unlinked and preserved
+     * @param invoiceLinesPreserved  invoice lines unlinked and preserved
      */
-    public record ForceDeleteOutcome(int orderItemsPreserved, int purchaseItemsPreserved) {
+    public record ForceDeleteOutcome(int orderItemsPreserved, int purchaseItemsPreserved,
+                                     int invoiceLinesPreserved) {
+
+        /** Total historical lines touched, for callers that only need the headline figure. */
+        public int totalPreserved() {
+            return orderItemsPreserved + purchaseItemsPreserved + invoiceLinesPreserved;
+        }
     }
 
     /**
@@ -513,6 +557,7 @@ public class ProductService {
         int deleted = 0;
         int totalOrderItemsPreserved = 0;
         int totalPurchaseItemsPreserved = 0;
+        int totalInvoiceLinesPreserved = 0;
         for (Long id : unique) {
             if (!productRepository.existsById(id)) {
                 notFound.add(id);
@@ -521,13 +566,16 @@ public class ProductService {
             ForceDeleteOutcome outcome = forceDeleteWithHistory(id);
             totalOrderItemsPreserved += outcome.orderItemsPreserved();
             totalPurchaseItemsPreserved += outcome.purchaseItemsPreserved();
+            totalInvoiceLinesPreserved += outcome.invoiceLinesPreserved();
             deleted++;
         }
         auditService.log("PRODUCTS_BULK_FORCE_DELETED_WITH_HISTORY", "Product", null,
                 deleted + " produse șterse definitiv din catalog în masă. " + totalOrderItemsPreserved
-                        + " linii de comandă și " + totalPurchaseItemsPreserved
+                        + " linii de comandă, " + totalInvoiceLinesPreserved
+                        + " linii de factură și " + totalPurchaseItemsPreserved
                         + " linii de achiziție au fost păstrate neschimbate, pentru contabilitate.");
-        return new BulkForceDeleteResult(deleted, notFound, totalOrderItemsPreserved, totalPurchaseItemsPreserved);
+        return new BulkForceDeleteResult(deleted, notFound, totalOrderItemsPreserved,
+                totalPurchaseItemsPreserved, totalInvoiceLinesPreserved);
     }
 
     /**
@@ -537,9 +585,15 @@ public class ProductService {
      * @param notFound                identifiers that no longer existed when the batch ran
      * @param orderItemsPreserved    total order lines unlinked and preserved across the batch
      * @param purchaseItemsPreserved total purchase lines unlinked and preserved across the batch
+     * @param invoiceLinesPreserved  total invoice lines unlinked and preserved across the batch
      */
     public record BulkForceDeleteResult(int deleted, List<Long> notFound, int orderItemsPreserved,
-                                         int purchaseItemsPreserved) {
+                                         int purchaseItemsPreserved, int invoiceLinesPreserved) {
+
+        /** Total historical lines touched across the whole batch. */
+        public int totalPreserved() {
+            return orderItemsPreserved + purchaseItemsPreserved + invoiceLinesPreserved;
+        }
     }
 
     /**

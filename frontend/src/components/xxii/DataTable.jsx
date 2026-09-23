@@ -112,8 +112,8 @@ export default function DataTable({
             onChange={(e) => setQuery(e.target.value)}
             placeholder={searchPlaceholder}
             aria-label={searchPlaceholder}
-            className="w-full rounded-lg border border-[rgba(255,255,255,0.12)]
-              bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-[color:var(--xx-ink)]
+            className="w-full rounded-lg border border-[rgba(var(--xx-veil),0.12)]
+              bg-[rgba(var(--xx-veil),0.04)] px-3 py-2 text-sm text-[color:var(--xx-ink)]
               placeholder:text-[color:var(--xx-ink-dim)] transition-colors duration-xx
               focus:border-[color:var(--xx-cyan)] focus:outline-none
               focus:ring-1 focus:ring-[color:var(--xx-cyan)]"
@@ -126,7 +126,7 @@ export default function DataTable({
         style={maxHeight ? { maxHeight } : undefined}
       >
         <table className="w-full border-collapse text-left text-sm">
-          <thead className="sticky top-0 z-10 bg-[rgba(9,10,26,0.94)] backdrop-blur-sm">
+          <thead className="sticky top-0 z-10 bg-[rgba(var(--xx-panel),0.94)] backdrop-blur-sm">
             <tr>
               {columns.map((column) => {
                 const active = sort.key === column.key;
@@ -139,7 +139,7 @@ export default function DataTable({
                     aria-sort={
                       active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'
                     }
-                    className={`${cellPad} border-b border-[rgba(255,255,255,0.1)] text-[11px]
+                    className={`${cellPad} border-b border-[rgba(var(--xx-veil),0.1)] text-[11px]
                       font-semibold uppercase tracking-[0.08em] text-[color:var(--xx-ink-dim)]
                       ${column.align === 'right' ? 'text-right' : ''}
                       ${column.align === 'center' ? 'text-center' : ''}`}
@@ -180,8 +180,8 @@ export default function DataTable({
                 <tr
                   key={row?.[rowKey] ?? index}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
-                  className={`border-b border-[rgba(255,255,255,0.06)] transition-colors duration-xx
-                    hover:bg-[rgba(255,255,255,0.035)]
+                  className={`border-b border-[rgba(var(--xx-veil),0.06)] transition-colors duration-xx
+                    hover:bg-[rgba(var(--xx-veil),0.035)]
                     ${onRowClick ? 'cursor-pointer' : ''}`}
                 >
                   {columns.map((column) => (

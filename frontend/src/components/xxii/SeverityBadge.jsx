@@ -20,27 +20,27 @@ const TONES = {
   DANGER: {
     label: 'Critic',
     glyph: '▲',
-    className: 'border-[rgba(184,47,60,0.5)] bg-[rgba(184,47,60,0.14)] text-[#ff8a97]',
+    className: 'border-[rgba(184,47,60,0.5)] bg-[rgba(184,47,60,0.14)] text-[var(--xx-danger-4)]',
   },
   WARNING: {
     label: 'Atenție',
     glyph: '●',
-    className: 'border-[rgba(176,140,9,0.5)] bg-[rgba(176,140,9,0.14)] text-[#e0bd4a]',
+    className: 'border-[rgba(176,140,9,0.5)] bg-[rgba(176,140,9,0.14)] text-[var(--xx-warn-5)]',
   },
   INFO: {
     label: 'Normal',
     glyph: '■',
-    className: 'border-[rgba(255,255,255,0.16)] bg-[rgba(255,255,255,0.05)] text-[color:var(--xx-ink-dim)]',
+    className: 'border-[rgba(var(--xx-veil),0.16)] bg-[rgba(var(--xx-veil),0.05)] text-[color:var(--xx-ink-dim)]',
   },
   SUCCESS: {
     label: 'Bun',
     glyph: '▼',
-    className: 'border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.14)] text-[#4fd3a0]',
+    className: 'border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.14)] text-[var(--xx-good-4)]',
   },
   NO_DATA: {
     label: 'Fără date',
     glyph: '○',
-    className: 'border-[rgba(46,123,255,0.4)] bg-[rgba(46,123,255,0.1)] text-[#7fb0ff]',
+    className: 'border-[rgba(46,123,255,0.4)] bg-[rgba(46,123,255,0.1)] text-[var(--xx-link)]',
   },
 };
 

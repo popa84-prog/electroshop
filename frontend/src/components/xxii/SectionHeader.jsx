@@ -44,7 +44,7 @@ export default function SectionHeader({
           {action || (
             <Link
               to={actionTo}
-              className="group inline-flex items-center gap-2 rounded-full border border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.05)] px-4 py-2 text-sm font-semibold text-[#cdd4f2] transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.5)] hover:text-white hover:shadow-glow-aqua"
+              className="group inline-flex items-center gap-2 rounded-full border border-[rgba(var(--xx-veil),0.14)] bg-[rgba(var(--xx-veil),0.05)] px-4 py-2 text-sm font-semibold text-[var(--xx-ink-soft)] transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.5)] hover:text-[color:var(--xx-ink)] hover:shadow-glow-aqua"
             >
               {actionLabel}
               <span aria-hidden="true" className="transition-transform duration-xx ease-xx group-hover:translate-x-1">

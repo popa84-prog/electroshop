@@ -3,14 +3,14 @@
  * chart draws from.
  *
  * Recharts has no theming layer, so before this file each admin screen carried
- * its own hard-coded hexes — which is how `#e2e8f0` grid lines and `#16a34a`
+ * its own hard-coded hexes — which is how `var(--xx-info-2)` grid lines and `var(--xx-good-7)`
  * bars survived the move to a dark surface. Everything visual that a chart
  * needs now lives here, and a chart imports values rather than inventing them.
  *
  * ── Why these particular colours ──────────────────────────────────────────
  *
  * They are not picked by eye. The two palettes below were run through the
- * data-visualisation validator against the real chart surface (#0a0b1e, the
+ * data-visualisation validator against the real chart surface (var(--xx-surface-1), the
  * glass panel colour, not the page void) and both pass every computable check:
  *
  *   SERIES   (adjacent pairs)   lightness band · chroma floor · CVD separation
@@ -21,8 +21,8 @@
  *
  * Two consequences worth stating plainly, because they look like mistakes:
  *
- *   1. The amber is `#b08c09`, not a bright neon yellow, and the red is
- *      `#b82f3c`, not `#ff5470`. Anything brighter leaves the OKLCH lightness
+ *   1. The amber is `var(--xx-warn-6)`, not a bright neon yellow, and the red is
+ *      `var(--xx-danger-7)`, not `var(--xx-red)`. Anything brighter leaves the OKLCH lightness
  *      band for dark surfaces (0.48–0.67) and stops being separable from its
  *      neighbours under deuteranopia. Green and red in particular are only
  *      distinguishable to a red-green colourblind reader because they sit at
@@ -39,13 +39,13 @@
  */
 
 /** The surface charts are actually drawn on — the glass panel, not the page. */
-export const XX_CHART_SURFACE = '#0a0b1e';
+export const XX_CHART_SURFACE = 'var(--xx-surface-1)';
 
 /**
  * Categorical series colours in fixed order. Slots are assigned by position and
  * never cycled: an eighth series folds into "Other" or becomes its own chart.
  */
-export const XX_SERIES = ['#2e7bff', '#b08c09', '#d032b8', '#1fac79', '#7a3cff', '#0e9fb0'];
+export const XX_SERIES = ['var(--xx-blue)', 'var(--xx-warn-6)', 'var(--xx-magenta-4)', 'var(--xx-good-6)', 'var(--xx-purple)', 'var(--xx-aqua-4)'];
 
 /** Named aliases for the slots above, so charts read as intent rather than index. */
 export const XX_SERIES_BLUE = XX_SERIES[0];
@@ -57,24 +57,24 @@ export const XX_SERIES_CYAN = XX_SERIES[5];
 
 /** Reserved status colours. Never reused as "series 4". */
 export const XX_STATUS = {
-  pending: '#b08c09',
-  paid: '#2e7bff',
-  shipped: '#d032b8',
-  delivered: '#1fac79',
-  cancelled: '#b82f3c',
+  pending: 'var(--xx-warn-6)',
+  paid: 'var(--xx-blue)',
+  shipped: 'var(--xx-magenta-4)',
+  delivered: 'var(--xx-good-6)',
+  cancelled: 'var(--xx-danger-7)',
 };
 
 /** Fallback for a status the backend adds later and this file does not know. */
-export const XX_STATUS_UNKNOWN = '#767ea6';
+export const XX_STATUS_UNKNOWN = 'var(--xx-ink-dim)';
 
 /** Recessive grid and axis ink, sampled from the XXII text tokens. */
-export const XX_GRID_STROKE = 'rgba(255,255,255,0.08)';
-export const XX_AXIS_INK = '#767ea6';
+export const XX_GRID_STROKE = 'rgba(var(--xx-veil),0.08)';
+export const XX_AXIS_INK = 'var(--xx-ink-dim)';
 
 /** Spread onto `<XAxis>` / `<YAxis>` so every chart's axes match. */
 export const xxAxisProps = {
   tick: { fontSize: 12, fill: XX_AXIS_INK },
-  stroke: 'rgba(255,255,255,0.12)',
+  stroke: 'rgba(var(--xx-veil),0.12)',
   tickLine: false,
 };
 
@@ -87,7 +87,7 @@ export const xxGridProps = {
 
 /** Spread onto `<Legend>`. */
 export const xxLegendProps = {
-  wrapperStyle: { fontSize: 12, color: '#a8b0d4' },
+  wrapperStyle: { fontSize: 12, color: 'var(--xx-ink-muted)' },
 };
 
 /** The cursor Recharts draws under the pointer — a scan line, not a grey block. */
@@ -150,7 +150,7 @@ export function HoloTooltip({ active, payload, label, title, rows, format }) {
   if (!lines || lines.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-[rgba(34,232,245,0.35)] bg-[rgba(7,8,24,0.94)] px-3 py-2 text-xs shadow-[0_18px_44px_-20px_rgba(0,0,0,0.95),0_0_36px_-14px_rgba(34,232,245,0.6)] backdrop-blur-glass">
+    <div className="rounded-xl border border-[rgba(34,232,245,0.35)] bg-[rgba(var(--xx-panel),0.94)] px-3 py-2 text-xs shadow-[0_18px_44px_-20px_rgba(var(--xx-shade),0.95),0_0_36px_-14px_rgba(34,232,245,0.6)] backdrop-blur-glass">
       <p className="mb-1.5 font-display font-semibold text-[color:var(--xx-ink)]">{title ?? label}</p>
       <ul className="space-y-1">
         {lines.map((line, index) => (

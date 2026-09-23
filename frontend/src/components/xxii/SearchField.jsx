@@ -70,7 +70,7 @@ export default function SearchField({
         type="button"
         onClick={() => onOpenChange(true)}
         aria-label="Caută în administrare"
-        className="grid h-9 w-9 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)]
+        className="grid h-9 w-9 place-items-center rounded-lg border border-[rgba(var(--xx-veil),0.12)]
           text-[color:var(--xx-ink-dim)] transition-colors duration-xx
           hover:border-[color:var(--xx-cyan)] hover:text-[color:var(--xx-cyan)]"
       >
@@ -111,8 +111,8 @@ export default function SearchField({
             }
           }}
           placeholder="Caută…"
-          className="w-full rounded-lg border border-[rgba(255,255,255,0.12)]
-            bg-[rgba(255,255,255,0.04)] py-2 pl-8 pr-8 text-sm text-[color:var(--xx-ink)]
+          className="w-full rounded-lg border border-[rgba(var(--xx-veil),0.12)]
+            bg-[rgba(var(--xx-veil),0.04)] py-2 pl-8 pr-8 text-sm text-[color:var(--xx-ink)]
             placeholder:text-[color:var(--xx-ink-dim)] transition-colors duration-xx
             focus:border-[color:var(--xx-cyan)] focus:outline-none"
         />
@@ -141,8 +141,8 @@ export default function SearchField({
           id="admin-search-results"
           role="listbox"
           className="xx-no-scrollbar absolute left-0 right-0 top-full z-40 mt-1 max-h-80
-            overflow-y-auto rounded-xl border border-[rgba(255,255,255,0.14)]
-            bg-[rgba(9,10,26,0.97)] p-1.5 shadow-[0_28px_70px_-32px_rgba(0,0,0,0.95)]
+            overflow-y-auto rounded-xl border border-[rgba(var(--xx-veil),0.14)]
+            bg-[rgba(var(--xx-panel),0.97)] p-1.5 shadow-[0_28px_70px_-32px_rgba(var(--xx-shade),0.95)]
             backdrop-blur-glass-lg"
         >
           {loading && !results ? (

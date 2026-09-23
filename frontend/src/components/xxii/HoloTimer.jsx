@@ -42,11 +42,11 @@ function Segment({ value, unit }) {
 
   return (
     <div className="flex flex-col items-center gap-1.5">
-      <span className="relative grid h-14 w-14 place-items-center overflow-hidden rounded-xl border border-[rgba(34,232,245,0.28)] bg-[rgba(9,11,28,0.6)] shadow-[0_0_28px_-8px_rgba(34,232,245,0.55)] backdrop-blur-glass sm:h-16 sm:w-16">
+      <span className="relative grid h-14 w-14 place-items-center overflow-hidden rounded-xl border border-[rgba(34,232,245,0.28)] bg-[rgba(var(--xx-panel),0.6)] shadow-[0_0_28px_-8px_rgba(34,232,245,0.55)] backdrop-blur-glass sm:h-16 sm:w-16">
         {/* Ghost segments — the unlit "8" behind every digit on a real display. */}
         <span
           aria-hidden="true"
-          className="absolute inset-0 grid place-items-center font-mono text-2xl font-bold text-white/[0.06] sm:text-3xl"
+          className="absolute inset-0 grid place-items-center font-mono text-2xl font-bold text-[rgba(var(--xx-veil),0.06)] sm:text-3xl"
         >
           88
         </span>
@@ -54,7 +54,7 @@ function Segment({ value, unit }) {
           {text}
         </span>
         {/* Horizontal split line, as on a flip-clock card. */}
-        <span aria-hidden="true" className="absolute inset-x-0 top-1/2 h-px bg-black/40" />
+        <span aria-hidden="true" className="absolute inset-x-0 top-1/2 h-px bg-[rgba(var(--xx-shade),0.4)]" />
       </span>
       <span className="text-[0.6rem] font-semibold uppercase tracking-[0.18em] xx-ink-dim">{unit}</span>
     </div>

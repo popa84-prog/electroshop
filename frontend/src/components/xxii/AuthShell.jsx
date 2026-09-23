@@ -58,7 +58,7 @@ const SCENE_CSS = `
  */
 export default function AuthShell({ eyebrow, title, children, footer = null }) {
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#04060f] px-4 py-10">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--xx-surface-2)] px-4 py-10">
       <style>{SCENE_CSS}</style>
 
       <div className="xx-auth-scene pointer-events-none absolute inset-0" aria-hidden="true">
@@ -100,7 +100,7 @@ export default function AuthShell({ eyebrow, title, children, footer = null }) {
         {STARS.map((s) => (
           <span
             key={s.id}
-            className="absolute rounded-full bg-[rgba(255,255,255,0.92)]"
+            className="absolute rounded-full bg-[rgba(var(--xx-veil),0.92)]"
             style={{
               top: `${s.top}%`,
               left: `${s.left}%`,
@@ -131,7 +131,7 @@ export default function AuthShell({ eyebrow, title, children, footer = null }) {
           />
         </div>
 
-        <div className="relative overflow-hidden rounded-[1.6rem] border border-[rgba(34,232,245,0.25)] bg-[rgba(255,255,255,0.04)] p-8 shadow-[0_0_60px_-10px_rgba(34,232,245,0.38)] backdrop-blur-2xl">
+        <div className="relative overflow-hidden rounded-[1.6rem] border border-[rgba(34,232,245,0.25)] bg-[rgba(var(--xx-veil),0.04)] p-8 shadow-[0_0_60px_-10px_rgba(34,232,245,0.38)] backdrop-blur-2xl">
           {/* Linia de scanare care coboară peste card. */}
           <div
             aria-hidden="true"
@@ -142,18 +142,18 @@ export default function AuthShell({ eyebrow, title, children, footer = null }) {
           <div className="relative">
             <div className="mb-6 flex flex-col items-center text-center">
               <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-[1.1rem] border border-[rgba(34,232,245,0.4)] bg-[rgba(34,232,245,0.1)] shadow-[0_0_25px_-5px_rgba(34,232,245,0.65)]">
-                <GeoIcon name="bolt" className="h-7 w-7" accent="#22e8f5" />
+                <GeoIcon name="bolt" className="h-7 w-7" accent="var(--xx-aqua)" />
               </div>
 
               <h1
-                className="bg-gradient-to-r from-[#22e8f5] via-[#b795ff] to-[#ff4fd8] bg-clip-text text-2xl font-bold tracking-[0.2em] text-transparent"
+                className="bg-gradient-to-r from-[var(--xx-aqua)] via-[var(--xx-violet-3)] to-[var(--xx-magenta-3)] bg-clip-text text-2xl font-bold tracking-[0.2em] text-transparent"
                 style={{ textShadow: '0 0 24px rgba(34,232,245,.3)' }}
               >
                 {title}
               </h1>
 
               {eyebrow && (
-                <p className="mt-2 text-xs uppercase tracking-[0.3em] text-[rgba(34,232,245,0.7)]">
+                <p className="mt-2 text-xs uppercase tracking-[0.3em] text-[rgba(var(--xx-aqua-rgb),0.7)]">
                   {eyebrow}
                 </p>
               )}

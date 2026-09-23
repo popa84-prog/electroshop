@@ -76,7 +76,7 @@ const DashCard = forwardRef(function DashCard(
             {icon ? (
               <span
                 className="grid h-7 w-7 shrink-0 place-items-center rounded-lg
-                  border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)]"
+                  border border-[rgba(var(--xx-veil),0.12)] bg-[rgba(var(--xx-veil),0.04)]"
                 style={{ color: accent }}
                 aria-hidden="true"
               >
@@ -110,8 +110,8 @@ const DashCard = forwardRef(function DashCard(
               title="Ascunde cardul"
               aria-label={`Ascunde ${title}`}
               className="grid h-7 w-7 place-items-center rounded-lg border
-                border-[rgba(255,255,255,0.1)] text-[color:var(--xx-ink-dim)]
-                transition-colors duration-xx hover:border-[rgba(255,255,255,0.25)]
+                border-[rgba(var(--xx-veil),0.1)] text-[color:var(--xx-ink-dim)]
+                transition-colors duration-xx hover:border-[rgba(var(--xx-veil),0.25)]
                 hover:text-[color:var(--xx-ink)]"
             >
               <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor"
@@ -136,7 +136,7 @@ const DashCard = forwardRef(function DashCard(
       </div>
 
       {footer && !error ? (
-        <footer className={`${compact ? 'mt-3' : 'mt-4'} border-t border-[rgba(255,255,255,0.08)] pt-3`}>
+        <footer className={`${compact ? 'mt-3' : 'mt-4'} border-t border-[rgba(var(--xx-veil),0.08)] pt-3`}>
           {footer}
         </footer>
       ) : null}
@@ -170,7 +170,7 @@ function CardError({ error, onRetry }) {
         <button
           type="button"
           onClick={onRetry}
-          className="rounded-lg border border-[rgba(255,255,255,0.18)] px-3 py-1.5 text-xs
+          className="rounded-lg border border-[rgba(var(--xx-veil),0.18)] px-3 py-1.5 text-xs
             font-medium text-[color:var(--xx-ink)] transition-colors duration-xx
             hover:border-[color:var(--xx-cyan)] hover:text-[color:var(--xx-cyan)]"
         >
@@ -188,7 +188,7 @@ function CardSkeleton({ compact }) {
       {Array.from({ length: compact ? 3 : 5 }).map((_, i) => (
         <div
           key={i}
-          className="xx-shimmer h-3 rounded-full bg-[rgba(255,255,255,0.06)]"
+          className="xx-shimmer h-3 rounded-full bg-[rgba(var(--xx-veil),0.06)]"
           style={{ width: `${100 - i * 12}%` }}
         />
       ))}

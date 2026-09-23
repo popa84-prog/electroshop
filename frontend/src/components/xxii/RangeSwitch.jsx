@@ -47,8 +47,8 @@ export default function RangeSwitch({
     <div
       role="radiogroup"
       aria-label={label}
-      className={`inline-flex items-center gap-0.5 rounded-lg border border-[rgba(255,255,255,0.12)]
-        bg-[rgba(255,255,255,0.03)] p-0.5 ${className}`}
+      className={`inline-flex items-center gap-0.5 rounded-lg border border-[rgba(var(--xx-veil),0.12)]
+        bg-[rgba(var(--xx-veil),0.03)] p-0.5 ${className}`}
     >
       {options.map((code) => {
         const option = RANGE_OPTIONS[code];
@@ -66,7 +66,7 @@ export default function RangeSwitch({
             className={`rounded-md px-2 py-1 text-[11px] font-semibold transition-all duration-xx ease-xx ${
               active
                 ? 'bg-[rgba(34,232,245,0.16)] text-[color:var(--xx-cyan)] shadow-[inset_0_0_16px_-8px_rgba(34,232,245,0.9)]'
-                : 'text-[color:var(--xx-ink-dim)] hover:bg-[rgba(255,255,255,0.06)] hover:text-[color:var(--xx-ink)]'
+                : 'text-[color:var(--xx-ink-dim)] hover:bg-[rgba(var(--xx-veil),0.06)] hover:text-[color:var(--xx-ink)]'
             }`}
           >
             {option.short}

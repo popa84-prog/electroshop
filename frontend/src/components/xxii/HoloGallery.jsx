@@ -96,13 +96,13 @@ export default function HoloGallery({ images = [], alt = '', onZoom, className =
           role="group"
           aria-label={`Galerie: ${alt}`}
           tabIndex={0}
-          className="group relative overflow-hidden rounded-[1.5rem] border border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.04)] shadow-glass-lg transition-shadow duration-xxslow ease-xx focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--xx-cyan)]"
+          className="group relative overflow-hidden rounded-[1.5rem] border border-[rgba(var(--xx-veil),0.14)] bg-[rgba(var(--xx-veil),0.04)] shadow-glass-lg transition-shadow duration-xxslow ease-xx focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--xx-cyan)]"
           style={{
             transform: `rotateX(${tilt.x.toFixed(2)}deg) rotateY(${tilt.y.toFixed(2)}deg)`,
             transformStyle: 'preserve-3d',
             transition: 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)',
             boxShadow: hovering
-              ? '0 34px 80px -30px rgba(0,0,0,0.95), 0 0 60px -14px rgba(46,123,255,0.55)'
+              ? '0 34px 80px -30px rgba(var(--xx-shade),0.95), 0 0 60px -14px rgba(46,123,255,0.55)'
               : undefined,
           }}
         >
@@ -128,7 +128,7 @@ export default function HoloGallery({ images = [], alt = '', onZoom, className =
               style={{
                 background: `radial-gradient(420px circle at ${(pointer.x * 100).toFixed(1)}% ${(
                   pointer.y * 100
-                ).toFixed(1)}%, rgba(255,255,255,0.16), transparent 62%)`,
+                ).toFixed(1)}%, rgba(var(--xx-veil),0.16), transparent 62%)`,
               }}
             />
           ) : null}
@@ -145,7 +145,7 @@ export default function HoloGallery({ images = [], alt = '', onZoom, className =
             <button
               type="button"
               onClick={() => onZoom(index)}
-              className="absolute bottom-3 right-3 z-10 inline-flex items-center gap-2 rounded-full border border-[rgba(255,255,255,0.18)] bg-[rgba(4,5,12,0.7)] px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-glass transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.6)] hover:shadow-glow-aqua"
+              className="absolute bottom-3 right-3 z-10 inline-flex items-center gap-2 rounded-full border border-[rgba(var(--xx-veil),0.18)] bg-[rgba(var(--xx-panel),0.7)] px-3 py-1.5 text-xs font-semibold text-[color:var(--xx-ink)] backdrop-blur-glass transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.6)] hover:shadow-glow-aqua"
             >
               <GeoIcon name="zoom" className="h-3.5 w-3.5" accent="var(--xx-cyan)" />
               Mărește
@@ -158,7 +158,7 @@ export default function HoloGallery({ images = [], alt = '', onZoom, className =
                 type="button"
                 onClick={() => step(-1)}
                 aria-label="Imaginea anterioară"
-                className="absolute left-3 top-1/2 z-10 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-[rgba(255,255,255,0.16)] bg-[rgba(4,5,12,0.65)] text-white opacity-0 backdrop-blur-glass transition-all duration-xx ease-xx group-hover:opacity-100 group-focus-within:opacity-100 hover:border-[rgba(34,232,245,0.6)]"
+                className="absolute left-3 top-1/2 z-10 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-[rgba(var(--xx-veil),0.16)] bg-[rgba(var(--xx-panel),0.65)] text-[color:var(--xx-ink)] opacity-0 backdrop-blur-glass transition-all duration-xx ease-xx group-hover:opacity-100 group-focus-within:opacity-100 hover:border-[rgba(34,232,245,0.6)]"
               >
                 <GeoIcon name="chevron" className="h-4 w-4 rotate-180" accent="var(--xx-cyan)" />
               </button>
@@ -166,7 +166,7 @@ export default function HoloGallery({ images = [], alt = '', onZoom, className =
                 type="button"
                 onClick={() => step(1)}
                 aria-label="Imaginea următoare"
-                className="absolute right-3 top-1/2 z-10 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-[rgba(255,255,255,0.16)] bg-[rgba(4,5,12,0.65)] text-white opacity-0 backdrop-blur-glass transition-all duration-xx ease-xx group-hover:opacity-100 group-focus-within:opacity-100 hover:border-[rgba(34,232,245,0.6)]"
+                className="absolute right-3 top-1/2 z-10 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-[rgba(var(--xx-veil),0.16)] bg-[rgba(var(--xx-panel),0.65)] text-[color:var(--xx-ink)] opacity-0 backdrop-blur-glass transition-all duration-xx ease-xx group-hover:opacity-100 group-focus-within:opacity-100 hover:border-[rgba(34,232,245,0.6)]"
               >
                 <GeoIcon name="chevron" className="h-4 w-4" accent="var(--xx-cyan)" />
               </button>
@@ -198,7 +198,7 @@ export default function HoloGallery({ images = [], alt = '', onZoom, className =
               className={`xx-snap-item h-16 w-16 shrink-0 overflow-hidden rounded-xl border transition-all duration-xx ease-xx sm:h-20 sm:w-20 ${
                 thumbIndex === index
                   ? 'border-[rgba(34,232,245,0.75)] shadow-glow-aqua'
-                  : 'border-[rgba(255,255,255,0.12)] opacity-60 hover:opacity-100'
+                  : 'border-[rgba(var(--xx-veil),0.12)] opacity-60 hover:opacity-100'
               }`}
             >
               <img src={url} alt="" loading="lazy" className="h-full w-full object-cover" />

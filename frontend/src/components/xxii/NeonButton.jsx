@@ -102,7 +102,7 @@ const NeonButton = forwardRef(function NeonButton(
         <span
           key={r.id}
           aria-hidden="true"
-          className="pointer-events-none absolute rounded-full bg-white/35 animate-xx-ripple"
+          className="pointer-events-none absolute rounded-full bg-[rgba(var(--xx-veil),0.35)] animate-xx-ripple"
           style={{
             left: r.x - r.size / 2,
             top: r.y - r.size / 2,

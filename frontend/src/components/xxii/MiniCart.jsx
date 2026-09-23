@@ -67,7 +67,7 @@ export default function MiniCart({ open, onClose, product = null, quantity = 1 }
         onMouseLeave={() => setHeld(false)}
         onFocusCapture={() => setHeld(true)}
         onBlurCapture={() => setHeld(false)}
-        className="pointer-events-auto w-full max-w-sm rounded-[1.25rem] border border-[rgba(34,232,245,0.35)] bg-[rgba(7,8,24,0.88)] p-4 shadow-[0_28px_70px_-28px_rgba(0,0,0,0.95),0_0_54px_-14px_rgba(34,232,245,0.55)] backdrop-blur-glass-xl animate-xx-materialize"
+        className="pointer-events-auto w-full max-w-sm rounded-[1.25rem] border border-[rgba(34,232,245,0.35)] bg-[rgba(var(--xx-panel),0.88)] p-4 shadow-[0_28px_70px_-28px_rgba(var(--xx-shade),0.95),0_0_54px_-14px_rgba(34,232,245,0.55)] backdrop-blur-glass-xl animate-xx-materialize"
       >
         <header className="flex items-start justify-between gap-3">
           <p className="flex items-center gap-2 text-sm font-semibold text-[color:var(--xx-cyan)]">
@@ -78,14 +78,14 @@ export default function MiniCart({ open, onClose, product = null, quantity = 1 }
             type="button"
             onClick={onClose}
             aria-label="Închide"
-            className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[color:var(--xx-ink-muted)] transition-colors duration-xx hover:bg-white/10 hover:text-white"
+            className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[color:var(--xx-ink-muted)] transition-colors duration-xx hover:bg-[rgba(var(--xx-veil),0.1)] hover:text-[color:var(--xx-ink)]"
           >
             <GeoIcon name="close" className="h-3.5 w-3.5" accent="currentColor" />
           </button>
         </header>
 
         {product ? (
-          <div className="mt-3 flex items-center gap-3 rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] p-2.5">
+          <div className="mt-3 flex items-center gap-3 rounded-xl border border-[rgba(var(--xx-veil),0.1)] bg-[rgba(var(--xx-veil),0.04)] p-2.5">
             <img
               src={resolveImage(product.imageThumbUrl || product.imageUrl)}
               alt=""
@@ -113,7 +113,7 @@ export default function MiniCart({ open, onClose, product = null, quantity = 1 }
           </ul>
         ) : null}
 
-        <div className="mt-3 flex items-center justify-between border-t border-[rgba(255,255,255,0.1)] pt-3">
+        <div className="mt-3 flex items-center justify-between border-t border-[rgba(var(--xx-veil),0.1)] pt-3">
           <span className="text-xs uppercase tracking-[0.14em] xx-ink-dim">
             {totalItems} {totalItems === 1 ? 'produs' : 'produse'}
           </span>

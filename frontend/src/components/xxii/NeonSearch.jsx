@@ -152,8 +152,8 @@ export default function NeonSearch({ className = '', compact = false, onNavigate
       <div
         className={`relative flex items-center overflow-hidden rounded-full border transition-all duration-xx ease-xx ${
           focused
-            ? 'border-[rgba(34,232,245,0.55)] bg-[rgba(9,11,28,0.72)] shadow-[0_0_34px_-8px_rgba(34,232,245,0.65)]'
-            : 'border-[rgba(255,255,255,0.13)] bg-[rgba(255,255,255,0.05)]'
+            ? 'border-[rgba(34,232,245,0.55)] bg-[rgba(var(--xx-panel),0.72)] shadow-[0_0_34px_-8px_rgba(34,232,245,0.65)]'
+            : 'border-[rgba(var(--xx-veil),0.13)] bg-[rgba(var(--xx-veil),0.05)]'
         }`}
       >
         <span aria-hidden="true" className="pointer-events-none absolute left-4 z-10">
@@ -195,7 +195,7 @@ export default function NeonSearch({ className = '', compact = false, onNavigate
               inputRef.current?.focus();
             }}
             aria-label="Golește căutarea"
-            className="absolute right-3 z-10 grid h-6 w-6 place-items-center rounded-full text-[color:var(--xx-ink-dim)] transition-colors duration-xx hover:bg-white/10 hover:text-white"
+            className="absolute right-3 z-10 grid h-6 w-6 place-items-center rounded-full text-[color:var(--xx-ink-dim)] transition-colors duration-xx hover:bg-[rgba(var(--xx-veil),0.1)] hover:text-[color:var(--xx-ink)]"
           >
             <GeoIcon name="close" className="h-3.5 w-3.5" accent="currentColor" />
           </button>
@@ -203,11 +203,11 @@ export default function NeonSearch({ className = '', compact = false, onNavigate
       </div>
 
       {showPanel ? (
-        <div className="absolute left-0 right-0 top-[calc(100%+0.6rem)] z-50 overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.14)] bg-[rgba(7,8,24,0.94)] shadow-glass-lg backdrop-blur-glass-xl animate-xx-materialize">
+        <div className="absolute left-0 right-0 top-[calc(100%+0.6rem)] z-50 overflow-hidden rounded-2xl border border-[rgba(var(--xx-veil),0.14)] bg-[rgba(var(--xx-panel),0.94)] shadow-glass-lg backdrop-blur-glass-xl animate-xx-materialize">
           {loading ? (
             <div className="space-y-2 p-3">
               {[0, 1, 2].map((index) => (
-                <div key={index} className="xx-scanning h-12 rounded-xl bg-[rgba(255,255,255,0.05)]" />
+                <div key={index} className="xx-scanning h-12 rounded-xl bg-[rgba(var(--xx-veil),0.05)]" />
               ))}
             </div>
           ) : emptyState ? (
@@ -223,7 +223,7 @@ export default function NeonSearch({ className = '', compact = false, onNavigate
                     onMouseEnter={() => setActive(index)}
                     onClick={() => openProduct(product)}
                     className={`flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors duration-xxfast ${
-                      index === active ? 'bg-[rgba(46,123,255,0.16)]' : 'hover:bg-white/5'
+                      index === active ? 'bg-[rgba(46,123,255,0.16)]' : 'hover:bg-[rgba(var(--xx-veil),0.05)]'
                     }`}
                   >
                     <img
@@ -253,7 +253,7 @@ export default function NeonSearch({ className = '', compact = false, onNavigate
           <button
             type="button"
             onClick={() => submit()}
-            className="flex w-full items-center justify-center gap-2 border-t border-[rgba(255,255,255,0.1)] px-4 py-3 text-sm font-semibold text-[color:var(--xx-cyan)] transition-colors duration-xx hover:bg-[rgba(34,232,245,0.1)]"
+            className="flex w-full items-center justify-center gap-2 border-t border-[rgba(var(--xx-veil),0.1)] px-4 py-3 text-sm font-semibold text-[color:var(--xx-cyan)] transition-colors duration-xx hover:bg-[rgba(34,232,245,0.1)]"
           >
             <GeoIcon name="zoom" className="h-4 w-4" accent="currentColor" />
             Vezi toate rezultatele pentru „{query.trim()}”

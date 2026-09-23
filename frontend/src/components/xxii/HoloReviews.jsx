@@ -50,7 +50,7 @@ export function NeonStars({ value = 0, size = 'md', className = '' }) {
             <GeoIcon
               name="star"
               className={box}
-              accent={filled ? '#ffc24b' : half ? '#ffc24b' : 'rgba(255,255,255,0.22)'}
+              accent={filled ? 'var(--xx-amber)' : half ? 'var(--xx-amber)' : 'rgba(var(--xx-veil),0.22)'}
             />
           </span>
         );
@@ -77,7 +77,7 @@ function ReviewCard({ review, index }) {
         <div className="flex items-center gap-2.5">
           <span
             aria-hidden="true"
-            className="grid h-9 w-9 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.05)] font-display text-sm font-bold text-[color:var(--xx-ink)]"
+            className="grid h-9 w-9 place-items-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] bg-[rgba(var(--xx-veil),0.05)] font-display text-sm font-bold text-[color:var(--xx-ink)]"
           >
             {author.trim().charAt(0).toUpperCase()}
           </span>
@@ -99,7 +99,7 @@ function ReviewCard({ review, index }) {
         {long && !open ? (
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-[rgba(7,8,24,0.95)] to-transparent"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-[rgba(var(--xx-panel),0.95)] to-transparent"
           />
         ) : null}
       </div>
@@ -184,10 +184,10 @@ export default function HoloReviews({ product, className = '' }) {
                     return (
                       <div key={stars} className="flex items-center gap-2">
                         <span className="w-3 text-right text-xs xx-ink-dim">{stars}</span>
-                        <GeoIcon name="star" className="h-3 w-3" accent="#ffc24b" />
-                        <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-[rgba(255,255,255,0.08)]">
+                        <GeoIcon name="star" className="h-3 w-3" accent="var(--xx-amber)" />
+                        <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-[rgba(var(--xx-veil),0.08)]">
                           <span
-                            className="block h-full rounded-full bg-gradient-to-r from-[#ffc24b] to-[#ff8a3d] transition-[width] duration-700 ease-xx"
+                            className="block h-full rounded-full bg-gradient-to-r from-[var(--xx-amber)] to-[var(--xx-warn-4)] transition-[width] duration-700 ease-xx"
                             style={{ width: `${percent}%` }}
                           />
                         </span>
@@ -220,7 +220,7 @@ export default function HoloReviews({ product, className = '' }) {
             <div className="card card-static grid place-items-center p-8 text-center">
               <span
                 aria-hidden="true"
-                className="grid h-12 w-12 place-items-center rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.05)]"
+                className="grid h-12 w-12 place-items-center rounded-xl border border-[rgba(var(--xx-veil),0.12)] bg-[rgba(var(--xx-veil),0.05)]"
               >
                 <GeoIcon name="star" className="h-6 w-6" accent="var(--xx-ink-dim)" />
               </span>

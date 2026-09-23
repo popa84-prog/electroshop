@@ -137,7 +137,7 @@ export default function HoloCarousel({
             onClick={() => page(-1)}
             disabled={edges.start}
             aria-label="Produsele anterioare"
-            className="absolute -left-2 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-[rgba(255,255,255,0.16)] bg-[rgba(9,11,28,0.75)] text-white backdrop-blur-glass transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.55)] hover:shadow-glow-aqua disabled:cursor-not-allowed disabled:opacity-25 sm:grid"
+            className="absolute -left-2 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-[rgba(var(--xx-veil),0.16)] bg-[rgba(var(--xx-panel),0.75)] text-[color:var(--xx-ink)] backdrop-blur-glass transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.55)] hover:shadow-glow-aqua disabled:cursor-not-allowed disabled:opacity-25 sm:grid"
           >
             <GeoIcon name="chevron" className="h-5 w-5 rotate-180" />
           </button>
@@ -146,7 +146,7 @@ export default function HoloCarousel({
             onClick={() => page(1)}
             disabled={edges.end}
             aria-label="Produsele următoare"
-            className="absolute -right-2 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-[rgba(255,255,255,0.16)] bg-[rgba(9,11,28,0.75)] text-white backdrop-blur-glass transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.55)] hover:shadow-glow-aqua disabled:cursor-not-allowed disabled:opacity-25 sm:grid"
+            className="absolute -right-2 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-[rgba(var(--xx-veil),0.16)] bg-[rgba(var(--xx-panel),0.75)] text-[color:var(--xx-ink)] backdrop-blur-glass transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.55)] hover:shadow-glow-aqua disabled:cursor-not-allowed disabled:opacity-25 sm:grid"
           >
             <GeoIcon name="chevron" className="h-5 w-5" />
           </button>

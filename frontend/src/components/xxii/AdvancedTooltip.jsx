@@ -58,8 +58,8 @@ export default function AdvancedTooltip({
 
   return (
     <div
-      className="min-w-[11rem] rounded-xl border border-[rgba(255,255,255,0.16)]
-        bg-[rgba(9,10,26,0.97)] p-3 shadow-[0_24px_60px_-28px_rgba(0,0,0,0.95)]
+      className="min-w-[11rem] rounded-xl border border-[rgba(var(--xx-veil),0.16)]
+        bg-[rgba(var(--xx-panel),0.97)] p-3 shadow-[0_24px_60px_-28px_rgba(var(--xx-shade),0.95)]
         backdrop-blur-glass-lg"
     >
       <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em]
@@ -107,9 +107,9 @@ export default function AdvancedTooltip({
                   {format(previous, kind)} în {comparisonLabel}
                   {' · '}
                   {changePct === null ? (
-                    <span className="text-[#7fb0ff]">nou</span>
+                    <span className="text-[var(--xx-link)]">nou</span>
                   ) : (
-                    <span className={changePct >= 0 ? 'text-[#4fd3a0]' : 'text-[#ff8a97]'}>
+                    <span className={changePct >= 0 ? 'text-[var(--xx-good-4)]' : 'text-[var(--xx-danger-4)]'}>
                       {changePct >= 0 ? '+' : ''}
                       {changePct.toFixed(1)}%
                     </span>
@@ -131,7 +131,7 @@ export default function AdvancedTooltip({
           two orders and one computed from two hundred look identical on a line,
           and only one of them means anything. */}
       {payload[0]?.payload?.count !== undefined && payload[0].payload.count !== null ? (
-        <p className="mt-2 border-t border-[rgba(255,255,255,0.1)] pt-1.5 text-[10px]
+        <p className="mt-2 border-t border-[rgba(var(--xx-veil),0.1)] pt-1.5 text-[10px]
           text-[color:var(--xx-ink-dim)]">
           {payload[0].payload.count} înregistrări
         </p>

@@ -24,32 +24,32 @@ const TONES = {
   blue: {
     ring: 'hover:border-[rgba(46,123,255,0.45)] hover:shadow-glow-blue',
     accent: 'var(--xx-blue)',
-    bar: 'from-[#2e7bff] to-[#7a3cff]',
+    bar: 'from-[var(--xx-blue)] to-[var(--xx-purple)]',
   },
   purple: {
     ring: 'hover:border-[rgba(122,60,255,0.45)] hover:shadow-glow-purple',
     accent: 'var(--xx-purple)',
-    bar: 'from-[#7a3cff] to-[#ff3dcb]',
+    bar: 'from-[var(--xx-purple)] to-[var(--xx-magenta)]',
   },
   aqua: {
     ring: 'hover:border-[rgba(34,232,245,0.45)] hover:shadow-glow-aqua',
     accent: 'var(--xx-cyan)',
-    bar: 'from-[#22e8f5] to-[#2e7bff]',
+    bar: 'from-[var(--xx-aqua)] to-[var(--xx-blue)]',
   },
   good: {
     ring: 'hover:border-[rgba(110,247,168,0.45)]',
     accent: 'var(--xx-lime)',
-    bar: 'from-[#6ef7a8] to-[#22e8f5]',
+    bar: 'from-[var(--xx-lime)] to-[var(--xx-aqua)]',
   },
   critical: {
     ring: 'hover:border-[rgba(255,84,112,0.45)]',
     accent: 'var(--xx-red)',
-    bar: 'from-[#ff5470] to-[#ff3dcb]',
+    bar: 'from-[var(--xx-red)] to-[var(--xx-magenta)]',
   },
   warning: {
     ring: 'hover:border-[rgba(255,194,75,0.45)]',
     accent: 'var(--xx-amber)',
-    bar: 'from-[#ffc24b] to-[#ff5470]',
+    bar: 'from-[var(--xx-amber)] to-[var(--xx-red)]',
   },
 };
 
@@ -166,7 +166,7 @@ export default function StatTile({
         {icon ? (
           <span
             aria-hidden="true"
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.05)] transition-transform duration-xx ease-xx group-hover:scale-110"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[rgba(var(--xx-veil),0.12)] bg-[rgba(var(--xx-veil),0.05)] transition-transform duration-xx ease-xx group-hover:scale-110"
             style={{ color: palette.accent }}
           >
             {icon}
@@ -197,7 +197,7 @@ export default function StatTile({
       {hint ? <p className="mt-2 text-xs xx-ink-dim">{hint}</p> : null}
 
       {typeof progress === 'number' ? (
-        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[rgba(255,255,255,0.08)]">
+        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[rgba(var(--xx-veil),0.08)]">
           <div
             className={`h-full rounded-full bg-gradient-to-r ${palette.bar} transition-[width] duration-700 ease-xx`}
             style={{ width: `${Math.max(0, Math.min(1, progress)) * 100}%` }}

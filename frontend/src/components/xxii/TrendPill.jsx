@@ -39,12 +39,12 @@ export default function TrendPill({ delta, suffix = '', compact = false, classNa
   // being rounded into a direction: reporting +0.02% as growth is technically
   // true and practically noise.
   const tone = isNew
-    ? 'border-[rgba(46,123,255,0.4)] bg-[rgba(46,123,255,0.12)] text-[#7fb0ff]'
+    ? 'border-[rgba(46,123,255,0.4)] bg-[rgba(46,123,255,0.12)] text-[var(--xx-link)]'
     : flat
-    ? 'border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.05)] text-[color:var(--xx-ink-dim)]'
+    ? 'border-[rgba(var(--xx-veil),0.14)] bg-[rgba(var(--xx-veil),0.05)] text-[color:var(--xx-ink-dim)]'
     : improving
-    ? 'border-[rgba(31,172,121,0.4)] bg-[rgba(31,172,121,0.12)] text-[#4fd3a0]'
-    : 'border-[rgba(184,47,60,0.45)] bg-[rgba(184,47,60,0.12)] text-[#ff8a97]';
+    ? 'border-[rgba(31,172,121,0.4)] bg-[rgba(31,172,121,0.12)] text-[var(--xx-good-4)]'
+    : 'border-[rgba(184,47,60,0.45)] bg-[rgba(184,47,60,0.12)] text-[var(--xx-danger-4)]';
 
   const glyph = isNew ? '★' : flat ? '→' : changePct > 0 ? '↑' : '↓';
 

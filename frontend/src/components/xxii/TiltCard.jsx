@@ -35,7 +35,7 @@ export default function TiltCard({
           ...style,
           boxShadow:
             glow && active
-              ? '0 26px 64px -26px rgba(0,0,0,0.95), 0 0 52px -10px rgba(122,60,255,0.55)'
+              ? '0 26px 64px -26px rgba(var(--xx-shade),0.95), 0 0 52px -10px rgba(122,60,255,0.55)'
               : undefined,
         }}
       >
@@ -48,7 +48,7 @@ export default function TiltCard({
             style={{
               background: `radial-gradient(340px circle at ${(pointer.x * 100).toFixed(1)}% ${(
                 pointer.y * 100
-              ).toFixed(1)}%, rgba(255,255,255,0.13), transparent 62%)`,
+              ).toFixed(1)}%, rgba(var(--xx-veil),0.13), transparent 62%)`,
               transition: 'opacity 200ms cubic-bezier(0.22, 1, 0.36, 1)',
             }}
           />

@@ -49,7 +49,7 @@ function PickCard({ entry, compact = false, fixedWidth = false }) {
 
   if (compact) {
     return (
-      <div className="group flex items-center gap-3 rounded-xl border border-[rgba(255,255,255,0.09)] bg-[rgba(255,255,255,0.035)] p-2.5 transition-all duration-xx ease-xx hover:border-[rgba(122,60,255,0.45)] hover:bg-[rgba(122,60,255,0.08)]">
+      <div className="group flex items-center gap-3 rounded-xl border border-[rgba(var(--xx-veil),0.09)] bg-[rgba(var(--xx-veil),0.035)] p-2.5 transition-all duration-xx ease-xx hover:border-[rgba(122,60,255,0.45)] hover:bg-[rgba(122,60,255,0.08)]">
         <Link to={`/products/${product.id}`} className="shrink-0">
           <img
             src={resolveImage(product.imageThumbUrl || product.imageUrl)}
@@ -92,7 +92,7 @@ function PickCard({ entry, compact = false, fixedWidth = false }) {
         </div>
 
         <Link to={`/products/${product.id}`} className="relative block overflow-hidden">
-          <div className="aspect-[4/3] w-full overflow-hidden bg-[rgba(255,255,255,0.04)]">
+          <div className="aspect-[4/3] w-full overflow-hidden bg-[rgba(var(--xx-veil),0.04)]">
             <img
               src={resolveImage(product.imageThumbUrl || product.imageUrl)}
               alt={product.name}
@@ -103,7 +103,7 @@ function PickCard({ entry, compact = false, fixedWidth = false }) {
         </Link>
 
         <div className="relative z-10 flex flex-1 flex-col p-4">
-          <p className="flex items-center gap-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-[#c9a4ff]">
+          <p className="flex items-center gap-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-[var(--xx-violet-2)]">
             <GeoIcon name="pulse" className="h-3.5 w-3.5" accent="currentColor" />
             {reason}
           </p>
@@ -220,7 +220,7 @@ export default function AIPicks({
         {loading ? (
           <div className="space-y-2.5">
             {[0, 1, 2].map((index) => (
-              <div key={index} className="xx-scanning h-16 rounded-xl bg-[rgba(255,255,255,0.05)]" />
+              <div key={index} className="xx-scanning h-16 rounded-xl bg-[rgba(var(--xx-veil),0.05)]" />
             ))}
           </div>
         ) : (

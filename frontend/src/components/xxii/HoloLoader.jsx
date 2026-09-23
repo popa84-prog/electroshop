@@ -35,7 +35,7 @@ export default function HoloLoader({ size = 'md', label = 'Se încarcă', classN
       <span className="relative inline-flex">
         {/* Outer ring — transparent on three sides so the rotation reads. */}
         <span
-          className={`${ring} inline-block animate-spin rounded-full border-solid border-[rgba(255,255,255,0.10)] border-t-[color:var(--xx-cyan)] border-r-[color:var(--xx-blue)]`}
+          className={`${ring} inline-block animate-spin rounded-full border-solid border-[rgba(var(--xx-veil),0.10)] border-t-[color:var(--xx-cyan)] border-r-[color:var(--xx-blue)]`}
           style={{ animationDuration: '820ms' }}
         />
         {/* Core — a soft pulsing dot at the centre of the ring. */}
@@ -61,7 +61,7 @@ export function HoloSkeleton({ lines = 0, height = '10rem', className = '', labe
           <span
             key={index}
             aria-hidden="true"
-            className="xx-scanning block h-3 rounded-full bg-[rgba(255,255,255,0.06)]"
+            className="xx-scanning block h-3 rounded-full bg-[rgba(var(--xx-veil),0.06)]"
             style={{ width: `${100 - index * 12}%` }}
           />
         ))}
@@ -74,7 +74,7 @@ export function HoloSkeleton({ lines = 0, height = '10rem', className = '', labe
     <div
       role="status"
       aria-live="polite"
-      className={`xx-scanning rounded-[1.25rem] border border-[rgba(255,255,255,0.10)] bg-[rgba(255,255,255,0.04)] ${className}`}
+      className={`xx-scanning rounded-[1.25rem] border border-[rgba(var(--xx-veil),0.10)] bg-[rgba(var(--xx-veil),0.04)] ${className}`}
       style={{ height }}
     >
       <span className="sr-only">{label}</span>

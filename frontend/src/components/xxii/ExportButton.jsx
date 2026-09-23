@@ -78,10 +78,10 @@ export default function ExportButton({
       className={`inline-flex items-center gap-1.5 rounded-lg border transition-all duration-xx ease-xx
         disabled:cursor-wait disabled:opacity-60
         ${state === 'error'
-          ? 'border-[rgba(184,47,60,0.5)] text-[#ff8a97]'
+          ? 'border-[rgba(184,47,60,0.5)] text-[var(--xx-danger-4)]'
           : state === 'done'
-          ? 'border-[rgba(31,172,121,0.5)] text-[#4fd3a0]'
-          : 'border-[rgba(255,255,255,0.14)] text-[color:var(--xx-ink-dim)] hover:border-[color:var(--xx-cyan)] hover:text-[color:var(--xx-cyan)]'}
+          ? 'border-[rgba(31,172,121,0.5)] text-[var(--xx-good-4)]'
+          : 'border-[rgba(var(--xx-veil),0.14)] text-[color:var(--xx-ink-dim)] hover:border-[color:var(--xx-cyan)] hover:text-[color:var(--xx-cyan)]'}
         ${compact ? 'px-2 py-1 text-[11px]' : 'px-3 py-1.5 text-xs'} ${className}`}
     >
       <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor"

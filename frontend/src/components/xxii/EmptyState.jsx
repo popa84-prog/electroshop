@@ -24,7 +24,7 @@ const VARIANTS = {
   collecting: {
     glyph: '◔',
     title: 'Colectarea datelor este în curs',
-    tone: 'text-[#7fb0ff]',
+    tone: 'text-[var(--xx-link)]',
   },
   filtered: {
     glyph: '⊘',
@@ -61,7 +61,7 @@ export default function EmptyState({
   return (
     <div
       className={`flex flex-col items-center justify-center rounded-xl border border-dashed
-        border-[rgba(255,255,255,0.12)] text-center ${compact ? 'gap-1.5 p-4' : 'gap-2 p-8'} ${className}`}
+        border-[rgba(var(--xx-veil),0.12)] text-center ${compact ? 'gap-1.5 p-4' : 'gap-2 p-8'} ${className}`}
     >
       <span className={`text-2xl ${variant.tone}`} aria-hidden="true">
         {variant.glyph}

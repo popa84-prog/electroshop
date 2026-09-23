@@ -179,6 +179,26 @@ const productService = {
   // Saves the new drag & drop order — imageIds must be the full, ordered id list.
   reorderProductImages: (id, imageIds) =>
     api.put(`/products/${id}/images/reorder`, { imageIds }).then((r) => r.data.data),
+
+  // ---- Completarea fotografiilor lipsă din catalogul Icecat ----
+  //
+  // Căutarea este GET pentru că nu schimbă nimic, iar confirmarea este POST
+  // pentru că urcă efectiv o imagine. Pe aceeași rută, o reîncărcare de pagină
+  // ar fi consumat din cota lunară Icecat și ar fi riscat o publicare.
+
+  /** Dacă integrarea are acreditări configurate pe server. */
+  imageSourcingStatus: (signal) =>
+    api.get('/admin/products/image-sourcing/status', { signal }).then((r) => r.data.data),
+
+  /** Caută potriviri pentru un lot de produse fără imagine. */
+  imageSourcingProposals: (limita = 25, signal) =>
+    api
+      .get('/admin/products/image-sourcing/propuneri', { params: { limita }, signal })
+      .then((r) => r.data.data),
+
+  /** Confirmă o potrivire: preia imaginea aleasă și o atașează produsului. */
+  imageSourcingApply: (payload) =>
+    api.post('/admin/products/image-sourcing/aplica', payload).then((r) => r.data),
 };
 
 export default productService;

@@ -4,6 +4,7 @@ import AdminLayout from './components/AdminLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import RequireAuth from './components/RequireAuth';
 import ErrorBoundary from './components/ErrorBoundary';
+import ThemeToggle from './components/ThemeToggle';
 
 import Home from './pages/Home';
 import Products from './pages/Products';
@@ -39,6 +40,12 @@ export default function App() {
     // fallback instead of the whole app going blank; keyed by pathname so
     // navigating to a different page automatically clears a stale error.
     <ErrorBoundary key={location.pathname}>
+      {/* Comutatorul de temă stă lângă <Routes>, nu în interiorul lui Layout.
+          Paginile de autentificare și cele de administrare folosesc alte
+          învelișuri; montat într-unul dintre ele, butonul ar lipsi din
+          celelalte, adică exact de pe ecranele unde cineva stă cel mai mult.
+          Aici este randat o singură dată, pentru orice rută. */}
+      <ThemeToggle />
       <Routes>
       {/* Standalone auth pages — the only thing an unauthenticated visitor can reach */}
       <Route path="/login" element={<Login />} />

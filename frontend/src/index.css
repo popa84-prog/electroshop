@@ -27,6 +27,22 @@
 :root {
   color-scheme: dark;
 
+  /* Overlay channels.
+     Every translucent surface and hairline in the app is "the opposite of the
+     canvas at some alpha". Holding just the RGB triplet in a variable — not a
+     finished colour — lets each of the ~430 call sites keep its own alpha while
+     the theme decides whether that alpha is laid down in white or in navy.
+     Without this the light theme would be 430 invisible panels. */
+  --xx-veil: 255, 255, 255;
+  --xx-shade: 0, 0, 0;
+
+  /* Aceleași două culori, ca triplete, pentru locurile care au nevoie de ele
+     cu transparență proprie. Un accent la 70% peste vid este lizibil; același
+     accent la 70% peste hârtie nu este, deci și pigmentul trebuie să se schimbe,
+     nu doar alfa. */
+  --xx-aqua-rgb: 34, 232, 245;
+  --xx-ink-rgb: 232, 236, 255;
+
   /* Surfaces — deep space */
   --xx-void: #04050c;
   --xx-void-800: #070818;
@@ -47,11 +63,11 @@
   /* Glassmorphism — brief: blur 18–24px, transparency 12–18% */
   --xx-glass-blur: 22px;
   --xx-glass-blur-soft: 18px;
-  --xx-glass-fill: rgba(255, 255, 255, 0.055);
-  --xx-glass-fill-strong: rgba(255, 255, 255, 0.09);
+  --xx-glass-fill: rgba(var(--xx-veil),0.055);
+  --xx-glass-fill-strong: rgba(var(--xx-veil),0.09);
   --xx-glass-tint: rgba(122, 60, 255, 0.06);
-  --xx-glass-border: rgba(255, 255, 255, 0.13);
-  --xx-glass-border-strong: rgba(255, 255, 255, 0.22);
+  --xx-glass-border: rgba(var(--xx-veil),0.13);
+  --xx-glass-border-strong: rgba(var(--xx-veil),0.22);
 
   /* Edge glow — brief: shadow spread 40–60px */
   --xx-glow-blue: 0 0 44px -10px rgba(46, 123, 255, 0.6);
@@ -64,6 +80,82 @@
   --xx-ink: #f2f5ff;
   --xx-ink-muted: #a8b0d4;
   --xx-ink-dim: #767ea6;
+  --xx-ink-soft: #cdd4f2;
+  --xx-link: #7fb0ff;
+  --xx-link-bright: #9ec4ff;
+  --xx-ink-on-violet: #d7c8ff;
+  --xx-ink-on-aqua: #b3f6ff;
+  --xx-ink-on-magenta: #ffc4ee;
+
+  /* Native widgets that cannot be styled, only told which canvas they sit on. */
+  --xx-surface-solid: #0b0d22;
+  --xx-autofill: #10122e;
+  --xx-glyph-invert: 1;
+
+  /* The canvas itself: three pools of light over a vertical wash. */
+  --xx-canvas:
+    radial-gradient(1200px 620px at 12% -12%, rgba(122, 60, 255, 0.3), transparent 62%),
+    radial-gradient(1080px 540px at 88% -4%, rgba(46, 123, 255, 0.24), transparent 62%),
+    radial-gradient(1000px 760px at 50% 112%, rgba(34, 232, 245, 0.14), transparent 60%),
+    linear-gradient(180deg, #06071a 0%, #04050c 45%, #05061a 100%);
+  --xx-grid-alpha: 0.028;
+
+
+  /* Paleta extinsă — generată, nu scrisă de mână.
+     Componentele purtau 322 de culori fixe: nuanțe deschise de verde, roz,
+     lavandă și chihlimbar, alese pentru text peste vid. Fiecare valoare
+     distinctă a primit tokenul ei, cu valoarea întunecată identică cu ce era
+     înainte — tema întunecată nu se schimbă cu niciun pixel. Perechile care
+     difereau între ele cu cel mult 6/255 pe canal, adică sub pragul vizibil,
+     au fost unificate; de aceea sunt 42 de tokeni pentru 46 de valori.
+     Contrapartidele deschise sunt aceleași nuanțe coborâte în luminozitate
+     până trec 4.5:1 pe hârtie, calculate, nu ochite. */
+  --xx-aqua-1: #a5f0f8;
+  --xx-aqua-2: #7ee9ff;
+  --xx-aqua-3: #5eead4;
+  --xx-aqua-4: #0e9fb0;
+  --xx-aqua-5: #0d9488;
+  --xx-danger-1: #ffc2cc;
+  --xx-danger-2: #ffb3bd;
+  --xx-danger-3: #ff8fa8;
+  --xx-danger-4: #ff8a97;
+  --xx-danger-5: #ff5a7a;
+  --xx-danger-6: #f43f5e;
+  --xx-danger-7: #b82f3c;
+  --xx-good-1: #b8ffd6;
+  --xx-good-2: #93e9c4;
+  --xx-good-3: #7ee9bd;
+  --xx-good-4: #4fd3a0;
+  --xx-good-5: #3ddc9a;
+  --xx-good-6: #1fac79;
+  --xx-good-7: #16a34a;
+  --xx-info-1: #e8ecff;
+  --xx-info-2: #e2e8f0;
+  --xx-info-3: #c9d4ff;
+  --xx-info-4: #c6cdf0;
+  --xx-info-5: #b7d0ff;
+  --xx-info-6: #b9c1e6;
+  --xx-info-7: #8d95c0;
+  --xx-magenta-1: #f5b6e6;
+  --xx-magenta-2: #f07fdc;
+  --xx-magenta-3: #ff4fd8;
+  --xx-magenta-4: #d032b8;
+  --xx-neutral: #ffffff;
+  --xx-surface-1: #0a0b1e;
+  --xx-surface-2: #04060f;
+  --xx-violet-1: #d5c2ff;
+  --xx-violet-2: #c9a4ff;
+  --xx-violet-3: #b795ff;
+  --xx-warn-1: #ffe0a3;
+  --xx-warn-2: #f0d089;
+  --xx-warn-3: #ffd27a;
+  --xx-warn-4: #ff8a3d;
+  --xx-warn-5: #e0bd4a;
+  --xx-warn-6: #b08c09;
+
+  /* Suprafețe opace pentru bare lipite, meniuri și fundaluri de dialog. */
+  --xx-panel: 9, 11, 28;
+  --xx-panel-danger: 30, 8, 18;
 
   /* Motion — brief: global timing 0.15s–0.25s */
   --xx-t-fast: 150ms;
@@ -78,6 +170,145 @@
   --xx-radius-sm: 0.75rem;
   --xx-radius-lg: 1.75rem;
 }
+
+/* ---------------------------------------------------------------------------
+   1b. TEMA DESCHISĂ
+   Un singur bloc. Nu redefinește nicio regulă de componentă — doar valorile pe
+   care regulile le citeau deja. Comutarea temei este, la propriu, schimbarea
+   acestor declarații; restul foii de stil și toate cele ~130 de componente
+   rămân neatinse.
+
+   Trei lucruri nu sunt simple inversări, și de aceea au valori proprii:
+
+   1. Accentele neon. #00f0ff pe #04050c are contrast 13:1; același cyan pe
+      #eef1f9 are 1.5:1, adică text invizibil. Fiecare accent are o variantă
+      întunecată, aleasă să treacă pragul de 4.5:1 pe pânza deschisă, păstrând
+      însă nuanța — cyanul rămâne cyan, nu devine albastru.
+
+   2. Sticla. Pe întuneric, un panou este alb la 5% peste vid. Pe lumină nu
+      poate fi navy la 5%, pentru că ar fi o pată cenușie: trebuie să fie ALB
+      peste un fundal ușor colorat, adică mai luminos decât pânza, nu mai
+      întunecat. De aceea tokenii de sticlă sunt suprascriși cu alb explicit
+      în loc să urmeze --xx-veil.
+
+   3. Strălucirile. Un glow de 48px în jurul unui card are sens pe întuneric,
+      unde lumina se vede. Pe alb nu se vede nimic, așa că devin umbre reale,
+      deplasate în jos, care produc aceeași ierarhie de adâncime prin mijlocul
+      pe care îl are lumina zilei.
+   ------------------------------------------------------------------------ */
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  /* Voalul se lasă acum în navy, nu în alb. Aceeași alfa, alt pigment. */
+  --xx-veil: 22, 28, 66;
+  --xx-shade: 16, 20, 48;
+  --xx-aqua-rgb: 5, 63, 74;
+  --xx-ink-rgb: 16, 20, 51;
+
+  /* Suprafețe — hârtie, nu vid */
+  --xx-void: #eef1f9;
+  --xx-void-800: #ffffff;
+  --xx-void-700: #f7f9fe;
+  --xx-void-600: #e8ecf8;
+  --xx-violet: #efeaff;
+
+  /* Accente recalibrate pentru contrast pe fundal deschis */
+  --xx-blue: #1f5fd8;
+  --xx-purple: #6a2ee0;
+  --xx-aqua: #0b778b;
+  --xx-cyan: #0a778d;
+  --xx-magenta: #c01e93;
+  --xx-lime: #107c4b;
+  --xx-amber: #8f640a;
+  --xx-red: #d02040;
+
+  /* Sticlă albă peste pânză colorată */
+  --xx-glass-fill: rgba(255, 255, 255, 0.72);
+  --xx-glass-fill-strong: rgba(255, 255, 255, 0.9);
+  --xx-glass-tint: rgba(106, 46, 224, 0.05);
+  --xx-glass-border: rgba(22, 28, 66, 0.12);
+  --xx-glass-border-strong: rgba(22, 28, 66, 0.2);
+
+  /* Strălucirile devin umbre */
+  --xx-glow-blue: 0 12px 32px -16px rgba(31, 95, 216, 0.5);
+  --xx-glow-purple: 0 12px 32px -16px rgba(106, 46, 224, 0.5);
+  --xx-glow-aqua: 0 12px 32px -16px rgba(13, 139, 163, 0.45);
+  --xx-glow-magenta: 0 12px 32px -16px rgba(192, 30, 147, 0.45);
+  --xx-glow-strong: 0 16px 40px -14px rgba(31, 95, 216, 0.55);
+
+  /* Cerneală */
+  --xx-ink: #101433;
+  --xx-ink-muted: #474e78;
+  --xx-ink-dim: #636a94;
+  --xx-ink-soft: #2b3158;
+  --xx-link: #1b52c9;
+  --xx-link-bright: #2463e0;
+  --xx-ink-on-violet: #4a21a6;
+  --xx-ink-on-aqua: #0a6475;
+  --xx-ink-on-magenta: #9c1878;
+
+  /* Widget-uri native */
+  --xx-surface-solid: #ffffff;
+  --xx-autofill: #eef1f9;
+  --xx-glyph-invert: 0;
+
+  /* Pânza: aceleași trei bazine de lumină, mult atenuate, peste hârtie */
+  --xx-canvas:
+    radial-gradient(1200px 620px at 12% -12%, rgba(122, 60, 255, 0.12), transparent 62%),
+    radial-gradient(1080px 540px at 88% -4%, rgba(46, 123, 255, 0.12), transparent 62%),
+    radial-gradient(1000px 760px at 50% 112%, rgba(34, 232, 245, 0.1), transparent 60%),
+    linear-gradient(180deg, #fbfcff 0%, #eef1f9 45%, #f4f1ff 100%);
+
+  --xx-aqua-1: #0a7883;
+  --xx-aqua-2: #00778f;
+  --xx-aqua-3: #107a6a;
+  --xx-aqua-4: #0b7885;
+  --xx-aqua-5: #0b7a70;
+  --xx-danger-1: #da0024;
+  --xx-danger-2: #db001d;
+  --xx-danger-3: #da0031;
+  --xx-danger-4: #db0018;
+  --xx-danger-5: #db002a;
+  --xx-danger-6: #d80c2f;
+  --xx-danger-7: #b82f3c;
+  --xx-good-1: #007e35;
+  --xx-good-2: #197b51;
+  --xx-good-3: #157c52;
+  --xx-good-4: #1f7b57;
+  --xx-good-5: #167c52;
+  --xx-good-6: #167c57;
+  --xx-good-7: #117d39;
+  --xx-info-1: #3559ff;
+  --xx-info-2: #4c6e9d;
+  --xx-info-3: #305aff;
+  --xx-info-4: #4e63d0;
+  --xx-info-5: #085dff;
+  --xx-info-6: #5266c1;
+  --xx-info-7: #5a67b0;
+  --xx-magenta-1: #c51b9d;
+  --xx-magenta-2: #c417a5;
+  --xx-magenta-3: #ca009e;
+  --xx-magenta-4: #bb2ba6;
+  --xx-neutral: #aa5252;
+  --xx-surface-1: #ffffff;
+  --xx-surface-2: #ffffff;
+  --xx-violet-1: #7b3fff;
+  --xx-violet-2: #8837ff;
+  --xx-violet-3: #7d3fff;
+  --xx-warn-1: #946200;
+  --xx-warn-2: #8c6612;
+  --xx-warn-3: #956200;
+  --xx-warn-4: #b84900;
+  --xx-warn-5: #836916;
+  --xx-warn-6: #846907;
+
+  --xx-panel: 255, 255, 255;
+  --xx-panel-danger: 254, 236, 239;
+
+  /* Grila se vede mai greu pe hârtie decât pe vid, deci urcă puțin. */
+  --xx-grid-alpha: 0.045;
+}
+
 
 /* ---------------------------------------------------------------------------
    2. BASE — the deep-space canvas
@@ -96,11 +327,7 @@
     min-height: 100vh;
     color: var(--xx-ink);
     background-color: var(--xx-void);
-    background-image:
-      radial-gradient(1200px 620px at 12% -12%, rgba(122, 60, 255, 0.3), transparent 62%),
-      radial-gradient(1080px 540px at 88% -4%, rgba(46, 123, 255, 0.24), transparent 62%),
-      radial-gradient(1000px 760px at 50% 112%, rgba(34, 232, 245, 0.14), transparent 60%),
-      linear-gradient(180deg, #06071a 0%, #04050c 45%, #05061a 100%);
+    background-image: var(--xx-canvas);
     background-attachment: fixed;
     background-repeat: no-repeat;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'ss01';
@@ -114,8 +341,8 @@
     z-index: 0;
     pointer-events: none;
     background-image:
-      linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+      linear-gradient(rgba(var(--xx-veil), var(--xx-grid-alpha)) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(var(--xx-veil), var(--xx-grid-alpha)) 1px, transparent 1px);
     background-size: 34px 34px;
     mask-image: radial-gradient(circle at 50% 32%, #000 0%, transparent 78%);
     -webkit-mask-image: radial-gradient(circle at 50% 32%, #000 0%, transparent 78%);
@@ -142,7 +369,7 @@
      dropdown list renders white-on-white in Chrome. */
   option,
   optgroup {
-    background-color: #0b0d22;
+    background-color: var(--xx-surface-solid);
     color: var(--xx-ink);
   }
 
@@ -151,13 +378,13 @@
   input[type='datetime-local']::-webkit-calendar-picker-indicator,
   input[type='month']::-webkit-calendar-picker-indicator,
   input[type='time']::-webkit-calendar-picker-indicator {
-    filter: invert(1) opacity(0.65);
+    filter: invert(var(--xx-glyph-invert)) opacity(0.65);
     cursor: pointer;
   }
 
   input[type='number']::-webkit-inner-spin-button,
   input[type='number']::-webkit-outer-spin-button {
-    filter: invert(1) opacity(0.55);
+    filter: invert(var(--xx-glyph-invert)) opacity(0.55);
   }
 
   /* Autofill paints an opaque yellow box over glass inputs otherwise. */
@@ -167,7 +394,7 @@
   textarea:-webkit-autofill,
   select:-webkit-autofill {
     -webkit-text-fill-color: var(--xx-ink);
-    -webkit-box-shadow: 0 0 0 1000px #10122e inset;
+    -webkit-box-shadow: 0 0 0 1000px var(--xx-autofill) inset;
     caret-color: var(--xx-ink);
     transition: background-color 100000s ease-in-out 0s;
   }
@@ -215,15 +442,15 @@
     border: 1px solid var(--xx-glass-border);
     border-radius: var(--xx-radius);
     box-shadow:
-      0 18px 48px -22px rgba(0, 0, 0, 0.9),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.09);
+      0 18px 48px -22px rgba(var(--xx-shade),0.9),
+      inset 0 1px 0 0 rgba(var(--xx-veil),0.09);
   }
 
   .glass-soft {
-    background: linear-gradient(150deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.025));
+    background: linear-gradient(150deg, rgba(var(--xx-veil),0.05), rgba(var(--xx-veil),0.025));
     backdrop-filter: blur(var(--xx-glass-blur-soft)) saturate(140%);
     -webkit-backdrop-filter: blur(var(--xx-glass-blur-soft)) saturate(140%);
-    border: 1px solid rgba(255, 255, 255, 0.09);
+    border: 1px solid rgba(var(--xx-veil),0.09);
     border-radius: var(--xx-radius-sm);
   }
 
@@ -239,8 +466,8 @@
     border: 1px solid var(--xx-glass-border);
     border-radius: var(--xx-radius);
     box-shadow:
-      0 18px 48px -22px rgba(0, 0, 0, 0.9),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.09);
+      0 18px 48px -22px rgba(var(--xx-shade),0.9),
+      inset 0 1px 0 0 rgba(var(--xx-veil),0.09);
     color: var(--xx-ink);
     transition:
       transform var(--xx-t) var(--xx-ease),
@@ -265,9 +492,9 @@
   .xx-panel:hover {
     border-color: var(--xx-glass-border-strong);
     box-shadow:
-      0 24px 60px -24px rgba(0, 0, 0, 0.95),
+      0 24px 60px -24px rgba(var(--xx-shade),0.95),
       var(--xx-glow-blue),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.13);
+      inset 0 1px 0 0 rgba(var(--xx-veil),0.13);
   }
 
   /* Opt-out for panels that should not lift (dense tables, nested panels). */
@@ -275,8 +502,8 @@
   .xx-panel-static:hover {
     transform: none;
     box-shadow:
-      0 18px 48px -22px rgba(0, 0, 0, 0.9),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.09);
+      0 18px 48px -22px rgba(var(--xx-shade),0.9),
+      inset 0 1px 0 0 rgba(var(--xx-veil),0.09);
     border-color: var(--xx-glass-border);
   }
 
@@ -324,7 +551,7 @@
     position: absolute;
     inset: 0;
     z-index: -1;
-    background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, 0.28) 50%, transparent 80%);
+    background: linear-gradient(100deg, transparent 20%, rgba(var(--xx-veil),0.28) 50%, transparent 80%);
     transform: translateX(-120%);
     transition: transform 420ms var(--xx-ease);
     pointer-events: none;
@@ -353,14 +580,14 @@
   .btn-secondary {
     @apply btn;
     color: var(--xx-ink);
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(var(--xx-veil),0.06);
     backdrop-filter: blur(var(--xx-glass-blur-soft));
     -webkit-backdrop-filter: blur(var(--xx-glass-blur-soft));
-    border-color: rgba(255, 255, 255, 0.16);
+    border-color: rgba(var(--xx-veil),0.16);
   }
 
   .btn-secondary:not(:disabled):hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(var(--xx-veil),0.1);
     border-color: rgba(34, 232, 245, 0.55);
     box-shadow: var(--xx-glow-aqua);
   }
@@ -374,7 +601,7 @@
 
   .btn-ghost:not(:disabled):hover {
     color: var(--xx-ink);
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(var(--xx-veil),0.06);
   }
 
   .btn-gold {
@@ -411,7 +638,7 @@
   /* "Charging" progress sweep for a submitting button. */
   .btn-charging {
     background-image:
-      linear-gradient(100deg, transparent 10%, rgba(255, 255, 255, 0.35) 40%, transparent 70%),
+      linear-gradient(100deg, transparent 10%, rgba(var(--xx-veil),0.35) 40%, transparent 70%),
       linear-gradient(120deg, #2e7bff 0%, #7a3cff 100%);
     background-size: 220% 100%, 160% 160%;
     background-repeat: no-repeat;
@@ -424,8 +651,8 @@
     position: relative;
     width: 100%;
     border-radius: 0.85rem;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: rgba(9, 11, 28, 0.55);
+    border: 1px solid rgba(var(--xx-veil),0.14);
+    background: rgba(var(--xx-panel),0.55);
     backdrop-filter: blur(var(--xx-glass-blur-soft));
     -webkit-backdrop-filter: blur(var(--xx-glass-blur-soft));
     color: var(--xx-ink);
@@ -446,13 +673,13 @@
 
   .input:hover:not(:disabled),
   .xx-input:hover:not(:disabled) {
-    border-color: rgba(255, 255, 255, 0.24);
+    border-color: rgba(var(--xx-veil),0.24);
   }
 
   .input:focus,
   .xx-input:focus {
     border-color: rgba(34, 232, 245, 0.75);
-    background: rgba(9, 11, 28, 0.75);
+    background: rgba(var(--xx-panel),0.75);
     box-shadow:
       0 0 0 1px rgba(34, 232, 245, 0.35),
       0 0 34px -10px rgba(34, 232, 245, 0.85);
@@ -478,8 +705,8 @@
   /* ---- Badges ---- */
   .badge {
     @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(var(--xx-veil),0.16);
+    background: rgba(var(--xx-veil),0.07);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     color: var(--xx-ink);
@@ -488,21 +715,21 @@
   .badge-neon {
     border-color: rgba(122, 60, 255, 0.6);
     background: rgba(122, 60, 255, 0.16);
-    color: #d7c8ff;
+    color: var(--xx-ink-on-violet);
     box-shadow: 0 0 26px -12px rgba(122, 60, 255, 0.95);
   }
 
   .badge-aqua {
     border-color: rgba(34, 232, 245, 0.55);
     background: rgba(34, 232, 245, 0.14);
-    color: #b3f6ff;
+    color: var(--xx-ink-on-aqua);
     box-shadow: 0 0 26px -12px rgba(34, 232, 245, 0.95);
   }
 
   .badge-magenta {
     border-color: rgba(255, 61, 203, 0.55);
     background: rgba(255, 61, 203, 0.14);
-    color: #ffc4ee;
+    color: var(--xx-ink-on-magenta);
     box-shadow: 0 0 26px -12px rgba(255, 61, 203, 0.95);
   }
 
@@ -521,7 +748,7 @@
   .xx-divider {
     height: 1px;
     border: 0;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+    background: linear-gradient(90deg, transparent, rgba(var(--xx-veil),0.18), transparent);
   }
 }
 
@@ -563,7 +790,7 @@
   .xx-border-neon {
     border: 1px solid transparent;
     background-image:
-      linear-gradient(rgba(9, 11, 28, 0.62), rgba(9, 11, 28, 0.62)),
+      linear-gradient(rgba(var(--xx-panel),0.62), rgba(var(--xx-panel),0.62)),
       linear-gradient(120deg, #2e7bff, #7a3cff 45%, #22e8f5);
     background-origin: border-box;
     background-clip: padding-box, border-box;
@@ -572,7 +799,7 @@
   .xx-border-neon-hot {
     border: 1px solid transparent;
     background-image:
-      linear-gradient(rgba(9, 11, 28, 0.62), rgba(9, 11, 28, 0.62)),
+      linear-gradient(rgba(var(--xx-panel),0.62), rgba(var(--xx-panel),0.62)),
       linear-gradient(120deg, #22e8f5, #ff3dcb);
     background-origin: border-box;
     background-clip: padding-box, border-box;
@@ -703,7 +930,7 @@ body .text-slate-700,
 body .text-graphite-700,
 body .text-slate-600,
 body .text-graphite-600 {
-  color: #cdd4f2;
+  color: var(--xx-ink-soft);
 }
 
 body .text-slate-500,
@@ -734,12 +961,12 @@ body .placeholder-slate-400::placeholder {
    active nav items and price highlights read as neon rather than green. */
 body .text-brand-700,
 body .text-brand-600 {
-  color: #7fb0ff;
+  color: var(--xx-link);
 }
 
 body .text-brand-500,
 body .text-brand-400 {
-  color: #9ec4ff;
+  color: var(--xx-link-bright);
 }
 
 body .hover\:text-brand-600:hover,
@@ -770,7 +997,7 @@ body .text-yellow-600 {
 
 body .text-blue-700,
 body .text-blue-600 {
-  color: #7fb0ff;
+  color: var(--xx-link);
 }
 
 /* ---- Backgrounds ---- */
@@ -778,7 +1005,7 @@ body .bg-white,
 body .bg-slate-50,
 body .bg-graphite-50,
 body .bg-champagne-50 {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgba(var(--xx-veil),0.05);
   backdrop-filter: blur(var(--xx-glass-blur-soft));
   -webkit-backdrop-filter: blur(var(--xx-glass-blur-soft));
 }
@@ -786,42 +1013,42 @@ body .bg-champagne-50 {
 body .bg-slate-100,
 body .bg-graphite-100,
 body .bg-champagne-100 {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: rgba(var(--xx-veil),0.08);
 }
 
 body .bg-slate-200,
 body .bg-graphite-200,
 body .bg-champagne-200 {
-  background-color: rgba(255, 255, 255, 0.12);
+  background-color: rgba(var(--xx-veil),0.12);
 }
 
 body .bg-slate-300 {
-  background-color: rgba(255, 255, 255, 0.16);
+  background-color: rgba(var(--xx-veil),0.16);
 }
 
 body .bg-slate-600,
 body .bg-slate-700,
 body .bg-slate-800,
 body .bg-slate-900 {
-  background-color: rgba(9, 11, 28, 0.8);
+  background-color: rgba(var(--xx-panel),0.8);
 }
 
 body .hover\:bg-slate-50:hover,
 body .hover\:bg-champagne-100:hover,
 body .hover\:bg-white:hover {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: rgba(var(--xx-veil),0.08);
 }
 
 body .hover\:bg-slate-100:hover {
-  background-color: rgba(255, 255, 255, 0.11);
+  background-color: rgba(var(--xx-veil),0.11);
 }
 
 body .hover\:bg-slate-200:hover {
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: rgba(var(--xx-veil),0.15);
 }
 
 body .hover\:bg-slate-700:hover {
-  background-color: rgba(9, 11, 28, 0.9);
+  background-color: rgba(var(--xx-panel),0.9);
 }
 
 /* Tinted status backgrounds (badges, alert strips) become neon washes. */
@@ -877,17 +1104,17 @@ body .border-slate-200,
 body .border-slate-300,
 body .border-graphite-100,
 body .border-graphite-200 {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(var(--xx-veil),0.12);
 }
 
 body .hover\:border-slate-200:hover {
-  border-color: rgba(255, 255, 255, 0.22);
+  border-color: rgba(var(--xx-veil),0.22);
 }
 
 body .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
 body .divide-slate-200 > :not([hidden]) ~ :not([hidden]),
 body .divide-graphite-100 > :not([hidden]) ~ :not([hidden]) {
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(var(--xx-veil),0.1);
 }
 
 body .border-brand-600,
@@ -912,7 +1139,7 @@ body table tbody tr {
 }
 
 body table tbody tr:hover {
-  background-color: rgba(255, 255, 255, 0.045);
+  background-color: rgba(var(--xx-veil),0.045);
 }
 
 /* ---------------------------------------------------------------------------
@@ -954,7 +1181,7 @@ body table tbody tr:hover {
     --xx-gap-lg: 2.5rem;
     --xx-ink-muted: #c2c9e8;
     --xx-ink-dim: #98a0c8;
-    --xx-glass-border: rgba(255, 255, 255, 0.2);
+    --xx-glass-border: rgba(var(--xx-veil),0.2);
   }
 
   .xx-title {
@@ -973,9 +1200,9 @@ body table tbody tr:hover {
   .card,
   .xx-panel {
     box-shadow:
-      0 40px 90px -30px rgba(0, 0, 0, 0.95),
+      0 40px 90px -30px rgba(var(--xx-shade),0.95),
       var(--xx-glow-purple),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+      inset 0 1px 0 0 rgba(var(--xx-veil),0.12);
   }
 
   .btn {
@@ -1050,11 +1277,11 @@ body table tbody tr:hover {
   .xx-panel,
   .glass,
   .glass-soft {
-    background: rgba(16, 18, 46, 0.92);
+    background: rgba(var(--xx-panel),0.92);
   }
 
   .input,
   .xx-input {
-    background: rgba(11, 13, 34, 0.95);
+    background: rgba(var(--xx-panel),0.95);
   }
 }

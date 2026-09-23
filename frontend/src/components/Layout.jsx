@@ -36,13 +36,13 @@ export default function Layout() {
         <div className="pointer-events-none fixed inset-x-0 top-24 z-50 flex justify-center px-4">
           <div
             role="alert"
-            className="pointer-events-auto flex items-center gap-3 rounded-2xl border border-[rgba(255,84,112,0.45)] bg-[rgba(30,8,18,0.9)] px-4 py-3 text-sm font-medium text-[#ffc2cc] shadow-[0_0_46px_-12px_rgba(255,84,112,0.8)] backdrop-blur-glass animate-xx-materialize"
+            className="pointer-events-auto flex items-center gap-3 rounded-2xl border border-[rgba(255,84,112,0.45)] bg-[rgba(var(--xx-panel-danger),0.9)] px-4 py-3 text-sm font-medium text-[var(--xx-danger-1)] shadow-[0_0_46px_-12px_rgba(255,84,112,0.8)] backdrop-blur-glass animate-xx-materialize"
           >
             <GeoIcon name="alert" className="h-5 w-5 shrink-0" accent="var(--xx-red)" />
             <span>{notice.text}</span>
             <button
               onClick={clearNotice}
-              className="ml-2 grid h-6 w-6 shrink-0 place-items-center rounded-full transition-colors duration-xx hover:bg-white/10 hover:text-white"
+              className="ml-2 grid h-6 w-6 shrink-0 place-items-center rounded-full transition-colors duration-xx hover:bg-[rgba(var(--xx-veil),0.1)] hover:text-[color:var(--xx-ink)]"
               aria-label="Închide"
             >
               <GeoIcon name="close" className="h-3.5 w-3.5" accent="currentColor" />

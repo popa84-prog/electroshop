@@ -229,7 +229,7 @@ export default function AdminNav() {
   const { tabs } = filterNavForRoles(user?.roles, hasPermission);
 
   return (
-    <div className="mb-6 flex flex-wrap gap-2 border-b border-[rgba(255,255,255,0.1)] pb-3">
+    <div className="mb-6 flex flex-wrap gap-2 border-b border-[rgba(var(--xx-veil),0.1)] pb-3">
       {tabs.map((t) => (
         <NavLink
           key={t.to}
@@ -239,7 +239,7 @@ export default function AdminNav() {
             `flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all duration-xx ease-xx ${
               isActive
                 ? 'border-[rgba(34,232,245,0.5)] bg-[rgba(34,232,245,0.12)] text-[color:var(--xx-ink)] shadow-[0_0_28px_-10px_rgba(34,232,245,0.8)]'
-                : 'border-[rgba(255,255,255,0.1)] text-[color:var(--xx-ink-muted)] hover:border-[rgba(122,60,255,0.5)] hover:text-[color:var(--xx-ink)]'
+                : 'border-[rgba(var(--xx-veil),0.1)] text-[color:var(--xx-ink-muted)] hover:border-[rgba(122,60,255,0.5)] hover:text-[color:var(--xx-ink)]'
             }`
           }
         >

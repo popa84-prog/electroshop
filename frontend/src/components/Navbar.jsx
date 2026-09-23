@@ -79,18 +79,18 @@ export default function Navbar() {
   const navLinkClass = ({ isActive }) =>
     `relative rounded-full px-4 py-2 text-sm font-medium transition-all duration-xx ease-xx ${
       isActive
-        ? 'text-white bg-[rgba(46,123,255,0.18)] shadow-[0_0_24px_-6px_rgba(46,123,255,0.8)]'
-        : 'text-[#b9c1e6] hover:text-white hover:bg-white/[0.07]'
+        ? 'text-[color:var(--xx-ink)] bg-[rgba(46,123,255,0.18)] shadow-[0_0_24px_-6px_rgba(46,123,255,0.8)]'
+        : 'text-[var(--xx-info-6)] hover:text-[color:var(--xx-ink)] hover:bg-[rgba(var(--xx-veil),0.07)]'
     }`;
 
   const sheetLinkClass = ({ isActive }) =>
     `flex items-center gap-3 rounded-xl px-4 py-3 text-base font-medium transition-all duration-xx ease-xx ${
-      isActive ? 'bg-[rgba(46,123,255,0.18)] text-white' : 'text-[#b9c1e6] hover:bg-white/[0.07] hover:text-white'
+      isActive ? 'bg-[rgba(46,123,255,0.18)] text-[color:var(--xx-ink)]' : 'text-[var(--xx-info-6)] hover:bg-[rgba(var(--xx-veil),0.07)] hover:text-[color:var(--xx-ink)]'
     }`;
 
   const bottomLinkClass = ({ isActive }) =>
     `flex flex-1 flex-col items-center gap-1 py-2 text-[0.62rem] font-semibold uppercase tracking-wide transition-colors duration-xx ${
-      isActive ? 'text-[color:var(--xx-cyan)]' : 'text-[#8d95c0]'
+      isActive ? 'text-[color:var(--xx-cyan)]' : 'text-[var(--xx-info-7)]'
     }`;
 
   return (
@@ -99,8 +99,8 @@ export default function Navbar() {
         <nav
           className={`mx-auto flex max-w-[1680px] items-center gap-3 rounded-2xl px-3 py-2.5 transition-all duration-xxslow ease-xx sm:gap-4 sm:px-5 ${
             condensed
-              ? 'border border-[rgba(255,255,255,0.14)] bg-[rgba(7,8,24,0.78)] shadow-[0_18px_46px_-24px_rgba(0,0,0,0.95),0_0_46px_-18px_rgba(46,123,255,0.55)] backdrop-blur-glass-xl'
-              : 'border border-transparent bg-[rgba(7,8,24,0.35)] backdrop-blur-glass'
+              ? 'border border-[rgba(var(--xx-veil),0.14)] bg-[rgba(var(--xx-panel),0.78)] shadow-[0_18px_46px_-24px_rgba(var(--xx-shade),0.95),0_0_46px_-18px_rgba(46,123,255,0.55)] backdrop-blur-glass-xl'
+              : 'border border-transparent bg-[rgba(var(--xx-panel),0.35)] backdrop-blur-glass'
           }`}
         >
           <Link
@@ -148,11 +148,11 @@ export default function Navbar() {
             <Link
               to="/cart"
               aria-label={`Coș de cumpărături, ${totalItems} produse`}
-              className="relative grid h-10 w-10 place-items-center rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.05)] text-white transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.5)] hover:shadow-glow-aqua"
+              className="relative grid h-10 w-10 place-items-center rounded-xl border border-[rgba(var(--xx-veil),0.12)] bg-[rgba(var(--xx-veil),0.05)] text-[color:var(--xx-ink)] transition-all duration-xx ease-xx hover:border-[rgba(34,232,245,0.5)] hover:shadow-glow-aqua"
             >
               <GeoIcon name="cart" className="h-5 w-5" accent="var(--xx-cyan)" />
               {totalItems > 0 && (
-                <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-[1.25rem] place-items-center rounded-full bg-xx-aqua px-1 text-[0.65rem] font-bold text-[#04050c] shadow-glow-aqua">
+                <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-[1.25rem] place-items-center rounded-full bg-xx-aqua px-1 text-[0.65rem] font-bold text-[var(--xx-void)] shadow-glow-aqua">
                   {totalItems > 99 ? '99+' : totalItems}
                 </span>
               )}
@@ -161,7 +161,7 @@ export default function Navbar() {
             {isAuthenticated ? (
               <div className="hidden items-center gap-2 lg:flex">
                 <span className="max-w-[9rem] truncate text-sm xx-ink-muted">
-                  Salut, <span className="font-semibold text-white">{user?.fullName?.split(' ')[0]}</span>
+                  Salut, <span className="font-semibold text-[color:var(--xx-ink)]">{user?.fullName?.split(' ')[0]}</span>
                 </span>
                 <NeonButton
                   variant="secondary"
@@ -193,7 +193,7 @@ export default function Navbar() {
             )}
 
             <button
-              className="grid h-10 w-10 place-items-center rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.05)] text-white transition-all duration-xx ease-xx hover:border-[rgba(46,123,255,0.5)] lg:hidden"
+              className="grid h-10 w-10 place-items-center rounded-xl border border-[rgba(var(--xx-veil),0.12)] bg-[rgba(var(--xx-veil),0.05)] text-[color:var(--xx-ink)] transition-all duration-xx ease-xx hover:border-[rgba(46,123,255,0.5)] lg:hidden"
               onClick={() => setOpen((value) => !value)}
               aria-label={open ? 'Închide meniul' : 'Deschide meniul'}
               aria-expanded={open}
@@ -215,16 +215,16 @@ export default function Navbar() {
         <div className="fixed inset-0 z-50 lg:hidden">
           <button
             aria-label="Închide meniul"
-            className="absolute inset-0 bg-[rgba(4,5,12,0.72)] backdrop-blur-xxs"
+            className="absolute inset-0 bg-[rgba(var(--xx-panel),0.72)] backdrop-blur-xxs"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute inset-x-3 top-3 max-h-[92vh] overflow-y-auto rounded-2xl border border-[rgba(255,255,255,0.14)] bg-[rgba(7,8,24,0.95)] p-4 shadow-glass-lg backdrop-blur-glass-xl animate-xx-materialize">
+          <div className="absolute inset-x-3 top-3 max-h-[92vh] overflow-y-auto rounded-2xl border border-[rgba(var(--xx-veil),0.14)] bg-[rgba(var(--xx-panel),0.95)] p-4 shadow-glass-lg backdrop-blur-glass-xl animate-xx-materialize">
             <div className="mb-4 flex items-center justify-between">
               <span className="xx-eyebrow mb-0">Navigație</span>
               <button
                 onClick={() => setOpen(false)}
                 aria-label="Închide meniul"
-                className="grid h-9 w-9 place-items-center rounded-xl border border-[rgba(255,255,255,0.12)] bg-white/5 text-white"
+                className="grid h-9 w-9 place-items-center rounded-xl border border-[rgba(var(--xx-veil),0.12)] bg-[rgba(var(--xx-veil),0.05)] text-[color:var(--xx-ink)]"
               >
                 <GeoIcon name="close" className="h-4 w-4" accent="var(--xx-cyan)" />
               </button>
@@ -262,7 +262,7 @@ export default function Navbar() {
             {isAuthenticated ? (
               <div className="space-y-3">
                 <p className="px-1 text-sm xx-ink-muted">
-                  Autentificat ca <span className="font-semibold text-white">{user?.fullName}</span>
+                  Autentificat ca <span className="font-semibold text-[color:var(--xx-ink)]">{user?.fullName}</span>
                 </p>
                 <NeonButton
                   variant="secondary"
@@ -300,7 +300,7 @@ export default function Navbar() {
       {/* Mobile bottom bar — four fixed, thumb-reachable destinations. */}
       <nav
         aria-label="Navigație rapidă"
-        className="fixed inset-x-0 bottom-0 z-30 flex border-t border-[rgba(255,255,255,0.12)] bg-[rgba(7,8,24,0.9)] pb-[env(safe-area-inset-bottom)] backdrop-blur-glass-xl sm:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 flex border-t border-[rgba(var(--xx-veil),0.12)] bg-[rgba(var(--xx-panel),0.9)] pb-[env(safe-area-inset-bottom)] backdrop-blur-glass-xl sm:hidden"
       >
         <NavLink to="/" className={bottomLinkClass} end>
           <GeoIcon name="home" className="h-5 w-5" accent="currentColor" />
@@ -314,7 +314,7 @@ export default function Navbar() {
           <span className="relative">
             <GeoIcon name="cart" className="h-5 w-5" accent="currentColor" />
             {totalItems > 0 ? (
-              <span className="absolute -right-2 -top-1.5 grid h-4 min-w-[1rem] place-items-center rounded-full bg-xx-aqua px-1 text-[0.55rem] font-bold text-[#04050c]">
+              <span className="absolute -right-2 -top-1.5 grid h-4 min-w-[1rem] place-items-center rounded-full bg-xx-aqua px-1 text-[0.55rem] font-bold text-[var(--xx-void)]">
                 {totalItems > 9 ? '9+' : totalItems}
               </span>
             ) : null}

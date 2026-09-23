@@ -46,11 +46,11 @@ export function dismissToast(id) {
  */
 const STYLES = {
   success:
-    'border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.14)] text-[#7ee9bd] shadow-[0_20px_50px_-24px_rgba(0,0,0,0.95),0_0_44px_-16px_rgba(31,172,121,0.6)]',
+    'border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.14)] text-[var(--xx-good-3)] shadow-[0_20px_50px_-24px_rgba(var(--xx-shade),0.95),0_0_44px_-16px_rgba(31,172,121,0.6)]',
   error:
-    'border-[rgba(255,90,122,0.45)] bg-[rgba(255,90,122,0.14)] text-[#ff8fa8] shadow-[0_20px_50px_-24px_rgba(0,0,0,0.95),0_0_44px_-16px_rgba(255,90,122,0.6)]',
+    'border-[rgba(255,90,122,0.45)] bg-[rgba(255,90,122,0.14)] text-[var(--xx-danger-3)] shadow-[0_20px_50px_-24px_rgba(var(--xx-shade),0.95),0_0_44px_-16px_rgba(255,90,122,0.6)]',
   info:
-    'border-[rgba(122,60,255,0.5)] bg-[rgba(122,60,255,0.16)] text-[#b795ff] shadow-[0_20px_50px_-24px_rgba(0,0,0,0.95),0_0_44px_-16px_rgba(122,60,255,0.6)]',
+    'border-[rgba(122,60,255,0.5)] bg-[rgba(122,60,255,0.16)] text-[var(--xx-violet-3)] shadow-[0_20px_50px_-24px_rgba(var(--xx-shade),0.95),0_0_44px_-16px_rgba(122,60,255,0.6)]',
 };
 
 /*
@@ -100,7 +100,7 @@ export function ToastHost() {
             <GeoIcon name={ICONS[t.type] || ICONS.info} className="h-4 w-4" accent="currentColor" />
           </span>
 
-          <span className="flex-1 text-[#e8ecff]">{t.message}</span>
+          <span className="flex-1 text-[var(--xx-info-1)]">{t.message}</span>
 
           <button
             type="button"

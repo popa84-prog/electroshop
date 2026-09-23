@@ -61,7 +61,7 @@ function ProductCard({ product, layout = 'grid' }) {
     return (
       <article className="card group flex items-center gap-4 overflow-hidden p-3">
         <Link to={`/products/${product.id}`} className="block shrink-0" aria-label={product.name}>
-          <div className="h-24 w-24 overflow-hidden rounded-xl bg-[rgba(255,255,255,0.05)] sm:h-28 sm:w-28">
+          <div className="h-24 w-24 overflow-hidden rounded-xl bg-[rgba(var(--xx-veil),0.05)] sm:h-28 sm:w-28">
             <img
               src={resolveImage(product.imageThumbUrl || product.imageUrl)}
               alt={product.name}
@@ -72,7 +72,7 @@ function ProductCard({ product, layout = 'grid' }) {
         </Link>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-[#7fb0ff]">
+          <span className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-[var(--xx-link)]">
             {product.brand}
             {product.category ? <span className="xx-ink-dim"> · {product.category}</span> : null}
           </span>
@@ -109,7 +109,7 @@ function ProductCard({ product, layout = 'grid' }) {
     <TiltCard max={4} className="h-full">
       <article className="card group flex h-full flex-col overflow-hidden">
         <Link to={`/products/${product.id}`} className="relative block" aria-label={product.name}>
-          <div className="aspect-[4/3] w-full overflow-hidden bg-[rgba(255,255,255,0.04)]">
+          <div className="aspect-[4/3] w-full overflow-hidden bg-[rgba(var(--xx-veil),0.04)]">
             <img
               src={resolveImage(product.imageThumbUrl || product.imageUrl)}
               alt={product.name}
@@ -124,7 +124,7 @@ function ProductCard({ product, layout = 'grid' }) {
               start with a hard horizontal cut. */}
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[rgba(4,5,12,0.75)] to-transparent"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[rgba(var(--xx-panel),0.75)] to-transparent"
           />
 
           <span className="absolute left-3 top-3">
@@ -133,7 +133,7 @@ function ProductCard({ product, layout = 'grid' }) {
         </Link>
 
         <div className="flex flex-1 flex-col p-4">
-          <span className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-[#7fb0ff]">
+          <span className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-[var(--xx-link)]">
             {product.brand}
           </span>
 

@@ -89,7 +89,7 @@ export default function Modal({ open, title, onClose, children, maxWidth = 'max-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-[rgba(3,4,12,0.72)] backdrop-blur-xxs"
+        className="absolute inset-0 bg-[rgba(var(--xx-panel),0.72)] backdrop-blur-xxs"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -100,14 +100,14 @@ export default function Modal({ open, title, onClose, children, maxWidth = 'max-
         aria-modal="true"
         aria-label={typeof title === 'string' ? title : undefined}
         tabIndex={-1}
-        className={`card card-static relative z-10 w-full ${maxWidth} max-h-[90vh] animate-xx-materialize overflow-y-auto p-6 shadow-[0_40px_100px_-40px_rgba(0,0,0,0.95),0_0_70px_-24px_rgba(122,60,255,0.6)] outline-none`}
+        className={`card card-static relative z-10 w-full ${maxWidth} max-h-[90vh] animate-xx-materialize overflow-y-auto p-6 shadow-[0_40px_100px_-40px_rgba(var(--xx-shade),0.95),0_0_70px_-24px_rgba(122,60,255,0.6)] outline-none`}
       >
-        <div className="mb-4 flex items-center justify-between gap-3 border-b border-[rgba(255,255,255,0.1)] pb-3">
+        <div className="mb-4 flex items-center justify-between gap-3 border-b border-[rgba(var(--xx-veil),0.1)] pb-3">
           <h2 className="font-display text-lg font-semibold text-[color:var(--xx-ink)]">{title}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.5)] hover:text-[color:var(--xx-red)]"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] text-[color:var(--xx-ink-muted)] transition-all duration-xx ease-xx hover:border-[rgba(255,84,112,0.5)] hover:text-[color:var(--xx-red)]"
             aria-label="Închide"
           >
             <GeoIcon name="close" className="h-4 w-4" accent="currentColor" />

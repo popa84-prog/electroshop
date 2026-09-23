@@ -110,15 +110,15 @@ export default function NotificationBell() {
         aria-haspopup="menu"
         className={`relative flex h-9 w-9 items-center justify-center rounded-[0.7rem] border transition-colors duration-200 ${
           open
-            ? 'border-[rgba(34,232,245,0.5)] bg-[rgba(34,232,245,0.12)] text-[#22e8f5]'
-            : 'border-[rgba(255,255,255,0.12)] text-[#c9d4ff] hover:border-[rgba(34,232,245,0.4)] hover:text-[#22e8f5]'
+            ? 'border-[rgba(34,232,245,0.5)] bg-[rgba(34,232,245,0.12)] text-[var(--xx-aqua)]'
+            : 'border-[rgba(var(--xx-veil),0.12)] text-[var(--xx-info-3)] hover:border-[rgba(34,232,245,0.4)] hover:text-[var(--xx-aqua)]'
         }`}
       >
         <GeoIcon name="bell" className="h-4 w-4" accent="currentColor" />
         {unread > 0 && (
           <span
             aria-hidden="true"
-            className="absolute -right-1 -top-1 flex h-[1.15rem] min-w-[1.15rem] animate-xx-pulse-glow items-center justify-center rounded-full border border-[rgba(255,90,122,0.6)] bg-[#ff5a7a] px-1 text-[10px] font-bold leading-none text-white shadow-[0_0_16px_rgba(255,90,122,0.75)]"
+            className="absolute -right-1 -top-1 flex h-[1.15rem] min-w-[1.15rem] animate-xx-pulse-glow items-center justify-center rounded-full border border-[rgba(255,90,122,0.6)] bg-[var(--xx-danger-5)] px-1 text-[10px] font-bold leading-none text-[color:var(--xx-ink)] shadow-[0_0_16px_rgba(255,90,122,0.75)]"
           >
             {unread > 99 ? '99+' : unread}
           </span>
@@ -134,7 +134,7 @@ export default function NotificationBell() {
         <div
           role="menu"
           aria-label="Notificări noi"
-          className="absolute right-0 top-11 z-50 w-80 max-w-[90vw] animate-xx-materialize rounded-[1rem] border border-[rgba(255,255,255,0.12)] bg-[rgba(9,11,28,0.92)] p-2 shadow-[0_28px_70px_-30px_rgba(0,0,0,0.95),0_0_50px_-18px_rgba(122,60,255,0.55)] backdrop-blur-xl"
+          className="absolute right-0 top-11 z-50 w-80 max-w-[90vw] animate-xx-materialize rounded-[1rem] border border-[rgba(var(--xx-veil),0.12)] bg-[rgba(var(--xx-panel),0.92)] p-2 shadow-[0_28px_70px_-30px_rgba(var(--xx-shade),0.95),0_0_50px_-18px_rgba(122,60,255,0.55)] backdrop-blur-xl"
         >
           <div className="flex items-center justify-between px-2 py-1.5">
             <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] xx-ink-muted">
@@ -143,7 +143,7 @@ export default function NotificationBell() {
             <Link
               to="/admin/notifications"
               onClick={() => setOpen(false)}
-              className="text-xs font-semibold text-[#22e8f5] transition-colors duration-200 hover:text-[#7ee9ff]"
+              className="text-xs font-semibold text-[var(--xx-aqua)] transition-colors duration-200 hover:text-[var(--xx-aqua-2)]"
             >
               Vezi toate
             </Link>
@@ -162,7 +162,7 @@ export default function NotificationBell() {
               items.map((n) => (
                 <div
                   key={n.id}
-                  className="flex items-start gap-2.5 rounded-[0.8rem] border border-transparent px-2 py-2 transition-colors duration-200 hover:border-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.05)]"
+                  className="flex items-start gap-2.5 rounded-[0.8rem] border border-transparent px-2 py-2 transition-colors duration-200 hover:border-[rgba(var(--xx-veil),0.1)] hover:bg-[rgba(var(--xx-veil),0.05)]"
                 >
                   <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[rgba(122,60,255,0.35)] bg-[rgba(122,60,255,0.12)]">
                     <GeoIcon
@@ -172,7 +172,7 @@ export default function NotificationBell() {
                   </span>
 
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-[#e8ecff]">{n.title}</p>
+                    <p className="truncate text-sm font-semibold text-[var(--xx-info-1)]">{n.title}</p>
                     {n.message && <p className="line-clamp-2 text-xs xx-ink-muted">{n.message}</p>}
                     <p className="mt-0.5 text-[11px] xx-ink-dim">
                       {TYPE_LABELS[n.type] || n.type} · {formatRelative(n.createdAt)}
@@ -184,7 +184,7 @@ export default function NotificationBell() {
                     onClick={() => markOneRead(n.id)}
                     title="Marchează ca citită"
                     aria-label={`Marchează „${n.title}” ca citită`}
-                    className="shrink-0 rounded-lg border border-transparent p-1.5 text-[#c9d4ff] transition-colors duration-200 hover:border-[rgba(31,172,121,0.5)] hover:text-[#7ee9bd]"
+                    className="shrink-0 rounded-lg border border-transparent p-1.5 text-[var(--xx-info-3)] transition-colors duration-200 hover:border-[rgba(31,172,121,0.5)] hover:text-[var(--xx-good-3)]"
                   >
                     <GeoIcon name="check" className="h-3.5 w-3.5" accent="currentColor" />
                   </button>

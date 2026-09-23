@@ -23,9 +23,9 @@ const FooterLink = ({ to, href, children }) => {
     <>
       <span
         aria-hidden="true"
-        className="inline-block h-1.5 w-1.5 rotate-45 rounded-[1px] bg-[rgba(255,255,255,0.25)] transition-all duration-xx ease-xx group-hover:bg-[color:var(--xx-cyan)] group-hover:shadow-[0_0_10px_2px_rgba(34,232,245,0.8)]"
+        className="inline-block h-1.5 w-1.5 rotate-45 rounded-[1px] bg-[rgba(var(--xx-veil),0.25)] transition-all duration-xx ease-xx group-hover:bg-[color:var(--xx-cyan)] group-hover:shadow-[0_0_10px_2px_rgba(34,232,245,0.8)]"
       />
-      <span className="transition-colors duration-xx ease-xx group-hover:text-white">{children}</span>
+      <span className="transition-colors duration-xx ease-xx group-hover:text-[color:var(--xx-ink)]">{children}</span>
     </>
   );
 
@@ -52,7 +52,7 @@ const FooterModule = ({ icon, title, accent, children, delay = 0 }) => (
       <div className="mb-4 flex items-center gap-2.5">
         <span
           aria-hidden="true"
-          className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.05)]"
+          className="grid h-8 w-8 place-items-center rounded-lg border border-[rgba(var(--xx-veil),0.12)] bg-[rgba(var(--xx-veil),0.05)]"
         >
           <GeoIcon name={icon} className="h-4 w-4" accent={accent} />
         </span>
@@ -156,10 +156,10 @@ export default function Footer() {
               </li>
               <li className="flex items-start gap-2.5 text-sm xx-ink-muted">
                 <GeoIcon name="shield" className="mt-0.5 h-4 w-4 shrink-0" accent="var(--xx-lime)" />
-                Garanție legală + garanție comercială 7 zile
+                Garanție 3 zile — produsul funcționează la livrare
               </li>
             </ul>
-            <ul className="mt-3 space-y-2.5 border-t border-[rgba(255,255,255,0.08)] pt-3">
+            <ul className="mt-3 space-y-2.5 border-t border-[rgba(var(--xx-veil),0.08)] pt-3">
               <li>
                 <FooterLink to="/retur">Condiții de retur</FooterLink>
               </li>

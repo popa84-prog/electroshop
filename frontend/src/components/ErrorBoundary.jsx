@@ -63,14 +63,14 @@ export default class ErrorBoundary extends Component {
         style={{ boxShadow: '0 0 52px -18px rgba(255,90,122,0.55)' }}
       >
         <span className="flex h-12 w-12 items-center justify-center rounded-full border border-[rgba(255,90,122,0.5)] bg-[rgba(255,90,122,0.14)]">
-          <GeoIcon name="alert" className="h-6 w-6" accent="#ff8fa8" />
+          <GeoIcon name="alert" className="h-6 w-6" accent="var(--xx-danger-3)" />
         </span>
 
-        <p className="text-sm font-semibold text-[#ff8fa8]">
+        <p className="text-sm font-semibold text-[var(--xx-danger-3)]">
           A apărut o eroare la afișarea acestei pagini.
         </p>
 
-        <pre className="max-w-md whitespace-pre-wrap break-words rounded-[0.8rem] border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-2 font-mono text-xs xx-ink-muted">
+        <pre className="max-w-md whitespace-pre-wrap break-words rounded-[0.8rem] border border-[rgba(var(--xx-veil),0.1)] bg-[rgba(var(--xx-veil),0.04)] px-3 py-2 font-mono text-xs xx-ink-muted">
           {this.state.error?.message || 'Eroare necunoscută.'}
         </pre>
 

@@ -90,8 +90,8 @@ export default function AdminSidebar({
     >
       <nav
         aria-label="Secțiuni administrare"
-        className="sticky top-20 rounded-[1.25rem] border border-[rgba(255,255,255,0.12)]
-          bg-[rgba(9,10,26,0.72)] p-2 shadow-[0_28px_70px_-32px_rgba(0,0,0,0.95),0_0_48px_-18px_rgba(122,60,255,0.55)]
+        className="sticky top-20 rounded-[1.25rem] border border-[rgba(var(--xx-veil),0.12)]
+          bg-[rgba(var(--xx-panel),0.72)] p-2 shadow-[0_28px_70px_-32px_rgba(var(--xx-shade),0.95),0_0_48px_-18px_rgba(122,60,255,0.55)]
           backdrop-blur-glass-lg"
       >
         <div className={`flex items-center gap-1 pb-2 pt-1 ${collapsed ? 'flex-col px-0' : 'px-3'}`}>
@@ -145,14 +145,14 @@ export default function AdminSidebar({
                   pinned
                 />
               ))}
-              <div className="my-1 border-t border-[rgba(255,255,255,0.1)]" />
+              <div className="my-1 border-t border-[rgba(var(--xx-veil),0.1)]" />
             </>
           ) : null}
 
           {dashboardItem ? (
             <>
               <RailLink item={dashboardItem} collapsed={collapsed} favorites={favorites} />
-              <div className="my-1 border-t border-[rgba(255,255,255,0.1)]" />
+              <div className="my-1 border-t border-[rgba(var(--xx-veil),0.1)]" />
             </>
           ) : null}
 
@@ -166,7 +166,7 @@ export default function AdminSidebar({
             if (collapsed) {
               return (
                 <div key={group.key} className="space-y-0.5 py-0.5">
-                  <div className="mx-2 border-t border-[rgba(255,255,255,0.08)]" />
+                  <div className="mx-2 border-t border-[rgba(var(--xx-veil),0.08)]" />
                   {group.items.map((item) => (
                     <RailLink key={item.to} item={item} collapsed favorites={favorites} />
                   ))}
@@ -183,7 +183,7 @@ export default function AdminSidebar({
                   aria-controls={panelId}
                   className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs
                     font-semibold uppercase tracking-[0.16em] text-[color:var(--xx-ink-dim)]
-                    transition-colors duration-xx hover:bg-[rgba(255,255,255,0.05)]
+                    transition-colors duration-xx hover:bg-[rgba(var(--xx-veil),0.05)]
                     hover:text-[color:var(--xx-ink)]"
                 >
                   <Icon name={group.icon} className="h-4 w-4 shrink-0 text-[color:var(--xx-purple)]" />
@@ -216,7 +216,7 @@ export default function AdminSidebar({
         </div>
 
         {favorites.error ? (
-          <p className="px-2 pt-1 text-[10px] text-[#ff8a97]">{favorites.error}</p>
+          <p className="px-2 pt-1 text-[10px] text-[var(--xx-danger-4)]">{favorites.error}</p>
         ) : null}
       </nav>
     </aside>
@@ -239,11 +239,11 @@ function RailLink({ item, collapsed, favorites, pinned = false }) {
      font-medium transition-all duration-xx ease-xx ${collapsed ? 'justify-center pl-1.5' : 'pl-2.5'} ${
       isActive
         ? 'border-[color:var(--xx-cyan)] bg-[rgba(34,232,245,0.1)] text-[color:var(--xx-ink)] shadow-[inset_0_0_24px_-10px_rgba(34,232,245,0.65)]'
-        : 'border-transparent text-[color:var(--xx-ink-muted)] hover:border-[rgba(122,60,255,0.55)] hover:bg-[rgba(255,255,255,0.05)] hover:text-[color:var(--xx-ink)]'
+        : 'border-transparent text-[color:var(--xx-ink-muted)] hover:border-[rgba(122,60,255,0.55)] hover:bg-[rgba(var(--xx-veil),0.05)] hover:text-[color:var(--xx-ink)]'
     }`;
 
   return (
-    <div className="group/row flex items-center focus-within:bg-[rgba(255,255,255,0.03)]
+    <div className="group/row flex items-center focus-within:bg-[rgba(var(--xx-veil),0.03)]
       rounded-lg">
       <NavLink to={item.to} end={item.end} className={linkClass} title={collapsed ? item.label : undefined}>
         <Icon name={item.icon} className="h-4 w-4 shrink-0" />

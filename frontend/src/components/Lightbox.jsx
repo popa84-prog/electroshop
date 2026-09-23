@@ -99,20 +99,20 @@ export default function Lightbox({ images = [], index = 0, onClose }) {
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const navButton =
-    'absolute top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-[rgba(255,255,255,0.16)] bg-[rgba(9,11,28,0.72)] text-[#c9d4ff] backdrop-blur-md transition-colors duration-200 hover:border-[rgba(34,232,245,0.55)] hover:text-[#22e8f5]';
+    'absolute top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-[rgba(var(--xx-veil),0.16)] bg-[rgba(var(--xx-panel),0.72)] text-[var(--xx-info-3)] backdrop-blur-md transition-colors duration-200 hover:border-[rgba(34,232,245,0.55)] hover:text-[var(--xx-aqua)]';
 
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Vizualizare imagine produs"
-      className="fixed inset-0 z-[60] flex animate-xx-materialize items-center justify-center bg-[rgba(3,4,12,0.9)] backdrop-blur-lg"
+      className="fixed inset-0 z-[60] flex animate-xx-materialize items-center justify-center bg-[rgba(var(--xx-panel),0.9)] backdrop-blur-lg"
       onClick={onClose}
     >
       <button
         ref={closeRef}
         type="button"
-        className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(255,255,255,0.16)] bg-[rgba(9,11,28,0.72)] text-[#c9d4ff] backdrop-blur-md transition-colors duration-200 hover:border-[rgba(255,90,122,0.55)] hover:text-[#ff8fa8]"
+        className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(var(--xx-veil),0.16)] bg-[rgba(var(--xx-panel),0.72)] text-[var(--xx-info-3)] backdrop-blur-md transition-colors duration-200 hover:border-[rgba(255,90,122,0.55)] hover:text-[var(--xx-danger-3)]"
         onClick={onClose}
         aria-label="Închide"
       >
@@ -147,7 +147,7 @@ export default function Lightbox({ images = [], index = 0, onClose }) {
           {/* Poziția în galerie, citită cu voce tare la fiecare schimbare. */}
           <p
             aria-live="polite"
-            className="absolute left-1/2 top-4 z-10 -translate-x-1/2 rounded-full border border-[rgba(255,255,255,0.14)] bg-[rgba(9,11,28,0.72)] px-3.5 py-1 font-mono text-xs font-semibold text-[#c9d4ff] backdrop-blur-md"
+            className="absolute left-1/2 top-4 z-10 -translate-x-1/2 rounded-full border border-[rgba(var(--xx-veil),0.14)] bg-[rgba(var(--xx-panel),0.72)] px-3.5 py-1 font-mono text-xs font-semibold text-[var(--xx-info-3)] backdrop-blur-md"
           >
             {i + 1} / {list.length}
           </p>
@@ -169,7 +169,7 @@ export default function Lightbox({ images = [], index = 0, onClose }) {
           transformOrigin: origin,
           cursor: zoom ? 'zoom-out' : 'zoom-in',
           transition: reduceMotion ? 'none' : 'transform 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
-          filter: 'drop-shadow(0 30px 70px rgba(0,0,0,0.85))',
+          filter: 'drop-shadow(0 30px 70px rgba(var(--xx-shade),0.85))',
         }}
         className="max-h-[85vh] max-w-[92vw] select-none rounded-[0.9rem] object-contain"
       />
@@ -192,7 +192,7 @@ export default function Lightbox({ images = [], index = 0, onClose }) {
               className={`h-14 w-14 flex-shrink-0 overflow-hidden rounded-[0.7rem] border-2 transition-all duration-200 ${
                 idx === i
                   ? 'border-[rgba(34,232,245,0.85)] shadow-[0_0_22px_-4px_rgba(34,232,245,0.8)]'
-                  : 'border-[rgba(255,255,255,0.14)] opacity-60 hover:opacity-100'
+                  : 'border-[rgba(var(--xx-veil),0.14)] opacity-60 hover:opacity-100'
               }`}
             >
               <img src={resolveImage(img)} className="h-full w-full object-cover" alt="" />

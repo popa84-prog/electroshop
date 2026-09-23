@@ -16,8 +16,8 @@ export const formatDate = (value) => {
  * XXII — order-status presentation, in one place.
  *
  * The hues are the validated status palette from `components/xxii/ChartTheme`
- * (pending #b08c09, paid #2e7bff, shipped #d032b8, delivered #1fac79,
- * cancelled #b82f3c) rendered as a glass chip: the hue at 14% for the fill, at
+ * (pending var(--xx-warn-6), paid var(--xx-blue), shipped var(--xx-magenta-4), delivered var(--xx-good-6),
+ * cancelled var(--xx-danger-7)) rendered as a glass chip: the hue at 14% for the fill, at
  * 42% for the edge, and a light tint of the same hue for the ink so the text
  * itself clears contrast against the dark surface.
  *
@@ -31,17 +31,17 @@ export const formatDate = (value) => {
 export const statusColor = (status) => {
   switch (status) {
     case 'PENDING':
-      return 'border border-[rgba(176,140,9,0.42)] bg-[rgba(176,140,9,0.16)] text-[#f0d089]';
+      return 'border border-[rgba(176,140,9,0.42)] bg-[rgba(176,140,9,0.16)] text-[var(--xx-warn-2)]';
     case 'PAID':
-      return 'border border-[rgba(46,123,255,0.42)] bg-[rgba(46,123,255,0.16)] text-[#b7d0ff]';
+      return 'border border-[rgba(46,123,255,0.42)] bg-[rgba(46,123,255,0.16)] text-[var(--xx-info-5)]';
     case 'SHIPPED':
-      return 'border border-[rgba(208,50,184,0.42)] bg-[rgba(208,50,184,0.16)] text-[#f5b6e6]';
+      return 'border border-[rgba(208,50,184,0.42)] bg-[rgba(208,50,184,0.16)] text-[var(--xx-magenta-1)]';
     case 'DELIVERED':
-      return 'border border-[rgba(31,172,121,0.42)] bg-[rgba(31,172,121,0.16)] text-[#93e9c4]';
+      return 'border border-[rgba(31,172,121,0.42)] bg-[rgba(31,172,121,0.16)] text-[var(--xx-good-2)]';
     case 'CANCELLED':
-      return 'border border-[rgba(184,47,60,0.42)] bg-[rgba(184,47,60,0.16)] text-[#ffb3bd]';
+      return 'border border-[rgba(184,47,60,0.42)] bg-[rgba(184,47,60,0.16)] text-[var(--xx-danger-2)]';
     default:
-      return 'border border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.06)] text-[#a8b0d4]';
+      return 'border border-[rgba(var(--xx-veil),0.14)] bg-[rgba(var(--xx-veil),0.06)] text-[var(--xx-ink-muted)]';
   }
 };
 

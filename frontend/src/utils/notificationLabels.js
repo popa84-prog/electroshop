@@ -20,20 +20,20 @@
 
 export const TYPE_STYLE = {
   NEW_ORDER:
-    'border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.14)] text-[#7ee9bd]',
+    'border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.14)] text-[var(--xx-good-3)]',
   LOW_STOCK:
-    'border-[rgba(255,186,80,0.45)] bg-[rgba(255,186,80,0.14)] text-[#ffd27a]',
+    'border-[rgba(255,186,80,0.45)] bg-[rgba(255,186,80,0.14)] text-[var(--xx-warn-3)]',
   NO_IMAGE:
-    'border-[rgba(122,60,255,0.5)] bg-[rgba(122,60,255,0.16)] text-[#b795ff]',
+    'border-[rgba(122,60,255,0.5)] bg-[rgba(122,60,255,0.16)] text-[var(--xx-violet-3)]',
   PRODUCT_INACTIVE:
-    'border-[rgba(255,255,255,0.16)] bg-[rgba(255,255,255,0.07)] text-[#c9d4ff]',
+    'border-[rgba(var(--xx-veil),0.16)] bg-[rgba(var(--xx-veil),0.07)] text-[var(--xx-info-3)]',
   ACCOUNT_LOCKED:
-    'border-[rgba(255,90,122,0.45)] bg-[rgba(255,90,122,0.14)] text-[#ff8fa8]',
+    'border-[rgba(255,90,122,0.45)] bg-[rgba(255,90,122,0.14)] text-[var(--xx-danger-3)]',
 };
 
 /** Fallback for a type the backend adds before the frontend knows about it. */
 export const TYPE_STYLE_FALLBACK =
-  'border-[rgba(255,255,255,0.16)] bg-[rgba(255,255,255,0.07)] text-[#c9d4ff]';
+  'border-[rgba(var(--xx-veil),0.16)] bg-[rgba(var(--xx-veil),0.07)] text-[var(--xx-info-3)]';
 
 export const TYPE_LABELS = {
   NEW_ORDER: 'Comandă nouă',

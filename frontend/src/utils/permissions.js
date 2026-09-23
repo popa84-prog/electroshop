@@ -48,8 +48,8 @@ export const ROLE_LABELS = {
  * has to infer "this one is an admin" from a hue.
  */
 export const ROLE_BADGE_STYLE = {
-  ROLE_ADMIN: 'border border-[rgba(122,60,255,0.45)] bg-[rgba(122,60,255,0.18)] text-[#d5c2ff]',
-  ROLE_MANAGER: 'border border-[rgba(46,123,255,0.45)] bg-[rgba(46,123,255,0.16)] text-[#b7d0ff]',
-  ROLE_EDITOR: 'border border-[rgba(34,232,245,0.45)] bg-[rgba(34,232,245,0.14)] text-[#a5f0f8]',
-  ROLE_USER: 'border border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.06)] text-[#a8b0d4]',
+  ROLE_ADMIN: 'border border-[rgba(122,60,255,0.45)] bg-[rgba(122,60,255,0.18)] text-[var(--xx-violet-1)]',
+  ROLE_MANAGER: 'border border-[rgba(46,123,255,0.45)] bg-[rgba(46,123,255,0.16)] text-[var(--xx-info-5)]',
+  ROLE_EDITOR: 'border border-[rgba(34,232,245,0.45)] bg-[rgba(34,232,245,0.14)] text-[var(--xx-aqua-1)]',
+  ROLE_USER: 'border border-[rgba(var(--xx-veil),0.14)] bg-[rgba(var(--xx-veil),0.06)] text-[var(--xx-ink-muted)]',
 };

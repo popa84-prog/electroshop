@@ -10,13 +10,13 @@
 // ink already verified against the deep-space surface.
 //
 // The hue set was reduced from seven to four deliberately. Running the four
-// candidate inks through the palette validator against the #0a0b1e surface:
+// candidate inks through the palette validator against the var(--xx-surface-1) surface:
 //
-//   normal-vision separation  worst pair #ffd27a↔#7ee9bd  ΔE 15.8   PASS
+//   normal-vision separation  worst pair var(--xx-warn-3)↔var(--xx-good-3)  ΔE 15.8   PASS
 //   contrast vs surface       all four >= 3:1                       PASS
-//   CVD separation            worst pair #ff8fa8↔#7ee9bd ΔE 7.3     WARN (deutan)
+//   CVD separation            worst pair var(--xx-danger-3)↔var(--xx-good-3) ΔE 7.3     WARN (deutan)
 //
-// Cyan was cut from this set: against #7ee9bd it scored ΔE 8.6 for *normal*
+// Cyan was cut from this set: against var(--xx-good-3) it scored ΔE 8.6 for *normal*
 // vision, below the 15 floor — a full-colour reader cannot reliably tell those
 // two badges apart. Cyan also carries interactive meaning everywhere else in
 // the XXII system, so spending it on a passive status badge would blunt that.
@@ -27,15 +27,15 @@
 // reinforcement and never the carrier of the meaning.
 
 /** Green — something was brought into existence or turned on. */
-const GOOD = 'border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.14)] text-[#7ee9bd]';
+const GOOD = 'border-[rgba(31,172,121,0.45)] bg-[rgba(31,172,121,0.14)] text-[var(--xx-good-3)]';
 /** Amber — something moved between states and may need watching. */
-const WARN = 'border-[rgba(255,186,80,0.45)] bg-[rgba(255,186,80,0.14)] text-[#ffd27a]';
+const WARN = 'border-[rgba(255,186,80,0.45)] bg-[rgba(255,186,80,0.14)] text-[var(--xx-warn-3)]';
 /** Red — something was destroyed or blocked. */
-const CRIT = 'border-[rgba(255,90,122,0.45)] bg-[rgba(255,90,122,0.14)] text-[#ff8fa8]';
+const CRIT = 'border-[rgba(255,90,122,0.45)] bg-[rgba(255,90,122,0.14)] text-[var(--xx-danger-3)]';
 /** Violet — something was edited in place. */
-const EDIT = 'border-[rgba(122,60,255,0.5)] bg-[rgba(122,60,255,0.16)] text-[#b795ff]';
+const EDIT = 'border-[rgba(122,60,255,0.5)] bg-[rgba(122,60,255,0.16)] text-[var(--xx-violet-3)]';
 /** Neutral — something was turned off, without loss. */
-const MUTE = 'border-[rgba(255,255,255,0.16)] bg-[rgba(255,255,255,0.07)] text-[#c9d4ff]';
+const MUTE = 'border-[rgba(var(--xx-veil),0.16)] bg-[rgba(var(--xx-veil),0.07)] text-[var(--xx-info-3)]';
 
 export const ACTION_STYLE = {
   PRODUCT_CREATED: GOOD,

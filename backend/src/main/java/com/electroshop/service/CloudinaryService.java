@@ -69,6 +69,43 @@ public class CloudinaryService {
     }
 
     /**
+     * Preia imaginea de la o adresă și o urcă pe Cloudinary.
+     *
+     * <p>Cloudinary descarcă el însuși adresa, deci octeții nu trec prin
+     * memoria aplicației — ceea ce contează pe un serviciu cu 400 MB de heap,
+     * unde o rafală de fotografii de produs în rezoluție mare ar fi singurul
+     * lucru care umple memoria.</p>
+     *
+     * <p>Nu se folosește niciodată pentru a copia o poză de pe site-ul cuiva.
+     * Singura sursă este un catalog care ne-a dat dreptul s-o facem, iar de la
+     * ce sursă anume se scrie pe imagine, în coloanele de proveniență.</p>
+     */
+    public UploadResult uploadFromUrl(String sourceUrl, String folder) {
+        ensureConfigured();
+        if (sourceUrl == null || sourceUrl.isBlank()) {
+            throw new IllegalArgumentException("Adresa imaginii lipsește.");
+        }
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> result = cloudinary.uploader().upload(
+                    sourceUrl.trim(),
+                    ObjectUtils.asMap(
+                            "folder", folder,
+                            "resource_type", "image"));
+            return new UploadResult(
+                    (String) result.get("secure_url"),
+                    (String) result.get("public_id"),
+                    asInteger(result.get("width")),
+                    asInteger(result.get("height")),
+                    (String) result.get("format"),
+                    asLong(result.get("bytes")));
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                    "Preluarea imaginii de la " + sourceUrl + " a eșuat: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * Derives a thumbnail delivery URL (300×300, cropped, auto quality/format) from
      * an original Cloudinary secure_url — no extra upload or API call needed, the
      * transformation is generated on-the-fly by Cloudinary's CDN on first request.

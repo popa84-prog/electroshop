@@ -25,6 +25,11 @@
  * Fiecare categorie are culoarea și simbolul ei, așa că un raft citit dintr-o
  * privire arată a catalog, nu a defecțiune.
  *
+ * <p>Culorile nu depind de temă, la fel ca fotografiile adevărate: o poză de
+ * produs arată la fel pe fond alb și pe fond negru, iar substitutul trebuie să
+ * se poarte la fel, altfel ar fi singurul lucru din raft care își schimbă
+ * culoarea sub ochii clientului.</p>
+ *
  * <h2>De ce nu seamănă cu o fotografie</h2>
  *
  * Deliberat. Simbolul este geometric, plat, cu hașură în fundal. O imagine
@@ -159,10 +164,9 @@ const GLIFURI = {
 /**
  * Memorie, ca să nu se reconstruiască același SVG la fiecare randare.
  *
- * <p>Cheia include tema, nu doar categoria. Așa, o schimbare de temă produce
- * intrări noi în loc să ceară cuiva să golească memoria la momentul potrivit —
- * iar „momentul potrivit" este exact felul de detaliu care se uită atunci când
- * se adaugă a treia temă.</p>
+ * <p>Cheia este doar categoria. Imaginea nu depinde de temă, deci nu există
+ * un al doilea rând de intrări și nici un moment în care memoria ar trebui
+ * golită.</p>
  */
 const memorie = new Map();
 
@@ -179,14 +183,6 @@ function nuantaDin(text) {
     h = (h * 31 + text.charCodeAt(i)) % 360;
   }
   return h;
-}
-
-/** Tema curentă, citită din atributul pe care îl scrie ThemeContext. */
-function temaCurenta() {
-  if (typeof document === 'undefined') {
-    return 'dark';
-  }
-  return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
 }
 
 function scurteaza(text, maxim) {
@@ -212,9 +208,7 @@ function xml(text) {
  */
 export function imagineNeutra(categorie) {
   const cat = (categorie || '').trim();
-  const tema = temaCurenta();
-  const cheie = `${tema}|${cat}`;
-  const cachuit = memorie.get(cheie);
+  const cachuit = memorie.get(cat);
   if (cachuit) {
     return cachuit;
   }
@@ -223,23 +217,29 @@ export function imagineNeutra(categorie) {
   const glif = GLIFURI[config.glif] || GLIFURI.implicit;
   const h = config.nuanta;
 
-  // Două palete, nu una întoarsă: pe hârtie albă un fundal închis ar fi o pată,
-  // iar pe fundal închis un desen negru dispare. Se aleg separat.
-  const p = tema === 'light'
-    ? {
-        fundal1: `hsl(${h} 42% 96%)`,
-        fundal2: `hsl(${h} 38% 90%)`,
-        linie: `hsl(${h} 46% 36%)`,
-        hasura: `hsl(${h} 40% 62%)`,
-        text: `hsl(${h} 30% 34%)`,
-      }
-    : {
-        fundal1: `hsl(${h} 32% 14%)`,
-        fundal2: `hsl(${h} 38% 9%)`,
-        linie: `hsl(${h} 70% 72%)`,
-        hasura: `hsl(${h} 60% 60%)`,
-        text: `hsl(${h} 30% 72%)`,
-      };
+  // O singură paletă, nu una pe temă.
+  //
+  // Prima variantă avea două palete și le alegea citind `data-theme` de pe
+  // document. Nu funcționa, și se vedea: la comutarea pe tema întunecată
+  // substitutele rămâneau în culorile deschise. Motivul este că tema se aplică
+  // prin variabile CSS, deci componentele nu se re-randează la schimbarea ei —
+  // iar fără o nouă randare, atributul `src` al imaginii rămâne cel vechi. Un
+  // SVG dintr-un `<img>` este un document izolat: nu vede nici variabilele
+  // paginii, iar `prefers-color-scheme` ar răspunde la setarea sistemului, nu
+  // la butonul de temă.
+  //
+  // Soluția nu este să forțăm o re-randare, ci să observăm că <b>fotografiile
+  // adevărate nu se schimbă cu tema</b>. O poză de produs arată la fel pe fond
+  // alb și pe fond negru. Substitutul trebuie să se poarte la fel, altfel ar fi
+  // singurul element din raft care își schimbă culoarea. Deci: un cartonaș de
+  // ton mediu, ca un fundal de studio colorat, lizibil pe orice fond.
+  const p = {
+    fundal1: `hsl(${h} 30% 40%)`,
+    fundal2: `hsl(${h} 34% 28%)`,
+    linie: `hsl(${h} 62% 88%)`,
+    hasura: `hsl(${h} 50% 92%)`,
+    text: `hsl(${h} 40% 86%)`,
+  };
 
   const textEtichetei = scurteaza(cat || 'Produs', 26).toUpperCase();
   const eticheta = xml(textEtichetei);
@@ -310,6 +310,6 @@ export function imagineNeutra(categorie) {
     `</svg>`;
 
   const adresa = `data:image/svg+xml,${encodeURIComponent(svg)}`;
-  memorie.set(cheie, adresa);
+  memorie.set(cat, adresa);
   return adresa;
 }

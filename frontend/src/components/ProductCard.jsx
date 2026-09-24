@@ -63,7 +63,7 @@ function ProductCard({ product, layout = 'grid' }) {
         <Link to={`/products/${product.id}`} className="block shrink-0" aria-label={product.name}>
           <div className="h-24 w-24 overflow-hidden rounded-xl bg-[rgba(var(--xx-veil),0.05)] sm:h-28 sm:w-28">
             <img
-              src={resolveImage(product.imageThumbUrl || product.imageUrl)}
+              src={resolveImage(product.imageThumbUrl || product.imageUrl, product.category)}
               alt={product.name}
               loading="lazy"
               className="h-full w-full object-cover transition-transform duration-500 ease-xx group-hover:scale-105"
@@ -111,7 +111,7 @@ function ProductCard({ product, layout = 'grid' }) {
         <Link to={`/products/${product.id}`} className="relative block" aria-label={product.name}>
           <div className="aspect-[4/3] w-full overflow-hidden bg-[rgba(var(--xx-veil),0.04)]">
             <img
-              src={resolveImage(product.imageThumbUrl || product.imageUrl)}
+              src={resolveImage(product.imageThumbUrl || product.imageUrl, product.category)}
               alt={product.name}
               loading="lazy"
               className={`h-full w-full object-cover transition-transform duration-500 ease-xx group-hover:scale-[1.07] ${

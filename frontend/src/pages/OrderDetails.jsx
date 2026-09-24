@@ -131,7 +131,7 @@ export default function OrderDetails() {
             <Reveal key={item.id} delay={i * 50}>
               <div className="card card-static flex items-center gap-4 p-4">
                 <img
-                  src={resolveImage(item.imageUrl)}
+                  src={resolveImage(item.imageUrl, item.category)}
                   alt={item.productName}
                   loading="lazy"
                   className="h-16 w-16 shrink-0 rounded-[0.8rem] border border-[rgba(var(--xx-veil),0.1)] object-cover"

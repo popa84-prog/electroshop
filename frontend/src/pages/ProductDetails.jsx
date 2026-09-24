@@ -158,7 +158,13 @@ export default function ProductDetails() {
         }`.slice(0, 160)
       : undefined,
     path: `/products/${id}`,
-    image: product ? resolveImage(product.imageUrl) : undefined,
+    // Numai o imagine reală ajunge în `og:image`. Substitutul neutru este o
+    // adresă `data:`, iar un crawler nu o poate prelua: previzualizarea
+    // linkului pe WhatsApp sau Facebook ar rămâne goală. Mai rău era varianta
+    // de dinainte, care trimitea acolo poza „No Image" de la placehold.co —
+    // adică exact aceea devenea imaginea magazinului la partajarea unui link.
+    // Fără câmp, previzualizarea cade pe imaginea implicită a site-ului.
+    image: product?.imageUrl ? resolveImage(product.imageUrl) : undefined,
   });
 
   // The raw gallery (unresolved URLs) feeds the Lightbox, which resolves them

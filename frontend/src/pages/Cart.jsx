@@ -114,7 +114,7 @@ export default function Cart() {
                     <Link to={`/products/${item.id}`} className="shrink-0" aria-label={item.name}>
                       <div className="h-20 w-20 overflow-hidden rounded-xl bg-[rgba(var(--xx-veil),0.05)]">
                         <img
-                          src={resolveImage(item.imageUrl)}
+                          src={resolveImage(item.imageUrl, item.category)}
                           alt={item.name}
                           loading="lazy"
                           className="h-full w-full object-cover transition-transform duration-500 ease-xx hover:scale-105"

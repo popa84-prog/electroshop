@@ -424,7 +424,7 @@ export default function Checkout() {
               {items.map((item) => (
                 <li key={item.id} className="flex items-center gap-3">
                   <img
-                    src={resolveImage(item.imageUrl)}
+                    src={resolveImage(item.imageUrl, item.category)}
                     alt=""
                     loading="lazy"
                     className="h-12 w-12 shrink-0 rounded-lg object-cover"

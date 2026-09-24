@@ -160,6 +160,12 @@ export const adminGroups = [
         permission: 'PRODUCTS_MANAGE',
       },
       {
+        to: '/admin/distributor-feed',
+        label: 'Feed distribuitor',
+        icon: 'truck',
+        permission: 'PRODUCTS_MANAGE',
+      },
+      {
         to: '/admin/image-sourcing',
         label: 'Fotografii lipsă',
         icon: 'sparkle',

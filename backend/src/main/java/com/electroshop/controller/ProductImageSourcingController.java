@@ -72,6 +72,22 @@ public class ProductImageSourcingController {
     }
 
     /**
+     * Indexul de potrivire pentru fotografiile proprii.
+     *
+     * <p>Câteva zeci de kiloocteți — identificator, denumire, cod, SKU — cu care
+     * browserul poate decide instantaneu ce fișier merge la ce produs, fără să
+     * urce nimic. Fotografiile pleacă abia după ce operatorul confirmă, pe
+     * ruta de încărcare care există deja.</p>
+     */
+    @GetMapping("/index")
+    @PreAuthorize("@permissionService.has('PRODUCTS_MANAGE')")
+    public ResponseEntity<ApiResponse<java.util.List<ProductImageSourcingService.RandIndex>>> index(
+            @RequestParam(defaultValue = "true") boolean doarFaraImagine) {
+        var randuri = service.indexPotrivire(doarFaraImagine);
+        return ResponseEntity.ok(ApiResponse.ok(randuri.size() + " produse în index.", randuri));
+    }
+
+    /**
      * O singură interogare, cu răspunsul brut de la Icecat.
      *
      * <p>Există pentru că prima rulare reală a potrivit un produs din 37, iar

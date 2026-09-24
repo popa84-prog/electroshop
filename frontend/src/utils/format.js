@@ -1,3 +1,5 @@
+import { imagineNeutra } from './placeholder';
+
 export const formatPrice = (value) =>
   new Intl.NumberFormat('ro-RO', { style: 'currency', currency: 'RON' }).format(Number(value || 0));
 
@@ -117,8 +119,23 @@ export const formatRelative = (value) => {
 // Product images can be absolute URLs or backend-relative (/uploads/..)
 // Backend-relative images are served by the API, so prefix with the API base.
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
-export const resolveImage = (url) => {
-  if (!url) return 'https://placehold.co/600x400?text=No+Image';
-  if (url.startsWith('http')) return url;
+
+/**
+ * Adresa afișabilă a unei imagini de produs.
+ *
+ * Când imaginea lipsește, se desenează în browser un substitut neutru, cu
+ * culoarea și simbolul categoriei. Înainte se întorcea o adresă către
+ * `placehold.co`, un serviciu extern, cu textul „No Image" — adică o cerere
+ * către un terț la fiecare afișare a fiecărui produs fără fotografie, pe un
+ * catalog în care sunt 249. Pe lângă faptul că scria în engleză, însemna că
+ * vitrina depinde de un server pe care nu îl controlăm și că browserul
+ * clientului îi trimite adresa IP și pagina de pe care vine.
+ *
+ * @param {string} url adresa imaginii, absolută sau relativă la API
+ * @param {string} [categorie] categoria produsului, pentru substitut
+ */
+export const resolveImage = (url, categorie) => {
+  if (!url) return imagineNeutra(categorie);
+  if (url.startsWith('http') || url.startsWith('data:')) return url;
   return `${API_BASE}${url}`;
 };

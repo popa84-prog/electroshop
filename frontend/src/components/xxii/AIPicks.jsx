@@ -52,7 +52,7 @@ function PickCard({ entry, compact = false, fixedWidth = false }) {
       <div className="group flex items-center gap-3 rounded-xl border border-[rgba(var(--xx-veil),0.09)] bg-[rgba(var(--xx-veil),0.035)] p-2.5 transition-all duration-xx ease-xx hover:border-[rgba(122,60,255,0.45)] hover:bg-[rgba(122,60,255,0.08)]">
         <Link to={`/products/${product.id}`} className="shrink-0">
           <img
-            src={resolveImage(product.imageThumbUrl || product.imageUrl)}
+            src={resolveImage(product.imageThumbUrl || product.imageUrl, product.category)}
             alt={product.name}
             loading="lazy"
             className="h-14 w-14 rounded-lg object-cover"
@@ -94,7 +94,7 @@ function PickCard({ entry, compact = false, fixedWidth = false }) {
         <Link to={`/products/${product.id}`} className="relative block overflow-hidden">
           <div className="aspect-[4/3] w-full overflow-hidden bg-[rgba(var(--xx-veil),0.04)]">
             <img
-              src={resolveImage(product.imageThumbUrl || product.imageUrl)}
+              src={resolveImage(product.imageThumbUrl || product.imageUrl, product.category)}
               alt={product.name}
               loading="lazy"
               className="h-full w-full object-cover transition-transform duration-500 ease-xx hover:scale-[1.07]"

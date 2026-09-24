@@ -227,7 +227,7 @@ export default function NeonSearch({ className = '', compact = false, onNavigate
                     }`}
                   >
                     <img
-                      src={resolveImage(product.imageThumbUrl || product.imageUrl)}
+                      src={resolveImage(product.imageThumbUrl || product.imageUrl, product.category)}
                       alt=""
                       loading="lazy"
                       className="h-10 w-10 shrink-0 rounded-lg object-cover"

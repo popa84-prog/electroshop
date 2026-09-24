@@ -87,7 +87,7 @@ export default function MiniCart({ open, onClose, product = null, quantity = 1 }
         {product ? (
           <div className="mt-3 flex items-center gap-3 rounded-xl border border-[rgba(var(--xx-veil),0.1)] bg-[rgba(var(--xx-veil),0.04)] p-2.5">
             <img
-              src={resolveImage(product.imageThumbUrl || product.imageUrl)}
+              src={resolveImage(product.imageThumbUrl || product.imageUrl, product.category)}
               alt=""
               className="h-14 w-14 shrink-0 rounded-lg object-cover"
             />

@@ -199,6 +199,25 @@ const productService = {
   /** Confirmă o potrivire: preia imaginea aleasă și o atașează produsului. */
   imageSourcingApply: (payload) =>
     api.post('/admin/products/image-sourcing/aplica', payload).then((r) => r.data),
+
+  // ---- Marcă și cod de produs, completate din denumire ----
+  //
+  // Pasul de dinaintea oricărei surse de fotografii: 63 din 100 de produse
+  // fără imagine nu pot fi identificate de nicio sursă externă pentru că le
+  // lipsește marca, codul sau amândouă.
+
+  /** Ce se poate deduce, pentru produsele cu identitate incompletă. */
+  identityProposals: (doarFaraImagine = true, limita = 200, signal) =>
+    api
+      .get('/admin/products/identity/propuneri', {
+        params: { doarFaraImagine, limita },
+        signal,
+      })
+      .then((r) => r.data.data),
+
+  /** Scrie mărcile și codurile confirmate. Nu suprascrie nimic existent. */
+  identityApply: (intrari) =>
+    api.post('/admin/products/identity/aplica', { intrari }).then((r) => r.data.data),
 };
 
 export default productService;

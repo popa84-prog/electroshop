@@ -1542,7 +1542,7 @@ export default function AdminProducts() {
                       title="Previzualizează"
                     >
                       <img
-                        src={resolveImage(p.imageUrl)}
+                        src={resolveImage(p.imageUrl, p.category)}
                         alt={p.name}
                         loading="lazy"
                         className="h-10 w-10 rounded-lg border border-[rgba(var(--xx-veil),0.12)] object-cover transition-all duration-xx ease-xx group-hover:border-[rgba(34,232,245,0.5)] group-hover:shadow-[0_0_22px_-6px_rgba(34,232,245,0.8)]"
@@ -1784,7 +1784,7 @@ export default function AdminProducts() {
                         always be told apart before the sale is confirmed. */}
                     <div className="flex items-start gap-3">
                       <img
-                        src={resolveImage(line.imageUrl)}
+                        src={resolveImage(line.imageUrl, line.category)}
                         alt={line.name}
                         className="h-20 w-20 shrink-0 rounded-lg border border-[rgba(var(--xx-veil),0.12)] object-cover"
                       />
@@ -3041,7 +3041,7 @@ export default function AdminProducts() {
           <div className="space-y-4">
             <div className="flex items-start gap-4">
               <img
-                src={resolveImage(previewProduct.imageUrl)}
+                src={resolveImage(previewProduct.imageUrl, previewProduct.category)}
                 alt={previewProduct.name}
                 loading="lazy"
                 className="h-28 w-28 flex-shrink-0 rounded-xl border border-[rgba(var(--xx-veil),0.14)] object-cover shadow-[0_0_44px_-16px_rgba(34,232,245,0.8)]"
@@ -3239,7 +3239,7 @@ function ProductTile({
       {/* Imaginea — suprafața pe care operatorul o evaluează în acest mod. */}
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-[rgba(var(--xx-veil),0.03)]">
         <img
-          src={resolveImage(p.imageUrl)}
+          src={resolveImage(p.imageUrl, p.category)}
           alt={p.name}
           loading="lazy"
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"

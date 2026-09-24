@@ -739,7 +739,7 @@ export default function AdminOrders() {
                   className="flex items-center gap-3 rounded-xl border border-[rgba(var(--xx-veil),0.09)] bg-[rgba(var(--xx-veil),0.04)] p-2"
                 >
                   <img
-                    src={resolveImage(it.imageUrl)}
+                    src={resolveImage(it.imageUrl, it.category)}
                     alt={it.productName}
                     loading="lazy"
                     className="h-10 w-10 rounded-lg border border-[rgba(var(--xx-veil),0.1)] object-cover"

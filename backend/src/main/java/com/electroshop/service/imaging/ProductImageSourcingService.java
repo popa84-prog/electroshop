@@ -162,6 +162,51 @@ public class ProductImageSourcingService {
                 List.copyOf(propuneri), Map.copyOf(motiveText), List.copyOf(exempleEsec));
     }
 
+    /**
+     * Lista minimă necesară ca browserul să potrivească fișiere cu produse.
+     *
+     * <h2>De ce potrivirea se face în browser</h2>
+     *
+     * Operatorul fotografiază zeci de produse deodată. Dacă potrivirea s-ar face
+     * pe server, ar trebui să urce întâi toate fișierele — zeci de megaocteți de
+     * fotografii de telefon — doar ca să afle care fișier merge la care produs,
+     * iar pentru cele care nu se potrivesc ar fi urcat degeaba.
+     *
+     * <p>Aici se trimite în schimb un index de câteva zeci de kiloocteți:
+     * identificator, denumire, cod și SKU. Browserul potrivește instantaneu,
+     * operatorul corectează ce e greșit, și abia apoi se urcă fișierele — o
+     * singură dată, direct la produsul corect, pe calea de încărcare care
+     * există deja și este testată.</p>
+     *
+     * @param doarFaraImagine implicit adevărat: produsele care au deja o
+     *                        fotografie nu sunt ținta acestei unelte, iar
+     *                        includerea lor ar face potrivirea mai ambiguă
+     */
+    @Transactional(readOnly = true)
+    public List<RandIndex> indexPotrivire(boolean doarFaraImagine) {
+        List<Product> produse = doarFaraImagine
+                ? productRepository.findActiveWithNoImage()
+                : productRepository.findAll();
+        return produse.stream()
+                .map(p -> new RandIndex(p.getId(), p.getName(), p.getMpn(), p.getSku(),
+                        p.getBrand(), p.getCategory()))
+                .toList();
+    }
+
+    /**
+     * Un produs, redus la ce trebuie ca să-l recunoști după numele unui fișier.
+     *
+     * @param id        identificatorul, folosit și ca nume de fișier acceptat
+     * @param denumire  pentru potrivirea slabă, pe cuvinte
+     * @param mpn       codul producătorului — potrivirea cea mai sigură
+     * @param sku       codul intern, dacă există
+     * @param marca     afișată operatorului ca să confirme dintr-o privire
+     * @param categorie idem
+     */
+    public record RandIndex(Long id, String denumire, String mpn, String sku,
+                            String marca, String categorie) {
+    }
+
     /** Interogare unică, pentru diagnostic. Nu schimbă nimic. */
     public IcecatClient.Raspuns diagnostic(String marca, String cod) {
         return icecat.interogheaza(BrandNormalizer.pentruIcecat(marca), cod);

@@ -154,6 +154,12 @@ export const adminGroups = [
         permission: 'PRODUCTS_MANAGE',
       },
       {
+        to: '/admin/own-photos',
+        label: 'Fotografii proprii',
+        icon: 'layers',
+        permission: 'PRODUCTS_MANAGE',
+      },
+      {
         to: '/admin/image-sourcing',
         label: 'Fotografii lipsă',
         icon: 'sparkle',

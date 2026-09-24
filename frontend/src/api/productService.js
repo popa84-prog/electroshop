@@ -218,6 +218,34 @@ const productService = {
   /** Scrie mărcile și codurile confirmate. Nu suprascrie nimic existent. */
   identityApply: (intrari) =>
     api.post('/admin/products/identity/aplica', { intrari }).then((r) => r.data.data),
+
+  // ---- Fotografii proprii, încărcate în masă ----
+  //
+  // Potrivirea fișier → produs se face în browser, nu pe server, și de aceea
+  // are nevoie de indexul de mai jos. Motivul este că fișierele sunt deja în
+  // memoria paginii: a le trimite pe toate serverului doar ca acesta să
+  // răspundă „acesta nu se potrivește cu nimic" ar urca zeci de megaocteți
+  // pentru a afla un nu. Indexul coboară o dată, câteva zeci de kiloocteți,
+  // iar încărcarea efectivă pleacă numai pentru fișierele care au primit un
+  // produs confirmat.
+
+  /**
+   * Indexul de potrivire: identificator, denumire, cod, SKU, marcă, categorie.
+   *
+   * Nu conține imagini, prețuri sau stocuri — numai ce este necesar ca să se
+   * recunoască un nume de fișier. Rămâne mic chiar și pentru tot catalogul.
+   *
+   * @param {boolean} doarFaraImagine implicit adevărat: produsele care au deja
+   *                                  fotografie nu au ce căuta într-un ecran
+   *                                  care completează golurile
+   */
+  photoMatchIndex: (doarFaraImagine = true, signal) =>
+    api
+      .get('/admin/products/image-sourcing/index', {
+        params: { doarFaraImagine },
+        signal,
+      })
+      .then((r) => r.data.data),
 };
 
 export default productService;

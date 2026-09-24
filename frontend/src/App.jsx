@@ -23,6 +23,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminProducts from './pages/admin/AdminProducts';
 import AdminImageSourcing from './pages/admin/AdminImageSourcing';
 import AdminCatalogIdentity from './pages/admin/AdminCatalogIdentity';
+import AdminOwnPhotos from './pages/admin/AdminOwnPhotos';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminSuppliers from './pages/admin/AdminSuppliers';
@@ -103,6 +104,7 @@ export default function App() {
           <Route path="products" element={<AdminProducts />} />
           <Route path="image-sourcing" element={<AdminImageSourcing />} />
           <Route path="identity" element={<AdminCatalogIdentity />} />
+          <Route path="own-photos" element={<AdminOwnPhotos />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="orders" element={<AdminOrders />} />
           <Route path="suppliers" element={<AdminSuppliers />} />

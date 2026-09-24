@@ -148,6 +148,12 @@ export const adminGroups = [
     items: [
       { to: '/admin/products', label: 'Produse', icon: 'box', permission: 'PRODUCTS_VIEW' },
       {
+        to: '/admin/identity',
+        label: 'Marcă și cod',
+        icon: 'tag',
+        permission: 'PRODUCTS_MANAGE',
+      },
+      {
         to: '/admin/image-sourcing',
         label: 'Fotografii lipsă',
         icon: 'sparkle',

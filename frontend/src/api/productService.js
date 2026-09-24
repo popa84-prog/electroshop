@@ -246,6 +246,47 @@ const productService = {
         signal,
       })
       .then((r) => r.data.data),
+
+  // ---- Feed de distribuitor ----
+  //
+  // Citirea este POST deși nu schimbă nimic, pentru că transportă un fișier,
+  // iar un fișier merge în corpul cererii, pe care GET nu îl are. Contractul
+  // se păstrează în conținut: `analizeaza` nu scrie nimic și nu preia nicio
+  // imagine, deci poate fi repetată fără efect.
+
+  /**
+   * Citește feedul și întoarce potrivirile propuse.
+   *
+   * @param {File} file fișierul .xlsx sau .xml primit de la distribuitor
+   * @param {boolean} doarFaraImagine numai produsele fără fotografie
+   * @param {number} limita câte potriviri într-o rundă
+   */
+  feedAnalizeaza: (file, doarFaraImagine = true, limita = 200) => {
+    const form = new FormData();
+    form.append('file', file);
+    return api
+      .post('/admin/products/distributor-feed/analizeaza', form, {
+        params: { doarFaraImagine, limita },
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data.data);
+  },
+
+  /**
+   * Preia imaginile confirmate.
+   *
+   * Furnizorul și temeiul folosirii sunt obligatorii pe server, nu doar în
+   * interfață: ele se scriu pe fiecare imagine și sunt singura diferență
+   * verificabilă între o fotografie pe care avem dreptul să o publicăm și una
+   * copiată de pe un site.
+   *
+   * @param {{supplierId: number, temeiLicenta: string,
+   *          intrari: Array<{productId: number, imagini: string[],
+   *                          codProducator?: string, gtin?: string,
+   *                          codDistribuitor?: string}>}} payload
+   */
+  feedAplica: (payload) =>
+    api.post('/admin/products/distributor-feed/aplica', payload).then((r) => r.data.data),
 };
 
 export default productService;

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Feed de distribuitor - exemplu de format, pentru ecranul
+  Admin -> Catalog -> Feed distribuitor.
+
+  Nu trebuie sa arate exact asa. Cititorul deduce singur structura:
+  numele elementului care reprezinta produsul este ales dupa cat de des
+  apare purtand un camp de identitate, iar coloanele se recunosc dupa
+  sinonime, in romana sau engleza. Merg la fel de bine:
+
+    <products><product><name>..</name><ean>..</ean>
+       <images><image>url</image></images></product></products>
+
+    <catalog><offer name=".." ean=".." picture="url"/></catalog>
+
+  Campurile recunoscute:
+    identitate : denumire / nume / name / title / titlu / product name
+    marca      : marca / brand / producator / manufacturer / vendor
+    cod        : mpn / cod producator / part number / manufacturer code / model
+    cod intern : sku / cod articol / article number / cod furnizor / referinta
+    cod de bare: ean / ean13 / gtin / barcode / cod bare / upc
+    imagini    : imagine / imagini / poza / poze / image / picture / photo / img
+
+  Codurile de mai jos sunt coduri reale din catalog, ca potrivirea sa se vada
+  imediat. Adresele de fotografii sunt insa catre un domeniu inexistent
+  (.invalid), deliberat: fisierul serveste la incercarea ecranului, iar daca
+  se apasa din greseala "Preia fotografiile", fiecare preluare esueaza si nu
+  se scrie nimic in catalog.
+-->
+<root>
+  <meta>
+    <generated>2026-09-24</generated>
+    <supplier>Distribuitor Demo SRL</supplier>
+  </meta>
+  <items>
+    <item mpn="XS18PRO" ean="5901234123457">
+      <title>Telefon Becindy Mini Phone XS18Pro 3.0 Inch HD 2GB+16GB</title>
+      <manufacturer>Becindy</manufacturer>
+      <img src="https://exemplu-distribuitor.invalid/poze/XS18PRO_1.jpg"/>
+      <img src="https://exemplu-distribuitor.invalid/poze/XS18PRO_2.jpg"/>
+    </item>
+    <item mpn="RM120" ean="6941590000019">
+      <title>SmallRig RM120 Long-Battery-Life RGB Video Light 3808</title>
+      <manufacturer>SmallRig</manufacturer>
+      <img src="https://exemplu-distribuitor.invalid/poze/RM120_1.jpg"/>
+      <img src="https://exemplu-distribuitor.invalid/poze/RM120_2.jpg"/>
+    </item>
+    <item mpn="DR2-WHITE-1000GPD" ean="0192143000012">
+      <title>Sistem Filtrare Apa Vortopt DR2-White-1000GPD Reverse Osmosis</title>
+      <manufacturer>Vortopt</manufacturer>
+      <img src="https://exemplu-distribuitor.invalid/poze/DR2_1.jpg"/>
+    </item>
+    <item mpn="SCOPECAM2-4K-L40" ean="4961818028111">
+      <title>RunCam Scope Cam 2 4K SCOPECAM2-4K-L40 Aluminium housing IP64</title>
+      <manufacturer>RunCam</manufacturer>
+      <img src="https://exemplu-distribuitor.invalid/poze/SCOPECAM2_1.jpg"/>
+      <img src="https://exemplu-distribuitor.invalid/poze/SCOPECAM2_2.jpg"/>
+    </item>
+    <item mpn="5603-5573AQ-UK" ean="5035048000022">
+      <title>Revitive Medic Circulation Booster 5603-5573AQ-UK</title>
+      <manufacturer>Revitive</manufacturer>
+      <img src="https://exemplu-distribuitor.invalid/poze/REVITIVE_1.jpg"/>
+    </item>
+
+    <!-- Rand care nu exista in catalog: trebuie numarat ca "nepotrivit". -->
+    <item mpn="NU-EXISTA-IN-CATALOG-9999" ean="4006381333931">
+      <title>Produs care nu este la noi</title>
+      <img src="https://exemplu-distribuitor.invalid/poze/x.jpg"/>
+    </item>
+
+    <!-- Rand fara fotografie: trebuie numarat ca "fara adresa de poza". -->
+    <item mpn="FARA-POZA-1234">
+      <title>Produs fara fotografie in feed</title>
+    </item>
+  </items>
+</root>
